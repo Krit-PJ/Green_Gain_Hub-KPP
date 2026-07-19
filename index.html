@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#166534">
+  <title>Green Gain Hub Kamphaeng Phet</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; overflow-x: hidden; overscroll-behavior-y: none; padding-bottom: env(safe-area-inset-bottom); }
+    .hidden { display: none !important; }
+    .input-group { position: relative; margin-bottom: 1rem; }
+    .input-field { width: 100%; min-width: 0; min-height: 48px; padding: 0.75rem; border-radius: 0.625rem; border: 1px solid #d1d5db; background-color: #fff; font-size: 16px; transition: all 0.2s; }
+    .input-field:focus { border-color: #16a34a; outline: none; box-shadow: 0 0 0 2px rgba(22,163,74,0.2); }
+    .label-text { font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.25rem; display: block; }
+    .required-mark { color: #ef4444; }
+    button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    button { min-height: 44px; }
+    #map { height: clamp(360px, 58dvh, 620px); width: 100%; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 10; }
+    #miniMap, [id^="miniMap-"] { height: 300px; width: 100%; border-radius: 0.625rem; margin-top: 0.5rem; border: 2px solid #e5e7eb; z-index: 10; }
+    .section-tabs { position: sticky; top: calc(57px + env(safe-area-inset-top)); z-index: 40; padding-top: 0.35rem; padding-bottom: 0.35rem; background: rgba(243,244,246,0.94); backdrop-filter: blur(8px); }
+    .record-actions > * { min-width: 0; }
+    .leaflet-control-zoom a { width: 42px !important; height: 42px !important; line-height: 42px !important; font-size: 22px !important; }
+    .leaflet-popup-content { margin: 12px 14px; min-width: 190px; font-family: 'Sarabun', sans-serif; line-height: 1.45; }
+    
+    /* PDPA Modal Style */
+    .pdpa-modal { position: fixed; inset: 0; width: 100%; height: 100%; height: 100dvh; background: rgba(0,0,0,0.6); z-index: 60; display: flex; justify-content: center; align-items: flex-end; padding: 0; }
+    .pdpa-content { background: white; border-radius: 1rem 1rem 0 0; max-width: 600px; width: 100%; max-height: 92dvh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); padding-bottom: env(safe-area-inset-bottom); }
+    .pdpa-header { background-color: #15803d; color: white; padding: 1rem; font-weight: bold; text-align: center; font-size: 1.1rem; }
+    .pdpa-body { overflow-y: auto; padding: 1rem; font-size: 0.9rem; line-height: 1.6; color: #374151; text-align: left; -webkit-overflow-scrolling: touch; }
+    .pdpa-footer { padding: 0.75rem; background: #f9fafb; border-top: 1px solid #e5e7eb; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .consent-check { display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 1rem; background: #f0fdf4; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #bbf7d0; }
+    
+    .match-card { transition: all 0.2s; border-left: 4px solid transparent; cursor: pointer; }
+    @media (hover: hover) { .match-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); } }
+    button:disabled { cursor: not-allowed; opacity: 0.7; }
+
+    @media (min-width: 640px) {
+      .section-tabs { position: static; padding: 0; background: transparent; backdrop-filter: none; }
+      .pdpa-modal { align-items: center; padding: 1rem; }
+      .pdpa-content { border-radius: 1rem; max-height: 85vh; padding-bottom: 0; }
+      .pdpa-body { padding: 1.5rem; text-align: justify; }
+      .pdpa-footer { padding: 1rem; gap: 1rem; }
+      #miniMap, [id^="miniMap-"] { height: 330px; }
+    }
+
+    @media (max-width: 639px) {
+      .record-header { align-items: stretch !important; }
+      .record-header h4 { margin-bottom: 0.25rem; }
+      .swal2-popup { width: calc(100% - 1.5rem) !important; padding: 1rem !important; }
+      .swal2-actions { width: 100%; gap: 0.5rem; }
+      .swal2-actions button { flex: 1; margin: 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="bg-white shadow-md fixed top-0 w-full z-50 border-b border-green-100">
+    <div class="container mx-auto px-3 sm:px-4 py-2 flex justify-between items-center gap-2 max-w-5xl" style="padding-top: max(.5rem, env(safe-area-inset-top));">
+      <img src="https://doaenews.doae.go.th/wp-content/uploads/2021/03/DOAE-2.png" class="h-8 sm:h-10 w-auto shrink-0" alt="กรมส่งเสริมการเกษตร">
+      <div class="text-center min-w-0">
+        <h1 class="text-green-800 font-bold text-sm sm:text-lg md:text-xl leading-tight truncate">Green Gain Hub: กำแพงเพชร</h1>
+        <!-- <p class="text-[10px] md:text-xs text-gray-500 font-medium">จังหวัดกำแพงเพชร</p> -->
+      </div>
+      <img src="https://upload.wikimedia.org/wikipedia/commons/f/fd/Seal_of_Kamphaeng_Phet_Province_%28color_version%2C_Thai_Fine_Art_Department%29.png" class="h-8 sm:h-10 w-auto shrink-0" alt="ตราจังหวัดกำแพงเพชร">
+    </div>
+  </nav>
+
+  <main class="flex-grow pt-20 sm:pt-24 pb-10 sm:pb-12 px-3 sm:px-4 container mx-auto max-w-5xl">
+
+    <div id="loginPage" class="mt-2 sm:mt-8">
+      <div class="max-w-md mx-auto bg-white p-5 sm:p-8 rounded-2xl shadow-xl border-t-4 border-green-600">
+        <h2 class="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-5 sm:mb-6">เข้าสู่ระบบ</h2>
+        <p class="text-sm text-center text-gray-500 mb-4">โปรดกรอกหมายเลขโทรศัพท์ที่ลงทะเบียนไว้</p>
+        
+        <div class="input-group">
+          <label class="label-text">หมายเลขโทรศัพท์ 10 หลัก</label>
+          <input type="tel" id="loginPhone" class="input-field text-lg tracking-widest text-center font-bold" placeholder="08XXXXXXXX" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        </div>
+
+        <button id="loginBtn" onclick="login()" class="w-full bg-green-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 hover:bg-green-800 transition">เข้าสู่ระบบ</button>
+        
+        <div class="mt-6 text-center border-t pt-4">
+          <button onclick="toggleAuth('register')" class="text-green-700 font-bold text-sm hover:underline">ลงทะเบียนใหม่ที่นี่</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pdpaModal" class="hidden pdpa-modal">
+        <div class="pdpa-content">
+            <div class="pdpa-header">
+                เอกสารแสดงความยินยอม (Consent Form)<br>
+                <span class="text-sm font-normal opacity-90">สำหรับใช้ประกอบในการประเมินสถานการณ์ของกลุ่มเป้าหมาย</span>
+            </div>
+            <div class="pdpa-body">
+                <p class="mb-3 font-bold text-green-800">ข้าพเจ้าให้กรมส่งเสริมการเกษตรนำข้อมูลส่วนบุคคลของข้าพเจ้าไปเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูล ดังนี้:</p>
+                
+                <div class="pl-4 mb-4 space-y-3">
+                    <p><strong>๑.</strong> ใช้ในงานส่งเสริมการเกษตร หรือใช้ประกอบในการเข้าร่วมโครงการหรือมาตรการต่างๆ ของภาครัฐ หรือยอมรับให้เปิดเผยข้อมูลส่วนบุคคลของข้าพเจ้าได้ตามกฎหมาย</p>
+                    <p><strong>๒.</strong> จัดทำฐานข้อมูล ประมวลผล วิเคราะห์ข้อมูลสถิติเพื่อใช้ในการจัดตั้งศูนย์กลางการสร้างมูลค่าเพิ่มวัสดุเหลือใช้ทางการเกษตร <strong>(Green Gain Hub)</strong> ขึ้นในพื้นที่โดย Hub เหล่านี้จะทำหน้าที่เป็น ศูนย์กลางการรวบรวม การแปรรูปเบื้องต้น และการรับซื้อ วัสดุเหลือใช้จากเกษตรกรเพื่อป้อนเข้าสู่ระบบตลาดหมุนเวียนอย่างมีประสิทธิภาพและนำไปเผยแพร่บนแพลตฟอร์มระบบของกรมส่งเสริมการเกษตรหรือแพลตฟอร์มอื่นๆ ที่เกี่ยวข้อง สำหรับให้เกษตรกรหรือประชาชนทั่วไปได้เข้าถึงข้อมูลของท่าน</p>
+                </div>
+                <hr class="my-4 border-gray-200">
+                <p class="mb-2 text-sm">
+                    ทั้งนี้ ก่อนการแสดงเจตนา ข้าพเจ้าได้อ่านรายละเอียดจากเอกสารชี้แจงข้อมูล หรือได้รับคำอธิบายจากกรมส่งเสริมการเกษตร ถึงวัตถุประสงค์ในการเก็บรวบรวม ใช้หรือเปิดเผย (“ประมวลผล”) ข้อมูลส่วนบุคคล และมีความเข้าใจดีแล้ว
+                </p>
+                <p class="mb-2 text-sm">
+                    ข้าพเจ้าให้ความยินยอมหรือปฏิเสธไม่ให้ความยินยอมในเอกสารนี้ด้วยความสมัครใจ ปราศจาก การบังคับ หรือชักจูง และข้าพเจ้าทราบว่าข้าพเจ้าสามารถถอนความยินยอมนี้เสียเมื่อใดก็ได้ เว้นแต่ในกรณี มีข้อจำกัดสิทธิ ตามกฎหมายหรือยังมีสัญญาระหว่างข้าพเจ้ากับกรมส่งเสริมการเกษตร ที่ให้ประโยชน์ แก่ข้าพเจ้าอยู่
+                </p>
+                <div class="consent-check">
+                   <input type="checkbox" id="pdpaCheck" class="mt-1 w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500">
+                   <label for="pdpaCheck" class="text-sm font-bold text-green-800 cursor-pointer">
+                       ข้าพเจ้ายินยอมให้ข้อมูลส่วนบุคคลตามรายละเอียดข้างต้น
+                   </label>
+                </div>
+            </div>
+            <div class="pdpa-footer">
+                <button onclick="handlePDPA(false)" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-300 transition">ไม่ยินยอม</button>
+                <button onclick="handlePDPA(true)" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 shadow transition">ยืนยันการลงทะเบียน</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="registerPage" class="hidden mt-2 sm:mt-8">
+      <div class="max-w-md mx-auto bg-white p-5 sm:p-8 rounded-2xl shadow-xl border-t-4 border-blue-600">
+        <h2 class="text-xl font-bold text-center mb-6">ลงทะเบียนสมาชิกใหม่</h2>
+        <form id="regForm" onsubmit="event.preventDefault(); showPDPA();">
+          <div class="input-group">
+            <label class="label-text">ประเภทสมาชิก</label>
+            <select name="role" class="input-field bg-blue-50 text-blue-900 font-bold">
+              <option value="farmer">🌾 เกษตรกร (ผู้ขาย)</option>
+              <option value="buyer">🏭 ผู้ประกอบการ (ผู้รับซื้อ)</option>
+            </select>
+          </div>
+          <div class="input-group"><label class="label-text">ชื่อ-นามสกุล / บริษัท <span class="required-mark">*</span></label><input type="text" name="name" class="input-field" required></div>
+          <div class="input-group">
+             <label class="label-text">เบอร์โทรศัพท์ (10 หลัก) ใช้เพื่อเข้าสู่ระบบ <span class="required-mark">*</span></label>
+             <input type="tel" name="phone" class="input-field font-bold tracking-wider" placeholder="08xxxxxxxx" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+          </div>
+          <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg mt-4 hover:bg-blue-700">ตรวจสอบข้อมูล</button>
+        </form>
+        <button onclick="toggleAuth('login')" class="w-full text-gray-500 text-sm mt-4 hover:underline">กลับไปเข้าสู่ระบบ</button>
+      </div>
+    </div>
+
+    <div id="mainApp" class="hidden">
+      
+      <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-md border border-green-50 mb-4 sm:mb-6 flex justify-between items-center gap-3 relative overflow-hidden">
+        <div id="userBorderRoleDisplay" class="absolute top-0 left-0 w-2 h-full bg-green-500"></div>
+        <div class="pl-2">
+           <p class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider mb-1">ผู้ใช้งานปัจจุบัน</p>
+           <h3 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 leading-tight break-words" id="userNameDisplay">User</h3>
+           <span class="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full" id="userRoleDisplay">Role</span>
+        </div>
+        <button onclick="logout()" class="shrink-0 flex flex-col items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 sm:px-4 py-2 rounded-xl transition">
+          <i class="fa-solid fa-right-from-bracket text-lg md:text-xl mb-1"></i><span class="text-[10px] md:text-xs font-bold">ออกจากระบบ</span>
+        </button>
+      </div>
+
+      <div class="section-tabs grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
+        <button onclick="switchToEntry('entry')" id="btn-entry" class="bg-white px-2 py-3 md:py-4 rounded-xl shadow-sm text-gray-600 text-sm sm:text-base font-bold border-b-4 border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-1.5 sm:gap-2 transition md:text-lg">
+           <i class="fa-solid fa-pen-to-square"></i> บันทึกข้อมูล
+        </button>
+        <button onclick="openMatchingMapCard()" id="btn-map-main" class="bg-white px-2 py-3 md:py-4 rounded-xl shadow-sm text-gray-600 text-sm sm:text-base font-bold border-b-4 border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-1.5 sm:gap-2 transition md:text-lg">
+           <i class="fa-solid fa-map-location-dot"></i> แผนที่ &amp; คู่ค้า
+        </button>
+      </div>
+
+      <div id="entrySection" class="hidden">
+        <div class="bg-white p-3 sm:p-6 md:p-8 rounded-2xl shadow-lg">
+          <h3 class="font-bold text-lg md:text-xl text-gray-800 mb-4 sm:mb-6 border-b pb-3">แบบฟอร์มบันทึกข้อมูล</h3>
+          <form id="dataForm">
+             
+             <div class="bg-gray-50 p-3 sm:p-4 md:p-6 rounded-xl border border-gray-200 mb-4 sm:mb-6">
+                 <p class="text-xs md:text-sm text-gray-400 mb-4 font-bold uppercase"><i class="fa-solid fa-robot"></i> ข้อมูลผู้ใช้งาน</p>
+                 
+                 <div class="grid grid-cols-1 md:grid-cols-1 gap-2">
+                     <div class="md:col-span-2">
+                        <label class="label-text">ชื่อผู้ใช้งาน (หมายเลขระบบ)</label>
+                        <input type="text" id="entryUsername" class="input-field bg-gray-200 text-gray-600 font-bold cursor-not-allowed" readonly>
+                     </div>
+                     
+                     <div class="info-details grid grid-cols-1 sm:grid-cols-3 gap-2 md:col-span-1">
+                       <div>
+                           <label class="label-text">ชื่อ <span class="required-mark">*</span></label>
+                           <input type="text" id="entryFname" name="fname" class="input-field font-bold text-gray-700" required>
+                       </div>
+                       <div>
+                           <label class="label-text">นามสกุล</label>
+                           <input type="text" id="entryLname" name="lname" class="input-field font-bold text-gray-700">
+                       </div>
+                       <div>
+                           <label class="label-text">เบอร์โทรติดต่อ <span class="required-mark">*</span></label>
+                           <input type="tel" id="entryPhone" name="phone" class="input-field" placeholder="แก้ไขได้" maxlength="10" inputmode="numeric" autocomplete="tel" required>
+                       </div>
+                     </div>
+                 </div>
+             </div>
+            
+            <!-- Farmer Form -->
+            <div id="farmerFields" class="hidden bg-green-50 p-2 sm:p-4 md:p-6 rounded-xl border border-green-100 mb-6">
+              <div id="farmerListSection" class="mt-6">
+                <div id="farmerList" class="grid grid-cols-1 gap-4"></div>
+              </div>
+            </div>
+
+            <!-- Buyer Form-->
+            <div id="buyerFields" class="hidden bg-blue-50 p-2 sm:p-4 md:p-6 rounded-xl border border-blue-100 mb-6">
+              <div id="buyerListSection" class="mt-6">
+                <div id="buyerList" class="grid grid-cols-1 gap-4"></div>
+              </div>
+            </div>
+
+            <!-- Add button -->
+            <button id="btn-add" type="button" onclick="addData()" class="w-full text-white py-4 rounded-xl font-bold mt-8 shadow-lg text-lg transition"><i class="fas fa-plus"></i> เพิ่มข้อมูลเข้าสู่ระบบ</button>
+          </form>
+          
+        </div>
+      </div>
+
+      <div id="mapSection" class="hidden">
+         <div id="map" class="md:h-[60vh]"></div>
+         
+         <div class="bg-white p-3 md:p-4 rounded-lg shadow mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs md:text-sm font-bold text-gray-600">
+            <span class="flex items-center gap-2"><i class="fa-solid fa-location-dot text-green-500 text-lg md:text-xl"></i> เกษตรกร</span>
+            <span class="flex items-center gap-2"><i class="fa-solid fa-location-dot text-red-500 text-lg md:text-xl"></i> สถานที่รับซื้อ</span>
+         </div>
+         
+         <h3 class="font-bold text-gray-700 text-base sm:text-lg mt-6 mb-3 sm:mb-4 border-l-4 border-green-500 pl-2">รายชื่อคู่ค้าที่แนะนำ</h3>
+         <p class="label-text leading-relaxed"><span class="required-mark">*</span> ระยะทางที่แสดงผลเป็นระยะทางกระจัด ไม่ใช่ระยะทางตามการเดินทางจริง</p>
+         
+         <div id="matchList" class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-12"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="bg-green-900 text-white text-center py-6 mt-auto">
+    <div class="container mx-auto px-4">
+      <h4 class="font-bold text-sm md:text-base mb-1">สำนักงานเกษตรจังหวัดกำแพงเพชร</h4>
+      <p class="text-xs md:text-sm opacity-80 mb-3">กรมส่งเสริมการเกษตร กระทรวงเกษตรและสหกรณ์</p>
+      <div class="border-t border-green-700 pt-3 text-[11px] md:text-xs text-green-300 opacity-80">
+         Copyright © 2026 กรมส่งเสริมการเกษตร (พัฒนาโดย ดร. กิตติ โพธิ์จวง)
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/api-client.js"></script>
+  <script>
+    const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
+    let currentUser = null;
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, ch => ({
+        '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;'
+      })[ch]);
+    }
+
+    function safeId(value) {
+      return String(value ?? '').replace(/[^0-9A-Za-z_-]/g, '');
+    }
+
+    function validCoordinates(lat, lng) {
+      const a = Number(lat), b = Number(lng);
+      return Number.isFinite(a) && Number.isFinite(b) && a >= -90 && a <= 90 && b >= -180 && b <= 180 && String(lat).trim() !== '' && String(lng).trim() !== '';
+    }
+
+    function coordinateOr(value, fallback) {
+      const n = Number(value);
+      return Number.isFinite(n) && String(value).trim() !== '' ? n : fallback;
+    }
+
+    function toggleOtherMaterial(selectEl) {
+      const card = selectEl.closest('[id^="farmer-card-"], [id^="buyer-card-"]');
+      if (!card) return;
+      const other = card.querySelector('input[name="materialOther"]');
+      if (!other) return;
+      const show = selectEl.value === 'อื่นๆ';
+      other.classList.toggle('hidden', !show);
+      other.required = show;
+      if (!show) other.value = '';
+    }
+
+    // --- UTILS ---
+    function toggleAuth(page) {
+       document.getElementById('loginPage').classList.toggle('hidden');
+       document.getElementById('registerPage').classList.toggle('hidden');
+    }
+    
+    function logout() {
+      Swal.fire({
+         title: 'ออกจากระบบ?', icon: 'question', showCancelButton: true, confirmButtonText: 'ยืนยัน', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#d33'
+      }).then((result) => {
+         if (result.isConfirmed) {
+           if (window.GGH_API) window.GGH_API.logout();
+           location.reload();
+         }
+      });
+    }
+
+    // --- PDPA LOGIC ---
+    function showPDPA() {
+        const f = document.getElementById('regForm');
+        const u = f.phone.value.replace(/\D/g, '');
+        // ลบเงื่อนไขเช็ครหัสผ่านออก
+        if(!f.name.value || u.length !== 10) {
+            return Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+        }
+        document.getElementById('pdpaModal').classList.remove('hidden');
+    }
+
+    function handlePDPA(consent) {
+        document.getElementById('pdpaModal').classList.add('hidden');
+        if(consent) {
+            const isChecked = document.getElementById('pdpaCheck').checked;
+            if(!isChecked) {
+                document.getElementById('pdpaModal').classList.remove('hidden');
+                return Swal.fire('แจ้งเตือน', 'กรุณาติ๊กถูกที่ช่อง "ข้าพเจ้ายินยอม"', 'warning');
+            }
+            register();
+        } else {
+            Swal.fire('แจ้งเตือน', 'ท่านต้องยินยอมนโยบาย PDPA เพื่อใช้งานระบบ', 'error')
+            .then(() => location.reload());
+        }
+    }
+
+    // --- AUTH (Login by Phone Only) ---
+    function login() {
+      const u = document.getElementById('loginPhone').value.replace(/\D/g, '');
+      const btn = document.getElementById('loginBtn');
+      const originalText = btn.innerText;
+      
+      if(u.length !== 10) return Swal.fire('แจ้งเตือน', 'กรุณากรอกหมายเลขโทรศัพท์ให้ครบ 10 หลัก', 'warning');
+      
+      btn.innerText = 'กำลังตรวจสอบข้อมูล...';
+      btn.disabled = true;
+      
+      google.script.run
+        .withSuccessHandler(function(data) {
+          if (data.status === 'success') {
+            currentUser = data;
+            setupUI(data);
+          } else {
+            Swal.fire('ผิดพลาด', data.message, 'error');
+            btn.innerText = originalText;
+            btn.disabled = false;
+          }
+        })
+        .withFailureHandler(function(err) {
+          Swal.fire('Error', 'Connection Error: ' + err.message, 'error');
+          btn.innerText = originalText;
+          btn.disabled = false;
+        })
+        .loginServer({ action: 'login', username: u }); 
+    }
+
+    function register() {
+      const f = document.getElementById('regForm');
+      const u = f.phone.value.replace(/\D/g, '');
+
+      Swal.showLoading();
+
+      google.script.run
+        .withSuccessHandler(function(d) {
+          Swal.close();
+          if (d.status === 'success') {
+            Swal.fire('สำเร็จ', 'ลงทะเบียนเรียบร้อย สามารถเข้าสู่ระบบได้ทันที', 'success');
+            toggleAuth('login');
+          } else {
+            Swal.fire('ผิดพลาด', d.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          Swal.close();
+          Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+        })
+        .registerServer({ role: f.role.value, name: f.name.value, phone: u, password: "" });
+    }
+
+    // --- UI SETUP ---
+    function setupUI(user) {
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+      document.getElementById('userNameDisplay').innerText = user.name;
+      document.getElementById('userRoleDisplay').innerText = user.role==='farmer'?'เกษตรกรผู้ขาย':'ผู้รับซื้อ';
+      
+      const nameParts = user.name.split(' ');
+      const fname = nameParts[0];
+      const lname = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      
+      document.getElementById('entryUsername').value = user.phone;
+      document.getElementById('entryFname').value = fname;
+      document.getElementById('entryLname').value = lname;
+      document.getElementById('entryPhone').value = user.phone;
+      loadUserProfile();
+
+      if(user.role==='farmer') {
+         document.getElementById('farmerFields').classList.remove('hidden');
+         document.getElementById('buyerFields').classList.add('hidden'); 
+
+      } else {
+         document.getElementById('farmerFields').classList.add('hidden');
+         document.getElementById('buyerFields').classList.remove('hidden');
+         // change role color
+         document.getElementById('userRoleDisplay').classList.replace('bg-green-100','bg-red-100');
+         document.getElementById('userRoleDisplay').classList.replace('text-green-800','text-red-800');
+         document.getElementById('userBorderRoleDisplay').classList.replace('bg-green-500','bg-red-500');
+      }
+      // setTimeout(initMiniMap, 500);
+      switchToEntry('entry');
+    }
+
+    function loadUserProfile() {
+      google.script.run
+        .withSuccessHandler(function(d) {
+          if (d.status === 'success') {
+            // displayUserProfile(d)
+            populateUserProfile(d);
+          } else if (d.status === 'not_found') {
+            Swal.fire('แจ้งเตือน', d.message, 'info');
+            populateUserProfile(d);
+          } else {
+            Swal.fire('ผิดพลาด', d.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+        })
+        .getUserProfileServer({ phone: currentUser.phone });
+    }
+
+    function displayUserProfile(d) {
+      if (d.role === 'farmer') {
+        console.log('ชื่อ:', d.profile.fname + ' ' + d.profile.lname);
+        console.log('แปลง:', d.farmers)
+      } else {
+        console.log('ชื่อ:', d.profile.fname + ' ' + d.profile.lname);
+        console.log('รับซื้อ:', d.buyers);
+        
+      }
+    }
+
+    function populateUserProfile(d) {
+      const id = new Date().getTime().toString();
+
+      if (d.role === 'farmer') {
+        // --- แสดง farmerFields ---
+        document.getElementById('farmerFields').classList.remove('hidden');
+        document.getElementById('buyerFields').classList.add('hidden');
+
+        const farmers = d.farmers;
+        const container = document.getElementById('farmerList');
+        document.getElementById('btn-add').classList.add('bg-green-500');
+        if (!farmers || farmers.length === 0) {
+          const index = 1;
+          const mapId = `miniMap-${index}`;
+
+          container.innerHTML = renderFarmerFieldCard({id:id}, index);
+          setTimeout(() => {
+            initMiniMap(mapId); // ← use new function
+          }, 300);
+          return;
+        }
+
+        // have existing data
+        container.innerHTML = farmers.map((f, i) => renderFarmerFieldCard(f, i+1)).join('');
+        setTimeout(() => {
+          farmers.forEach((f, i) => {
+            const mapId = `miniMap-${i+1}`;
+            initMiniMap(mapId, f.lat, f.lng);
+
+            // if data exists → show marker
+            if (validCoordinates(f.lat, f.lng)) {
+              setMiniMarker(mapId, f.lat, f.lng);
+            }
+          });
+        }, 300);
+
+      } else {
+        // --- แสดง buyerFields ---
+        document.getElementById('buyerFields').classList.remove('hidden');
+        document.getElementById('farmerFields').classList.add('hidden');
+  
+        const buyers = d.buyers;
+        const container = document.getElementById('buyerList');
+        document.getElementById('btn-add').classList.add('bg-blue-500');
+        // new one
+        if (!buyers || buyers.length === 0) {
+          const index = 1;
+          const mapId = `miniMap-${index}`;
+
+          container.innerHTML = renderBuyerFieldCard({id:id}, index);
+          setTimeout(() => {
+            initMiniMap(mapId); 
+          }, 300);
+          return;
+        }
+        
+        // have existing data
+        container.innerHTML = buyers.map((b, i) => renderBuyerFieldCard(b, i+1)).join('');
+        setTimeout(() => {
+          buyers.forEach((b, i) => {
+            const mapId = `miniMap-${i+1}`;
+            initMiniMap(mapId, b.lat, b.lng);
+
+            // if data exists → show marker
+            if (validCoordinates(b.lat, b.lng)) {
+              setMiniMarker(mapId, b.lat, b.lng);
+            }
+          });
+        }, 300);
+
+      }
+    }
+
+    function renderFarmerFieldCard(f, index){
+      let rai = '', ngan = '', wah = '';
+      const match = f?.area?.match(/(\d+)\s*ไร่\s*(\d+)\s*งาน\s*(\d+)\s*ตร\.ว\./);
+      if (match) {
+        rai = match[1];
+        ngan = match[2];
+        wah = match[3];
+      }
+
+      return `
+      <div class="record-card bg-white p-3 sm:p-4 rounded-xl shadow border scroll-mt-28" id="farmer-card-${index}">
+        <div class="record-header flex flex-col md:flex-row justify-between md:items-center gap-2 mb-4">
+          <h4 class="text-green-800 font-bold text-sm md:text-base">
+            <i class="fa-solid fa-seedling"></i> แปลงที่ ${index}
+          </h4>
+
+          <div class="record-actions grid grid-cols-2 gap-2 w-full md:flex md:w-auto">
+            <button id="btn-delete-${index}" type="button" onclick="deleteData('${safeId(f?.id)}')"  
+              class="w-full md:w-auto bg-red-50 text-red-600 py-2.5 px-3 md:px-5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-200 transition border border-red-200">
+              <i class="fa fa-trash"></i> ลบ
+            </button>
+            <button id="btn-map-${index}" type="button" onclick="switchToMap(${coordinateOr(f?.lat,16.48)},${coordinateOr(f?.lng,99.52)})"  
+            class="w-full md:w-auto bg-white text-gray-600 py-2.5 px-3 md:px-5 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-gray-200 transition border border-gray-200">
+            <i class="fa-solid fa-map-location-dot"></i><span>แผนที่ &amp; คู่ค้า</span>
+            </button>
+          </div>
+          
+        </div>
+
+        <div class="info-details grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="label-text">ชนิดพืช <span class="required-mark">*</span></label>
+            <select class="input-field" name="crop">
+              ${['ข้าวนาปี','ข้าวนาปรัง','อ้อยโรงงาน','มันสำปะหลัง','อื่นๆ']
+                .map(opt => `<option ${opt === f?.crop ? 'selected' : ''}>${opt}</option>`)
+                .join('')}
+            </select>
+          </div>
+
+          <div>
+            <label class="label-text">ชนิดเศษวัสดุ <span class="required-mark">*</span></label>
+            <select class="input-field" name="materialType" onchange="toggleOtherMaterial(this)">
+              ${MATERIAL_TYPES.map(opt => `<option value="${opt}" ${opt === (f?.materialType || 'ฟางข้าว') ? 'selected' : ''}>${opt}</option>`).join('')}
+            </select>
+            <input type="text" name="materialOther"
+              value="${escapeHtml(f?.materialOther || '')}"
+              class="input-field mt-2 ${(f?.materialType === 'อื่นๆ') ? '' : 'hidden'}"
+              placeholder="ระบุชนิดเศษวัสดุ">
+          </div>
+
+          <div><label class="label-text">วันปลูก</label><input type="date" name="plantDate" class="input-field" value="${escapeHtml(f?.plantDate || '')}"></div>
+          <div><label class="label-text">วันเก็บเกี่ยว</label><input type="date" name="harvestDate" class="input-field" value="${escapeHtml(f?.harvestDate || '')}"></div>
+        </div>
+
+        <label class="label-text my-2">พื้นที่ (ไร่-งาน-ตร.ว.)</label>
+        <div class="grid grid-cols-3 gap-2 mt-2">
+          <input type="number" value="${rai}" name="rai" class="input-field px-2 sm:px-3" inputmode="decimal" min="0" placeholder="ไร่">
+          <input type="number" value="${ngan}" name="ngan" class="input-field px-2 sm:px-3" inputmode="decimal" min="0" placeholder="งาน">
+          <input type="number" value="${wah}" name="wah" class="input-field px-2 sm:px-3" inputmode="decimal" min="0" placeholder="ตร.ว.">
+        </div>
+
+        <div class="mt-5 sm:mt-6 border-t pt-5 sm:pt-6">
+          <label class="label-text font-bold">พิกัดแปลง / สถานที่รับซื้อ <span class="required-mark">*</span></label>
+          <p class="text-xs text-gray-500 mb-3">กดดึงพิกัดปัจจุบัน หรือเลื่อนหมุดสีน้ำเงินบนแผนที่ให้ตรงกับสถานที่ของท่าน</p>
+          
+          <button type="button" onclick="getGPS('miniMap-${index}')" class="w-full md:w-auto bg-indigo-100 text-indigo-700 py-3 px-6 rounded-lg font-bold mb-4 flex items-center justify-center gap-2 hover:bg-indigo-200 transition">
+            <i class="fa-solid fa-location-crosshairs"></i> ดึง GPS ปัจจุบัน
+          </button>
+        
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly 
+              value="${f?.lat??''}">
+              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly 
+              value="${f?.lng??''}">
+          </div>
+          <div id="miniMap-${index}" class="mt-3 rounded border"></div>
+        </div>
+
+        <button type="button" onclick="submitData('${safeId(f?.id)}', ${index})" class="w-full bg-green-600 hover:bg-green-700 text-white py-3.5 sm:py-4 rounded-xl font-bold mt-6 sm:mt-8 shadow-lg text-base sm:text-lg transition">บันทึกข้อมูลเข้าสู่ระบบ</button>
+
+      </div>
+      `;
+    }
+
+    function renderBuyerFieldCard(b, index){
+      return `
+      <div class="record-card bg-white p-3 sm:p-4 rounded-xl shadow border scroll-mt-28" id="buyer-card-${index}">
+        <div class="record-header flex flex-col md:flex-row justify-between md:items-center gap-2 mb-4">
+            <h4 class="text-blue-800 font-bold text-sm md:text-base">
+              <i class="fa-solid fa-industry"></i> ข้อมูลการรับซื้อ ${index}
+            </h4>
+
+            <div class="record-actions grid grid-cols-2 gap-2 w-full md:flex md:w-auto">
+              <button id="btn-delete-${index}" type="button" onclick="deleteData('${safeId(b?.id)}')"  
+                class="w-full md:w-auto bg-red-50 text-red-600 py-2.5 px-3 md:px-5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-200 transition border border-red-200">
+                <i class="fa fa-trash"></i> ลบ
+              </button>
+
+              <button id="btn-map-${index}" type="button" onclick="switchToMap(${coordinateOr(b?.lat,16.48)},${coordinateOr(b?.lng,99.52)})"  
+                class="w-full md:w-auto bg-white text-gray-600 py-2.5 px-3 md:px-5 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-gray-200 transition border border-gray-200">
+                <i class="fa-solid fa-map-location-dot"></i><span>แผนที่ &amp; คู่ค้า</span>
+              </button>
+            </div>
+
+        </div>
+           
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="label-text">รับซื้อวัสดุ <span class="required-mark">*</span></label>
+              <select name="materialType" class="input-field" onchange="toggleOtherMaterial(this)">
+              ${MATERIAL_TYPES
+                  .map(opt => `<option value="${opt}" ${opt === (b?.materialType || 'ฟางข้าว') ? 'selected' : ''}>${opt}</option>`)
+                  .join('')}
+              </select>
+              <input type="text" name="materialOther"
+                value="${escapeHtml(b?.materialOther || '')}"
+                class="input-field mt-2 ${(b?.materialType === 'อื่นๆ') ? '' : 'hidden'}"
+                placeholder="ระบุชนิดเศษวัสดุ">
+            </div>
+            
+            <div>
+              <label class="label-text">ปริมาณที่รับได้ (ตัน/วัน) <span class="required-mark">*</span></label>
+              <input type="text" value="${escapeHtml(b?.capacity??'')}" name="capacity" class="input-field" placeholder="เช่น 50 ตัน">
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:col-span-2">
+                <div>
+                  <label class="label-text">คุณภาพ <span class="required-mark">*</span></label>
+                  <input type="text" value="${escapeHtml(b?.quality??'')}" name="quality" class="input-field" placeholder="เช่น ความชื้น<15%">
+                </div>
+                <div>
+                  <label class="label-text">ราคา (บาท/ไร่) <span class="required-mark">*</span></label>
+                  <input type="number" value="${b?.price??''}" name="price" class="input-field" inputmode="decimal" min="0" step="0.01" placeholder="ระบุราคา">
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-5 sm:mt-6 border-t pt-5 sm:pt-6">
+          <label class="label-text font-bold">พิกัดแปลง / สถานที่รับซื้อ <span class="required-mark">*</span></label>
+          <p class="text-xs text-gray-500 mb-3">กดดึงพิกัดปัจจุบัน หรือเลื่อนหมุดสีน้ำเงินบนแผนที่ให้ตรงกับสถานที่ของท่าน</p>
+          
+          <button type="button" onclick="getGPS('miniMap-${index}')" class="w-full md:w-auto bg-indigo-100 text-indigo-700 py-3 px-6 rounded-lg font-bold mb-4 flex items-center justify-center gap-2 hover:bg-indigo-200 transition">
+            <i class="fa-solid fa-location-crosshairs"></i> ดึง GPS ปัจจุบัน
+          </button>
+        
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly 
+              value="${b?.lat??''}">
+              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly 
+              value="${b?.lng??''}">
+          </div>
+          <div id="miniMap-${index}" class="mt-3 rounded border"></div>
+        </div>
+
+        <button type="button" onclick="submitData('${safeId(b?.id)}',${index})" class="w-full bg-green-600 hover:bg-green-700 text-white py-3.5 sm:py-4 rounded-xl font-bold mt-6 sm:mt-8 shadow-lg text-base sm:text-lg transition">บันทึกข้อมูลเข้าสู่ระบบ</button>
+
+      </div>
+      `;
+    }
+
+
+    function switchToEntry(t) {
+      document.getElementById('mapSection').classList.add('hidden');
+      const entryBtn = document.getElementById('btn-entry');
+      const mapBtn = document.getElementById('btn-map-main');
+      if (entryBtn) {
+        entryBtn.classList.remove('text-green-700','border-green-500');
+        entryBtn.classList.add('text-gray-600','border-gray-200');
+      }
+      if (mapBtn) {
+        mapBtn.classList.remove('text-blue-700','border-blue-500');
+        mapBtn.classList.add('text-gray-600','border-gray-200');
+      }
+
+      const active = document.getElementById('btn-'+t);
+      if(t==='entry') {
+        active.classList.replace('text-gray-600','text-green-700');
+        active.classList.replace('border-gray-200','border-green-500');
+        document.getElementById('entrySection').classList.remove('hidden');
+      }
+    }
+
+    function openMatchingMapCard() {
+      const container = document.getElementById(currentUser?.role === 'buyer' ? 'buyerList' : 'farmerList');
+      const lat = Number(container?.querySelector('input[name="lat"]')?.value) || 16.48;
+      const lng = Number(container?.querySelector('input[name="lng"]')?.value) || 99.52;
+      switchToMap(lat, lng);
+    }
+
+    function switchToMap(lat, lng) {
+      lat = coordinateOr(lat, 16.48);
+      lng = coordinateOr(lng, 99.52);
+      const entryBtn = document.getElementById('btn-entry');
+      const mapBtn = document.getElementById('btn-map-main');
+
+      if (entryBtn) {
+        entryBtn.classList.remove('text-green-700','border-green-500');
+        entryBtn.classList.add('text-gray-600','border-gray-200');
+      }
+      if (mapBtn) {
+        mapBtn.classList.remove('text-gray-600','border-gray-200');
+        mapBtn.classList.add('text-blue-700','border-blue-500');
+      }
+
+      document.getElementById('entrySection').classList.add('hidden');
+      document.getElementById('mapSection').classList.remove('hidden');
+
+      // wait for section to be visible
+      setTimeout(() => {
+        initMatchingMap(lat, lng);
+        if (mainMap) {
+          mainMap.invalidateSize();
+        }
+      }, 100);
+    }
+
+    // --- MAP & DATA LOGIC ---
+    let miniMaps = {}, miniMarkers = {};
+    let mapMarkers = {}; 
+
+    let mainMap = null;
+
+    function initMiniMap(mapId, lat = 16.48, lng = 99.52) {
+      if (miniMaps[mapId]) return;
+
+      lat = coordinateOr(lat, 16.48);
+      lng = coordinateOr(lng, 99.52);
+
+      const map = L.map(mapId).setView([lat, lng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+        .addTo(map);
+
+      // click to place marker (FIXED: include mapId)
+      map.on('click', e => {
+        setMiniMarker(mapId, e.latlng.lat, e.latlng.lng);
+      });
+
+      miniMaps[mapId] = map;
+    }
+
+    function getGPS(mapId) {
+      if(!navigator.geolocation) return Swal.fire('Error','เบราว์เซอร์ของท่านไม่รองรับการดึงตำแหน่ง (GPS)','error');
+      Swal.showLoading();
+      navigator.geolocation.getCurrentPosition(
+        p => {
+          Swal.close();
+          setMiniMarker(mapId,p.coords.latitude, p.coords.longitude);
+          miniMaps[mapId].setView([p.coords.latitude, p.coords.longitude], 15);
+        },
+        err => {
+          Swal.close();
+          const message = err.code === 1
+            ? 'กรุณาอนุญาตให้เว็บไซต์เข้าถึงตำแหน่ง แล้วลองอีกครั้ง'
+            : 'ไม่สามารถดึงตำแหน่งได้ กรุณาลองใหม่หรือแตะตำแหน่งบนแผนที่';
+          Swal.fire('ไม่สามารถใช้ GPS', message, 'warning');
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+      );
+    }
+
+    function setMiniMarker(mapId, lat, lng) {
+      const match = mapId.match(/\d+$/);
+      const id = match ? parseInt(match[0], 10) : null;
+      document.getElementById('lat-'+ id).value = Number(lat).toFixed(6);
+      document.getElementById('lng-'+ id).value = Number(lng).toFixed(6);
+      if(miniMarkers[mapId]) miniMaps[mapId].removeLayer(miniMarkers[mapId]);
+
+      const marker = L.marker([lat, lng], { draggable: true }).addTo(miniMaps[mapId]);
+      miniMarkers[mapId] = marker;
+
+
+      marker.on('dragend', e => {
+        const p = e.target.getLatLng();
+        document.getElementById('lat-' + id).value = p.lat.toFixed(6);
+        document.getElementById('lng-' + id).value = p.lng.toFixed(6);
+      });
+    }
+
+    
+    function initMatchingMap(lat, lng) {
+      // console.log('user location to match:', lat, lng, currentUser.role);
+      // clear old markers (important)
+      Object.values(mapMarkers).forEach(m => mainMap.removeLayer(m));
+      mapMarkers = {};
+
+      // create map only once
+      if (!mainMap) {
+        mainMap = L.map('map').setView([lat || 16.48, lng || 99.52], 9);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+          .addTo(mainMap);
+      }
+
+      // ALWAYS update view
+      if (lat != null && lng != null) {
+        if (mapMarkers['user']) {
+          mainMap.removeLayer(mapMarkers['user']);
+        }
+
+        const gIcon = new L.Icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34]});
+        const rIcon = new L.Icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34]});
+        const icon = currentUser.role == 'farmer' ? gIcon : rIcon;
+
+        mapMarkers['user'] = L.marker([lat, lng], {icon: icon}).addTo(mainMap).bindPopup('📍 ตำแหน่งของคุณ');
+        mainMap.setView([lat, lng], 9);
+
+        loadMatchingData(lat, lng);
+      }
+      setTimeout(() => {
+        document.getElementById('btn-entry')?.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
+    }
+
+
+    function loadMatchingData(userLat, userLng) {
+      google.script.run
+        .withSuccessHandler(function(data) {
+          const gIcon = new L.Icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34]});
+          const rIcon = new L.Icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34]});
+          const list = document.getElementById('matchList');
+          list.innerHTML = '';
+          let targets = [];
+          let isFarmer = currentUser.role === 'farmer';
+          if(isFarmer) targets = data.buyers;
+          else targets = data.farmers;
+
+          if(targets.length === 0) list.innerHTML = '<div class="col-span-1 md:col-span-2 text-center text-gray-400 py-8">ยังไม่พบข้อมูลคู่ค้าในระบบขณะนี้</div>';
+
+          const cards = targets.map((t, index) => {
+            const icon = isFarmer ? rIcon : gIcon;
+            const marker = L.marker([t.lat, t.lng], {icon: icon}).addTo(mainMap);
+            let desc = '';
+
+            if(isFarmer) desc = `<b>${escapeHtml(t.name)}</b><br>รับซื้อ: ${escapeHtml(t.material)}<br>ความชื้น: ${escapeHtml(t.quality)}<br>ราคารับซื้อ: ${escapeHtml(t.price)} บ./ไร่`;
+            else desc = `<b>${escapeHtml(t.name)}</b><br>พืช: ${escapeHtml(t.crop)}<br>เศษวัสดุ: ${escapeHtml(t.material || '-')}<br>พื้นที่: ${escapeHtml(t.area)}<br>เก็บเกี่ยว: ${escapeHtml(t.harvest || '-')}`;
+
+            const cleanPhone = t.phone.replace(/[^0-9]/g, '');
+            const callBg    = isFarmer ? '#dc2626' : '#15803d';  // red-600 or green-700
+            const callBorder = isFarmer ? '#991b1b' : '#14532d';
+            const actionBtns = `
+            <div style="margin-top:10px; display:flex; gap:5px; flex-direction: column">
+              <a href="tel:${cleanPhone}" target="_top" 
+                style="flex:1; text-align:center; background:${callBg}; color:white; padding:6px 0; border-radius:6px; font-size:12px; font-weight:bold; text-decoration:none; border:1px solid ${callBorder};">📞 โทร ${cleanPhone} </a>
+              <a href="https://www.google.com/maps/search/?api=1&query=${t.lat},%20${t.lng}" target="_blank" 
+                style="flex:1; text-align:center; background:#2563eb; color:white; padding:6px 0; border-radius:6px; font-size:12px; font-weight:bold; text-decoration:none; border:1px solid #1e3a8a;">📍 นำทาง</a>
+            </div>`;
+
+            marker.bindPopup(desc + actionBtns);
+
+            const markerId = `m-${index}`;
+            mapMarkers[markerId] = marker;
+            const dist = calcDist(userLat, userLng, t.lat, t.lng).toFixed(1);
+
+            const html = `
+              <div class="match-card bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 relative flex flex-col h-full" onclick="focusMarker('${markerId}', ${t.lat}, ${t.lng})">
+                <div class="flex justify-between items-start gap-3 mb-auto">
+                  <div class="min-w-0">
+                    <h4 class="font-bold text-gray-800 text-base sm:text-lg break-words">${escapeHtml(t.name)}</h4>
+                    <div class="text-sm text-gray-600 mt-2 leading-relaxed">${desc.replace(/<b>.*?<\/b><br>/, '')}</div>
+                  </div>
+                  <div class="text-right  ${isFarmer ? 'bg-red-50' : 'bg-green-50'} px-2 py-1 rounded-lg">
+                    <span class="block text-xl font-bold ${isFarmer ? 'text-red-700' : 'text-green-700'}">${dist}</span>
+                    <span class="text-[10px] ${isFarmer ? 'text-red-600' : 'text-green-600'} uppercase font-bold">กม.</span>
+                  </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-2">
+                  <a href="tel:${cleanPhone}" target="_top" onclick="event.stopPropagation()" class="flex-1 ${isFarmer ? 'bg-red-50' : 'bg-green-50'} ${isFarmer ? 'text-red-700' : 'text-green-700'} py-2.5 rounded-xl font-bold text-center hover:${isFarmer? 'bg-red-200':'bg-green-200'} transition text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-phone"></i> โทรติดต่อ
+                  </a>
+                  <button class="flex-1 bg-gray-50 text-gray-600 border border-gray-200 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-100 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-map-pin"></i> ดูบนแผนที่
+                  </button>
+                </div>
+              </div>
+            `;
+            return { dist, html };
+          });
+          // Sort ascending by distance, then render
+          cards.sort((a, b) => a.dist - b.dist);
+          list.innerHTML = cards.map(c => c.html).join('');
+        })
+        .withFailureHandler(function(err) {
+          Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+        })
+        .getMatchingDataServer(); 
+    }
+
+    function focusMarker(id, lat, lng) {
+       mainMap.flyTo([lat, lng], 13);
+       if(mapMarkers[id]) mapMarkers[id].openPopup();
+       document.getElementById('map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function calcDist(lat1, lon1, lat2, lon2) {
+      const R = 6371; const dLat = (lat2-lat1)*(Math.PI/180); const dLon = (lon2-lon1)*(Math.PI/180);
+      const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180))*Math.cos(lat2*(Math.PI/180))*Math.sin(dLon/2)*Math.sin(dLon/2);
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+
+    let resizeTimer;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        Object.values(miniMaps).forEach(map => map?.invalidateSize());
+        mainMap?.invalidateSize();
+      }, 180);
+    }, { passive: true });
+
+    function addData() {
+      const isFarmer = currentUser.role === 'farmer';
+      const containerId = isFarmer ? 'farmerList' : 'buyerList';
+      const container = document.getElementById(containerId);
+      const id = new Date().getTime().toString();
+
+      const index = container.children.length;
+      const html = isFarmer
+        ? renderFarmerFieldCard({id:id}, index+1)
+        : renderBuyerFieldCard({id:id}, index+1);
+      container.insertAdjacentHTML('beforeend', html);
+
+      const mapId = `miniMap-${index+1}`;
+
+      // init map AFTER DOM render
+      setTimeout(() => {
+        initMiniMap(mapId); // default center
+      }, 100);
+    }
+
+    function deleteData(mapId){
+      const phone = document.getElementById('entryPhone').value;
+
+      const payload = {
+        action: 'deleteData',
+        role: currentUser.role,
+        phone: currentUser.phone,
+        id: mapId
+      };
+      // console.log('delete payload:', payload)
+      Swal.showLoading();
+
+      google.script.run
+        .withSuccessHandler(function(d) {
+          Swal.close();
+          if (d.status === 'success') {
+            Swal.fire('สำเร็จ', 'ลบข้อมูลเข้าสู่ระบบเรียบร้อยแล้ว', 'success');
+            
+            // reload lists again
+            miniMaps = {};
+            miniMarkers = {};
+            loadUserProfile();
+
+            setTimeout(() => {
+              document.getElementById(currentUser.role == 'farmer'? 'farmerFields': 'buyerFields')?.scrollIntoView({ behavior: 'smooth' });
+            }, 150);
+          } else {
+            Swal.fire('เกิดข้อผิดพลาด', d.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          Swal.close();
+          Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+        })
+        .deleteDataServer(payload); 
+    }
+
+    // --- SUBMIT ---
+    function submitData(id, mapId) {
+      try{
+        const miniMapId = `miniMap-${mapId}`;
+
+        const fname = document.getElementById('entryFname').value;
+        const lname = document.getElementById('entryLname').value;
+        const phone = document.getElementById('entryPhone').value;
+
+        const lat = document.getElementById(`lat-${mapId}`).value;
+        const lng = document.getElementById(`lng-${mapId}`).value;
+        const card = document.getElementById(currentUser.role === 'farmer'? `farmer-card-${mapId}`:`buyer-card-${mapId}`);
+
+        if (!fname) return Swal.fire('แจ้งเตือน','กรุณาระบุชื่อ','warning');
+        if (!phone) return Swal.fire('แจ้งเตือน','กรุณาระบุเบอร์โทรศัพท์ติดต่อ','warning');
+        if (!lat) return Swal.fire('แจ้งเตือน','กรุณาดึงพิกัด GPS หรือปักหมุดบนแผนที่','warning');
+
+        const payload = {
+          action: 'saveData',
+          role: currentUser.role,
+          username: currentUser.phone,
+          id: `${id}`,
+          fname,
+          lname,
+          phone,
+          lat,
+          lng,
+          miniMapId 
+        };
+
+        if (currentUser.role === 'farmer') {
+          const crop = card.querySelector('select[name="crop"]').value;
+          const materialType = card.querySelector('select[name="materialType"]').value;
+          const materialOther = card.querySelector('input[name="materialOther"]').value.trim();
+          const plantDate = card.querySelector('input[name="plantDate"]').value;
+          const harvestDate = card.querySelector('input[name="harvestDate"]').value;
+          const rai = card.querySelector('input[name="rai"]')?.value || 0;
+          const ngan = card.querySelector('input[name="ngan"]')?.value || 0;
+          const wah = card.querySelector('input[name="wah"]')?.value || 0;
+
+          if (!plantDate || !harvestDate) {
+            return Swal.fire('แจ้งเตือน','กรุณาระบุวันปลูกและวันเก็บเกี่ยว','warning');
+          }
+          if (materialType === 'อื่นๆ' && !materialOther) {
+            return Swal.fire('แจ้งเตือน','กรุณาระบุชนิดเศษวัสดุอื่นๆ','warning');
+          }
+
+          payload.crop = crop;
+          payload.materialType = materialType;
+          payload.materialOther = materialOther;
+          payload.plantDate = plantDate;
+          payload.harvestDate = harvestDate;
+          payload.area = `${rai} ไร่ ${ngan} งาน ${wah} ตร.ว.`;
+          // payload.cropId = `${id}`;
+
+        } else {
+          const materialType = card.querySelector('select[name="materialType"]').value;
+          const materialOther = card.querySelector('input[name="materialOther"]').value.trim();
+          const quality = card.querySelector('input[name="quality"]').value;
+          const price = card.querySelector('input[name="price"]').value;
+          const capacity = card.querySelector('input[name="capacity"]').value;
+
+          if (!quality || !price || !capacity) {
+            return Swal.fire('แจ้งเตือน','กรุณากรอกข้อมูลรับซื้อให้ครบถ้วน','warning');
+          }
+          if (materialType === 'อื่นๆ' && !materialOther) {
+            return Swal.fire('แจ้งเตือน','กรุณาระบุชนิดเศษวัสดุอื่นๆ','warning');
+          }
+
+          payload.materialType = materialType;
+          payload.materialOther = materialOther;
+          payload.material = materialType === 'อื่นๆ' ? materialOther : materialType;
+          payload.quality = quality;
+          payload.price = price;
+          payload.capacity = capacity;
+          // payload.materialId = `${id}`;
+        }
+        // console.log(payload)
+        Swal.showLoading();
+
+        google.script.run
+          .withSuccessHandler(function(d) {
+            Swal.close();
+            if (d.status === 'success') {
+              Swal.fire('สำเร็จ', 'บันทึกข้อมูลเข้าสู่ระบบเรียบร้อยแล้ว', 'success');
+              // reload lists again
+              miniMaps = {};
+              miniMarkers = {};
+              loadUserProfile();
+            } else {
+              Swal.fire('เกิดข้อผิดพลาด', d.message, 'error');
+            }
+          })
+          .withFailureHandler(function(err) {
+            Swal.close();
+            Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+          })
+          .saveDataServer(payload);
+      }
+      catch(err) {
+        console.error('🔥 addData error:', err);
+      }
+      
+    }
+  </script>
+</body>
+</html>
