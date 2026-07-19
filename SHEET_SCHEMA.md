@@ -1,0 +1,37 @@
+# Google Sheet ที่ระบบ 0.7 ใช้งาน
+
+[1.Green Gain HUB_KPP](https://docs.google.com/spreadsheets/d/1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA/edit)
+
+ระบบใช้ข้อมูลจริงในแท็บ `users`, `farmers`, `buyers` โดยไม่อ่านแท็บทดสอบ
+
+## users — A:I
+
+`Telephone, Password, Status, Name, System, Consent, Consent_Timestamp, Created_At, Updated_At`
+
+- คอลัมน์ Password เป็นโครงสร้างเดิมและ API รุ่น 0.7 ไม่อ่านหรือเขียนรหัสผ่าน
+- เข้าสู่ระบบด้วย Telephone ตามพฤติกรรมระบบเดิม
+- รายการลงทะเบียนใหม่เก็บ Consent และวันเวลาโดยอัตโนมัติ
+
+## farmers — A:R
+
+| ช่วง | ข้อมูล |
+|---|---|
+| A:L | โครงสร้างเดิม: ID, Timestamp, Name, Surname, Phone, Crop, Plant_Date, Havest_Date, Area, Lat, Lng, Stasus |
+| M | Owner_Telephone — เจ้าของรายการ |
+| N | Material_Type — ฟางข้าว / ใบอ้อย / เหง้ามันสำปะหลัง / อื่นๆ |
+| O | Material_Other — รายละเอียดเมื่อเลือกอื่นๆ |
+| P | Map_Expire_Date — วันเก็บเกี่ยว + 10 วัน |
+| Q | Map_Visible — สถานะ Open และยังไม่พ้นกำหนด |
+| R | Updated_At |
+
+## buyers — A:P
+
+| ช่วง | ข้อมูล |
+|---|---|
+| A:L | โครงสร้างเดิม: ID, Timestamp, Name, Surname, Phone, Lat, Lng, Material, Quality, Price, Capacity, Status |
+| M | Owner_Telephone — เจ้าของรายการ |
+| N | Material_Type |
+| O | Material_Other |
+| P | Updated_At |
+
+Backend ตรวจสิทธิ์ด้วย Owner_Telephone และใช้ Phone เป็น fallback เฉพาะข้อมูลเก่าที่ยังไม่มี Owner_Telephone
