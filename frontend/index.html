@@ -233,6 +233,50 @@
             <span class="flex items-center gap-2"><i class="fa-solid fa-location-dot text-green-500 text-lg md:text-xl"></i> เกษตรกร</span>
             <span class="flex items-center gap-2"><i class="fa-solid fa-location-dot text-red-500 text-lg md:text-xl"></i> สถานที่รับซื้อ</span>
          </div>
+
+         <div id="harvestFilterPanel" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-3 sm:p-4 mt-4">
+            <div class="flex items-start gap-2 mb-3">
+              <i class="fa-solid fa-calendar-days text-emerald-700 mt-1"></i>
+              <div>
+                <h3 class="font-bold text-emerald-900">เลือกข้อมูลที่คาดว่าจะเก็บเกี่ยว</h3>
+                <p class="text-xs text-emerald-700">สำหรับผู้รับซื้อ: เลือกดูทุกช่วงเวลา แยกตามปี หรือแยกตามเดือน</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="label-text">รูปแบบข้อมูล</label>
+                <select id="harvestViewMode" class="input-field" onchange="updateHarvestFilterControls(true)">
+                  <option value="ALL">ทั้งหมด</option>
+                  <option value="YEAR">รายปี</option>
+                  <option value="MONTH">รายเดือน</option>
+                </select>
+              </div>
+              <div>
+                <label class="label-text">ปีที่คาดว่าจะเก็บเกี่ยว</label>
+                <select id="harvestYearFilter" class="input-field" onchange="refreshHarvestMatches()" disabled>
+                  <option value="">เลือกปี</option>
+                </select>
+              </div>
+              <div>
+                <label class="label-text">เดือนที่คาดว่าจะเก็บเกี่ยว</label>
+                <select id="harvestMonthFilter" class="input-field" onchange="refreshHarvestMatches()" disabled>
+                  <option value="1">มกราคม</option>
+                  <option value="2">กุมภาพันธ์</option>
+                  <option value="3">มีนาคม</option>
+                  <option value="4">เมษายน</option>
+                  <option value="5">พฤษภาคม</option>
+                  <option value="6">มิถุนายน</option>
+                  <option value="7">กรกฎาคม</option>
+                  <option value="8">สิงหาคม</option>
+                  <option value="9">กันยายน</option>
+                  <option value="10">ตุลาคม</option>
+                  <option value="11">พฤศจิกายน</option>
+                  <option value="12">ธันวาคม</option>
+                </select>
+              </div>
+            </div>
+            <p id="harvestFilterSummary" class="text-sm font-bold text-emerald-800 mt-3"></p>
+         </div>
          
          <h3 class="font-bold text-gray-700 text-base sm:text-lg mt-6 mb-3 sm:mb-4 border-l-4 border-green-500 pl-2">รายชื่อคู่ค้าที่แนะนำ</h3>
          <p class="label-text leading-relaxed"><span class="required-mark">*</span> ระยะทางที่แสดงผลเป็นระยะทางกระจัด ไม่ใช่ระยะทางตามการเดินทางจริง</p>
@@ -257,7 +301,11 @@
   <script src="assets/api-client.js"></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
+    const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
     let currentUser = null;
+    let lastMatchingLat = null;
+    let lastMatchingLng = null;
+    let availableHarvestYears = [];
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, ch => ({
@@ -277,6 +325,100 @@
     function coordinateOr(value, fallback) {
       const n = Number(value);
       return Number.isFinite(n) && String(value).trim() !== '' ? n : fallback;
+    }
+
+    function harvestDateParts(value) {
+      const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return null;
+      const year = Number(match[1]);
+      const month = Number(match[2]);
+      const day = Number(match[3]);
+      const date = new Date(year, month - 1, day);
+      if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+      return { year, month, day };
+    }
+
+    function configureHarvestFilters(farmers) {
+      const panel = document.getElementById('harvestFilterPanel');
+      if (!panel) return;
+      const isBuyer = currentUser?.role === 'buyer';
+      panel.classList.toggle('hidden', !isBuyer);
+      if (!isBuyer) return;
+
+      const yearSelect = document.getElementById('harvestYearFilter');
+      const previousYear = yearSelect.value;
+      availableHarvestYears = [...new Set((farmers || [])
+        .map(f => harvestDateParts(f.harvestDate || f.harvest))
+        .filter(Boolean)
+        .map(parts => parts.year))]
+        .sort((a, b) => a - b);
+
+      yearSelect.innerHTML = '<option value="">เลือกปี</option>' + availableHarvestYears
+        .map(year => `<option value="${year}">พ.ศ. ${year + 543}</option>`)
+        .join('');
+
+      if (availableHarvestYears.includes(Number(previousYear))) {
+        yearSelect.value = previousYear;
+      } else if (availableHarvestYears.length) {
+        const currentYear = new Date().getFullYear();
+        yearSelect.value = String(availableHarvestYears.includes(currentYear) ? currentYear : availableHarvestYears[0]);
+      }
+      updateHarvestFilterControls(false);
+    }
+
+    function updateHarvestFilterControls(shouldRefresh) {
+      const mode = document.getElementById('harvestViewMode')?.value || 'ALL';
+      const yearSelect = document.getElementById('harvestYearFilter');
+      const monthSelect = document.getElementById('harvestMonthFilter');
+      if (!yearSelect || !monthSelect) return;
+      yearSelect.disabled = mode === 'ALL';
+      monthSelect.disabled = mode !== 'MONTH';
+      if (mode !== 'ALL' && !yearSelect.value && availableHarvestYears.length) {
+        yearSelect.value = String(availableHarvestYears[0]);
+      }
+      if (mode === 'MONTH' && !monthSelect.value) {
+        monthSelect.value = String(new Date().getMonth() + 1);
+      }
+      if (shouldRefresh) refreshHarvestMatches();
+    }
+
+    function refreshHarvestMatches() {
+      if (lastMatchingLat != null && lastMatchingLng != null) {
+        loadMatchingData(lastMatchingLat, lastMatchingLng);
+      }
+    }
+
+    function filterFarmersByHarvestPeriod(farmers) {
+      if (currentUser?.role !== 'buyer') return farmers || [];
+      const mode = document.getElementById('harvestViewMode')?.value || 'ALL';
+      if (mode === 'ALL') return farmers || [];
+      const selectedYear = Number(document.getElementById('harvestYearFilter')?.value);
+      const selectedMonth = Number(document.getElementById('harvestMonthFilter')?.value);
+      if (!selectedYear) return [];
+      return (farmers || []).filter(farmer => {
+        const parts = harvestDateParts(farmer.harvestDate || farmer.harvest);
+        if (!parts || parts.year !== selectedYear) return false;
+        return mode === 'YEAR' || parts.month === selectedMonth;
+      });
+    }
+
+    function updateHarvestFilterSummary(count) {
+      const summary = document.getElementById('harvestFilterSummary');
+      if (!summary || currentUser?.role !== 'buyer') return;
+      const mode = document.getElementById('harvestViewMode')?.value || 'ALL';
+      const year = Number(document.getElementById('harvestYearFilter')?.value);
+      const month = Number(document.getElementById('harvestMonthFilter')?.value);
+      let period = 'ทุกช่วงเวลา';
+      if (mode === 'YEAR' && year) period = `ปี พ.ศ. ${year + 543}`;
+      if (mode === 'MONTH' && year && month) period = `${THAI_MONTHS[month - 1]} พ.ศ. ${year + 543}`;
+      summary.textContent = `พบข้อมูลคาดว่าจะเก็บเกี่ยว ${count} แปลง (${period})`;
+    }
+
+    function clearMatchingMarkers() {
+      Object.keys(mapMarkers).filter(key => key.startsWith('m-')).forEach(key => {
+        if (mainMap && mapMarkers[key]) mainMap.removeLayer(mapMarkers[key]);
+        delete mapMarkers[key];
+      });
     }
 
     function toggleOtherMaterial(selectEl) {
@@ -646,6 +788,17 @@
               <label class="label-text">ปริมาณที่รับได้ (ตัน/วัน) <span class="required-mark">*</span></label>
               <input type="text" value="${escapeHtml(b?.capacity??'')}" name="capacity" class="input-field" placeholder="เช่น 50 ตัน">
             </div>
+
+            <div class="md:col-span-2">
+              <label class="label-text">ต้องการรับซื้อภายในกี่วันหลังเก็บเกี่ยว <span class="required-mark">*</span></label>
+              <select name="purchaseAfterHarvestDays" class="input-field">
+                <option value="ALL" ${!b?.purchaseAfterHarvestDays || b.purchaseAfterHarvestDays === 'ALL' || Number(b.purchaseAfterHarvestDays) === 0 ? 'selected' : ''}>ทั้งหมด</option>
+                ${Array.from({length: 15}, (_, index) => index + 1).map(day =>
+                  `<option value="${day}" ${Number(b?.purchaseAfterHarvestDays) === day ? 'selected' : ''}>ภายใน ${day} วันหลังเก็บเกี่ยว</option>`
+                ).join('')}
+              </select>
+              <p class="text-xs text-gray-500 mt-1">เลือก “ทั้งหมด” หรือระบุได้ตั้งแต่ 1–15 วันหลังเก็บเกี่ยว</p>
+            </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:col-span-2">
                 <div>
@@ -837,16 +990,21 @@
 
 
     function loadMatchingData(userLat, userLng) {
+      lastMatchingLat = userLat;
+      lastMatchingLng = userLng;
       google.script.run
         .withSuccessHandler(function(data) {
           const gIcon = new L.Icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34]});
           const rIcon = new L.Icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34]});
           const list = document.getElementById('matchList');
           list.innerHTML = '';
+          clearMatchingMarkers();
           let targets = [];
           let isFarmer = currentUser.role === 'farmer';
+          configureHarvestFilters(data.farmers);
           if(isFarmer) targets = data.buyers;
-          else targets = data.farmers;
+          else targets = filterFarmersByHarvestPeriod(data.farmers);
+          updateHarvestFilterSummary(targets.length);
 
           if(targets.length === 0) list.innerHTML = '<div class="col-span-1 md:col-span-2 text-center text-gray-400 py-8">ยังไม่พบข้อมูลคู่ค้าในระบบขณะนี้</div>';
 
@@ -855,7 +1013,12 @@
             const marker = L.marker([t.lat, t.lng], {icon: icon}).addTo(mainMap);
             let desc = '';
 
-            if(isFarmer) desc = `<b>${escapeHtml(t.name)}</b><br>รับซื้อ: ${escapeHtml(t.material)}<br>ความชื้น: ${escapeHtml(t.quality)}<br>ราคารับซื้อ: ${escapeHtml(t.price)} บ./ไร่`;
+            if(isFarmer) {
+              const purchasePeriod = !t.purchaseAfterHarvestDays || t.purchaseAfterHarvestDays === 'ALL' || Number(t.purchaseAfterHarvestDays) === 0
+                ? 'ทั้งหมด'
+                : `${escapeHtml(t.purchaseAfterHarvestDays)} วันหลังเก็บเกี่ยว`;
+              desc = `<b>${escapeHtml(t.name)}</b><br>รับซื้อ: ${escapeHtml(t.material)}<br>ช่วงเวลารับซื้อ: ${purchasePeriod}<br>ความชื้น: ${escapeHtml(t.quality)}<br>ราคารับซื้อ: ${escapeHtml(t.price)} บ./ไร่`;
+            }
             else desc = `<b>${escapeHtml(t.name)}</b><br>พืช: ${escapeHtml(t.crop)}<br>เศษวัสดุ: ${escapeHtml(t.material || '-')}<br>พื้นที่: ${escapeHtml(t.area)}<br>เก็บเกี่ยว: ${escapeHtml(t.harvest || '-')}`;
 
             const cleanPhone = t.phone.replace(/[^0-9]/g, '');
@@ -1048,6 +1211,7 @@
           const quality = card.querySelector('input[name="quality"]').value;
           const price = card.querySelector('input[name="price"]').value;
           const capacity = card.querySelector('input[name="capacity"]').value;
+          const purchaseAfterHarvestDays = card.querySelector('select[name="purchaseAfterHarvestDays"]').value;
 
           if (!quality || !price || !capacity) {
             return Swal.fire('แจ้งเตือน','กรุณากรอกข้อมูลรับซื้อให้ครบถ้วน','warning');
@@ -1062,6 +1226,9 @@
           payload.quality = quality;
           payload.price = price;
           payload.capacity = capacity;
+          payload.purchaseAfterHarvestDays = purchaseAfterHarvestDays === 'ALL'
+            ? 'ALL'
+            : Number(purchaseAfterHarvestDays);
           // payload.materialId = `${id}`;
         }
         // console.log(payload)

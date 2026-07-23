@@ -25,6 +25,7 @@ class Sheet {
 const headers = {
   users: ['Telephone','Password','Status','Name','System','Consent','Consent_Timestamp','Created_At','Updated_At'],
   farmers: ['ID','Timestamp','Name','Surname','Phone','Crop','Plant_Date','Havest_Date','Area (ไร่-งาน-ตร.ว.)','Lat','Lng','Stasus','Owner_Telephone','Material_Type','Material_Other','Map_Expire_Date','Map_Visible','Updated_At'],
+  // Legacy A:P header: setup must append the new field safely at Q1.
   buyers: ['ID','Timestamp','Name','Surname','Phone','Lat','Lng','Material','Quality','Price','Capacity','Status','Owner_Telephone','Material_Type','Material_Other','Updated_At'],
   Config: ['Parameter','Value','Unit','Description'],
 };
@@ -32,7 +33,7 @@ const headers = {
 const sheets = {
   users: new Sheet([headers.users, ['0812345678','','farmer','ผู้ทดสอบ',false,true,'','','']]),
   farmers: new Sheet([headers.farmers, ['f1',new Date(),'สมชาย','ทดสอบ','0812345678','ข้าวนาปี',new Date('2026-05-01'),new Date('2026-07-15'),'10 ไร่ 0 งาน 0 ตร.ว.',16.48,99.52,'Open','0812345678','ฟางข้าว','','','',new Date()]]),
-  buyers: new Sheet([headers.buyers, ['b1',new Date(),'ผู้ซื้อ','ทดสอบ','0899999999',16.50,99.55,'ฟางข้าว','แห้ง',30,'10','Active','0899999999','ฟางข้าว','',new Date()]]),
+  buyers: new Sheet([headers.buyers, ['b1',new Date(),'ผู้ซื้อ','ทดสอบ','0899999999',16.50,99.55,'ฟางข้าว','แห้ง',30,'10','Active','0899999999','ฟางข้าว','',new Date(),3]]),
   Config: new Sheet([headers.Config, ['visit_count',1,'ครั้ง','จำนวนครั้ง']]),
 };
 
@@ -53,10 +54,12 @@ global.Session = { getScriptTimeZone: () => 'Asia/Bangkok' };
 global.ScriptApp = { getProjectTriggers: () => [], newTrigger: () => ({ timeBased(){return this;}, everyDays(){return this;}, atHour(){return this;}, create(){} }), deleteTrigger(){} };
 
 const code = fs.readFileSync(require('path').join(__dirname, '..', 'apps-script', 'Code.gs'), 'utf8');
-const api = new Function(code + '; return { loginServer, getUserProfileServer, saveDataServer, getMatchingDataServer, verifyDatabaseSchema, testMapExpiryRule };')();
+const api = new Function(code + '; return { loginServer, getUserProfileServer, saveDataServer, getMatchingDataServer, verifyDatabaseSchema, testMapExpiryRule, ensureBuyerHarvestDaysColumn_ };')();
 
 function assert(value, message) { if (!value) throw new Error(message); }
 
+assert(api.ensureBuyerHarvestDaysColumn_().startsWith('PASS'), 'buyers schema migration failed');
+assert(sheets.buyers.rows[0][16] === 'Purchase_After_Harvest_Days', 'buyers Q1 header was not appended');
 assert(api.verifyDatabaseSchema().startsWith('PASS'), 'schema verification failed');
 assert(api.testMapExpiryRule().startsWith('PASS'), 'expiry boundary failed');
 
@@ -78,5 +81,43 @@ assert(newFarmer[12] === '0812345678' && newFarmer[13] === 'เหง้าม�
 
 const matches = api.getMatchingDataServer(session);
 assert(matches.buyers.length === 1 && matches.buyers[0].material === 'ฟางข้าว', 'buyer download mapping failed');
+assert(matches.buyers[0].purchaseAfterHarvestDays === 3, 'buyer harvest-days download mapping failed');
+
+const buyerSession = { phone: '0899999999', role: 'buyer', name: 'ผู้ซื้อ ทดสอบ' };
+const buyerSaved = api.saveDataServer({
+  role:'buyer', id:'b2', fname:'โรงงาน', lname:'ตัวอย่าง', phone:'0899999999',
+  materialType:'ใบอ้อย', materialOther:'', quality:'แห้ง', price:450, capacity:'20 ตัน/วัน',
+  purchaseAfterHarvestDays:15, lat:16.55, lng:99.60
+}, buyerSession);
+assert(buyerSaved.status === 'success', 'buyer upload failed');
+const newBuyer = sheets.buyers.rows.at(-1);
+assert(newBuyer.length === 17 && newBuyer[16] === 15, 'buyer harvest-days column mapping failed');
+const buyerProfile = api.getUserProfileServer(buyerSession);
+assert(buyerProfile.buyers.at(-1).purchaseAfterHarvestDays === 15, 'buyer harvest-days profile mapping failed');
+
+api.saveDataServer({
+  role:'buyer', id:'b3', fname:'ผู้ซื้อเดิม', lname:'ไม่มีค่าใหม่', phone:'0899999999',
+  materialType:'ฟางข้าว', quality:'แห้ง', price:300, capacity:'10 ตัน/วัน', lat:16.51, lng:99.51
+}, buyerSession);
+assert(sheets.buyers.rows.at(-1)[16] === 'ALL', 'legacy/default harvest-days value must be ALL');
+
+api.saveDataServer({
+  role:'buyer', id:'b4', fname:'ผู้ซื้อ', lname:'ทุกช่วงเวลา', phone:'0899999999',
+  materialType:'ฟางข้าว', quality:'แห้ง', price:300, capacity:'10 ตัน/วัน',
+  purchaseAfterHarvestDays:'ALL', lat:16.51, lng:99.51
+}, buyerSession);
+assert(sheets.buyers.rows.at(-1)[16] === 'ALL', 'ALL harvest-days value was not saved');
+sheets.buyers.rows.at(-1)[16] = 0;
+assert(api.getUserProfileServer(buyerSession).buyers.at(-1).purchaseAfterHarvestDays === 'ALL', 'legacy zero value must load as ALL');
+
+let rejected16 = false;
+try {
+  api.saveDataServer({
+    role:'buyer', id:'b5', fname:'ผู้ซื้อ', lname:'เกินกำหนด', phone:'0899999999',
+    materialType:'ฟางข้าว', quality:'แห้ง', price:300, capacity:'10 ตัน/วัน',
+    purchaseAfterHarvestDays:16, lat:16.51, lng:99.51
+  }, buyerSession);
+} catch (err) { rejected16 = true; }
+assert(rejected16, 'harvest-days value 16 must be rejected');
 
 console.log('PASS: GitHub ↔ Sheets upload/download schema mapping');

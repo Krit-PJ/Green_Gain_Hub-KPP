@@ -1,5 +1,5 @@
 /**
- * Green Gain Hub 0.7.1 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 1.0.0 — API-only bridge from GitHub Pages to Google Sheets.
  * Database: Google Sheets / file storage: Google Drive.
  */
 const DEFAULT_SPREADSHEET_ID = '1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA';
@@ -164,15 +164,17 @@ function saveFarmer_(data, session) {
 
 function saveBuyer_(data, session) {
   const sh = sheet_('buyers');
+  ensureBuyerHarvestDaysColumn_();
   const material = validateMaterial_(data.materialType || data.material, data.materialOther);
   const id = cleanText_(data.id, 100) || newId_();
   const now = new Date();
+  const purchaseAfterHarvestDays = purchaseAfterHarvestDays_(data.purchaseAfterHarvestDays);
   const rowValues = [
     id, now, cleanText_(data.fname, 100), cleanText_(data.lname, 100),
     normalizeContactPhone_(data.phone || session.phone), numberInRange_(data.lat, -90, 90, 'ละติจูด'),
     numberInRange_(data.lng, -180, 180, 'ลองจิจูด'), material.resolved,
     cleanText_(data.quality, 100), nonNegative_(data.price, 'ราคา'), cleanText_(data.capacity, 80),
-    'Active', session.phone, material.type, material.other, now
+    'Active', session.phone, material.type, material.other, now, purchaseAfterHarvestDays
   ];
   requireFields_(rowValues, [[2, 'ชื่อ'], [4, 'โทรศัพท์'], [8, 'คุณภาพ'], [10, 'ปริมาณ']]);
   const lock = LockService.getScriptLock();
@@ -183,7 +185,7 @@ function saveBuyer_(data, session) {
     if (occupiedRow && !row) throw new Error('ไม่มีสิทธิ์แก้ไขข้อมูลนี้');
     if (row) {
       rowValues[1] = sh.getRange(row, 2).getValue() || now;
-      sh.getRange(row, 1, 1, 16).setValues([rowValues]);
+      sh.getRange(row, 1, 1, 17).setValues([rowValues]);
     } else {
       sh.appendRow(rowValues);
     }
@@ -212,7 +214,8 @@ function buyerRecords_(phone) {
     return {
       id: text_(r[0]), timestamp: dateTime_(r[1]), fname: text_(r[2]), lname: text_(r[3]), phone: text_(r[4]),
       lat: maybeNumber_(r[5]), lng: maybeNumber_(r[6]), material: text_(r[7]), quality: text_(r[8]), price: maybeNumber_(r[9]), capacity: text_(r[10]),
-      recordStatus: text_(r[11]), materialType: text_(r[13]), materialOther: text_(r[14])
+      recordStatus: text_(r[11]), materialType: text_(r[13]), materialOther: text_(r[14]),
+      purchaseAfterHarvestDays: purchaseAfterHarvestDays_(r[16])
     };
   });
 }
@@ -229,7 +232,8 @@ function buyerPublic_(r) {
   return {
     id: text_(r[0]), name: (text_(r[2]) + ' ' + text_(r[3])).trim(), fname: text_(r[2]), lname: text_(r[3]),
     phone: text_(r[4]), lat: Number(r[5]), lng: Number(r[6]),
-    material: resolvedMaterial_(r[13], r[14], r[7]), quality: text_(r[8]), price: maybeNumber_(r[9]), capacity: text_(r[10])
+    material: resolvedMaterial_(r[13], r[14], r[7]), quality: text_(r[8]), price: maybeNumber_(r[9]), capacity: text_(r[10]),
+    purchaseAfterHarvestDays: purchaseAfterHarvestDays_(r[16])
   };
 }
 
@@ -258,7 +262,7 @@ function verifyDatabaseSchema() {
   const expected = {
     users: ['Telephone','Password','Status','Name','System','Consent','Consent_Timestamp','Created_At','Updated_At'],
     farmers: ['ID','Timestamp','Name','Surname','Phone','Crop','Plant_Date','Havest_Date','Area (ไร่-งาน-ตร.ว.)','Lat','Lng','Stasus','Owner_Telephone','Material_Type','Material_Other','Map_Expire_Date','Map_Visible','Updated_At'],
-    buyers: ['ID','Timestamp','Name','Surname','Phone','Lat','Lng','Material','Quality','Price','Capacity','Status','Owner_Telephone','Material_Type','Material_Other','Updated_At'],
+    buyers: ['ID','Timestamp','Name','Surname','Phone','Lat','Lng','Material','Quality','Price','Capacity','Status','Owner_Telephone','Material_Type','Material_Other','Updated_At','Purchase_After_Harvest_Days'],
     settings: ['Parameter','Value','Unit','Description']
   };
   Object.keys(expected).forEach(function (kind) {
@@ -273,10 +277,23 @@ function verifyDatabaseSchema() {
 
 /** One-time administrator setup after pasting this code into a new project. */
 function setupSystem() {
+  const migration = ensureBuyerHarvestDaysColumn_();
   const schema = verifyDatabaseSchema();
   const expiry = testMapExpiryRule();
   setupDailyTrigger();
-  return schema + '\n' + expiry + '\nPASS: daily trigger installed';
+  return migration + '\n' + schema + '\n' + expiry + '\nPASS: daily trigger installed';
+}
+
+/** Adds the new buyers column without moving or rewriting any existing column. */
+function ensureBuyerHarvestDaysColumn_() {
+  const sh = sheet_('buyers');
+  const cell = sh.getRange(1, 17);
+  const current = String(cell.getValue() || '').trim();
+  if (!current) cell.setValue('Purchase_After_Harvest_Days');
+  if (current && current !== 'Purchase_After_Harvest_Days') {
+    throw new Error('buyers: column Q is already used by ' + current);
+  }
+  return 'PASS: buyers column Q is ready';
 }
 
 /** Run once in the Apps Script editor: day 10 must be true and day 11 false. */
@@ -377,6 +394,19 @@ function sessionTtlSeconds_() {
 function mapExpiryDays_() {
   const days = Number(setting_('MAP_EXPIRY_DAYS', DEFAULT_MAP_EXPIRY_DAYS));
   return isFinite(days) && days >= 0 && days <= 365 ? Math.floor(days) : DEFAULT_MAP_EXPIRY_DAYS;
+}
+
+function purchaseAfterHarvestDays_(value) {
+  // New format: ALL or an integer from 1–15. Legacy 0/blank values become ALL.
+  if (value === '' || value === null || value === undefined || value === 0 || String(value).trim().toUpperCase() === 'ALL') {
+    return 'ALL';
+  }
+  const days = Number(value);
+  const maxDays = 15;
+  if (!isFinite(days) || Math.floor(days) !== days || days < 1 || days > maxDays) {
+    throw new Error('กรุณาเลือกทั้งหมด หรือจำนวนเต็มตั้งแต่ 1 ถึง ' + maxDays + ' วันหลังเก็บเกี่ยว');
+  }
+  return days;
 }
 
 function validateMaterial_(type, other) {

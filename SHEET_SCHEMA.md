@@ -4,6 +4,8 @@
 
 ระบบใช้ข้อมูลจริงในแท็บ `users`, `farmers`, `buyers` โดยไม่อ่านแท็บทดสอบ
 
+ตัวกรองข้อมูลที่คาดว่าจะเก็บเกี่ยวแบบรายปี/รายเดือนของผู้รับซื้อ ใช้ค่า `farmers!H` (`Havest_Date`) ที่มีอยู่แล้ว จึงไม่มีการเพิ่มหรือเลื่อนคอลัมน์ในรุ่น 1.0.0
+
 ## users — A:I
 
 `Telephone, Password, Status, Name, System, Consent, Consent_Timestamp, Created_At, Updated_At`
@@ -24,7 +26,7 @@
 | Q | Map_Visible — สถานะ Open และยังไม่พ้นกำหนด |
 | R | Updated_At |
 
-## buyers — A:P
+## buyers — A:Q
 
 | ช่วง | ข้อมูล |
 |---|---|
@@ -33,5 +35,6 @@
 | N | Material_Type |
 | O | Material_Other |
 | P | Updated_At |
+| Q | Purchase_After_Harvest_Days — ผู้ซื้อเลือก `ALL` (ทั้งหมด) หรือ 1–15 วัน (ข้อมูลเดิมที่ว่าง/0 ใช้ `ALL`) |
 
 Backend ตรวจสิทธิ์ด้วย Owner_Telephone และใช้ Phone เป็น fallback เฉพาะข้อมูลเก่าที่ยังไม่มี Owner_Telephone
