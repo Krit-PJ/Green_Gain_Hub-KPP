@@ -1,8 +1,8 @@
 /**
- * Green Gain Hub 1.2.1 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 1.2.2 — API-only bridge from GitHub Pages to Google Sheets.
  * Database: Google Sheets / file storage: Google Drive.
  */
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.2';
 const DEFAULT_SPREADSHEET_ID = '1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA';
 const DEFAULT_SESSION_TTL_SECONDS = 21600; // 6 hours
 const MATERIAL_TYPES = ['ฟางข้าว', 'ใบอ้อย', 'เหง้ามันสำปะหลัง', 'อื่นๆ'];

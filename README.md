@@ -1,4 +1,4 @@
-# Green Gain Hub 1.2.1 — แก้ข้อมูล Google Sheet ไม่แสดง
+# Green Gain Hub 1.2.2 — เชื่อมต่อ Deployment ที่ใช้งานจริง
 
 รุ่นนี้ปรับความหมายของ “ทั้งหมด” ในเมนู “แผนที่ & คู่ค้า” สำหรับผู้รับซื้อ ให้แสดงข้อมูลเกษตรกรผู้ขายทุกระเบียนที่มีสถานะ `Open` และมีพิกัดละติจูด–ลองจิจูด โดยไม่ใช้วันเก็บเกี่ยว ปี เดือน หรือกฎ 10 วันมาซ่อนข้อมูล
 
@@ -45,10 +45,12 @@ Google Sheet: 1.Green Gain HUB_KPP
    - คืนสถานะ `Expired` ที่เกิดจากกฎเดิมเป็น `Open`
    - ล้างวันหมดอายุเดิมในคอลัมน์ P สำหรับรายการ Open
    - ยกเลิก Trigger เดิมที่เคยเปลี่ยนสถานะตามกฎ 10 วัน
-6. เลือก **Deploy > New deployment > Web app**
-   - Execute as: **Me**
-   - Who has access: **Anyone**
-7. คัดลอก URL ที่ลงท้าย `/exec`
+6. เลือก **ทำให้ใช้งานได้ > จัดการการทำให้ใช้งานได้**
+7. เลือกเว็บแอปเดิมที่มีรหัส `AKfycbwQL...` แล้วกด **แก้ไข** (รูปดินสอ)
+8. ที่ช่อง **เวอร์ชัน** เลือก **เวอร์ชันใหม่**
+   - ดำเนินการในฐานะ: **ฉัน**
+   - ผู้ที่มีสิทธิ์เข้าถึง: **ทุกคน**
+9. กด **ทำให้ใช้งานได้** โดย URL `/exec` ต้องคงเป็น URL เดิม
 
 Apps Script ชุดนี้เป็น API อย่างเดียว การเปิด `/exec` โดยไม่ส่งคำสั่งจะไม่แสดงเว็บไซต์
 
@@ -58,10 +60,10 @@ Apps Script ชุดนี้เป็น API อย่างเดียว �
 
 ```js
 window.GGH_CONFIG = {
-  SHEETS_API_URL: 'https://script.google.com/macros/s/AKfycbxdispDx1h_HQ_6N4-GeKP3l6f8tuo4LdPvao5e8qUuUPIOxae1k-dWn9fVj44FlRnJ/exec',
+  SHEETS_API_URL: 'https://script.google.com/macros/s/AKfycbwQLSoTT71Tsgt2IITpkQKE57qBvYrA9MLSt-Yg6r3-1a2X04mJ0xmqMHEK-tcV2iPe/exec',
   SPREADSHEET_ID: '1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA',
   REQUEST_TIMEOUT_MS: 30000,
-  BUILD_VERSION: '1.2.1'
+  BUILD_VERSION: '1.2.2'
 };
 ```
 
@@ -78,7 +80,7 @@ URL หน้าเว็บจะคงเดิมในรูป `https://USE
 
 หลังวาง `Code.gs` ให้เลือก **Deploy > Manage deployments > Edit > New version** กับ Deployment เดิม เพื่อให้ API URL ต่อไปนี้คงเดิม:
 
-`https://script.google.com/macros/s/AKfycbxdispDx1h_HQ_6N4-GeKP3l6f8tuo4LdPvao5e8qUuUPIOxae1k-dWn9fVj44FlRnJ/exec`
+`https://script.google.com/macros/s/AKfycbwQLSoTT71Tsgt2IITpkQKE57qBvYrA9MLSt-Yg6r3-1a2X04mJ0xmqMHEK-tcV2iPe/exec`
 
 ## 4. โครงสร้างที่คงไว้
 
@@ -100,7 +102,8 @@ URL หน้าเว็บจะคงเดิมในรูป `https://USE
 
 - `setupSystem()` แสดง PASS ครบ
 - Run `verifyLiveMatchingData()` และตรวจว่าจำนวนที่รายงานตรงกับแถว `Open` ที่มีพิกัด
-- หาก Frontend แจ้ง “Backend ยังไม่ใช่เวอร์ชัน 1.2.1” ต้อง Deploy Apps Script แบบ New version ก่อน
+- เปิด API ตรวจสอบแล้วต้องแสดง `apiVersion: "1.2.2"`
+- หาก Frontend แจ้ง “Backend ยังไม่ใช่เวอร์ชัน 1.2.2” ต้อง Deploy Apps Script แบบ New version ก่อน
 - ตรวจว่า `SHEETS_API_URL` ใน `config.js` ตรงกับ Deployment URL ด้านบน
 - ทดสอบลงทะเบียนด้วยหมายเลขใหม่หนึ่งรายการ
 - ทดสอบ Upload ข้อมูล Farmer และ Buyer

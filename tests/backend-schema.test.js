@@ -79,8 +79,8 @@ const newFarmer = sheets.farmers.rows.at(-1);
 assert(newFarmer[12] === '0812345678' && newFarmer[13] === 'เหง้ามันสำปะหลัง' && newFarmer.length === 18, 'farmer column mapping failed');
 
 const matches = api.getMatchingDataServer(session);
-assert(matches.apiVersion === '1.2.1', 'matching API version is missing or stale');
-assert(api.getApiInfoServer().apiVersion === '1.2.1', 'public API version check failed');
+assert(matches.apiVersion === '1.2.2', 'matching API version is missing or stale');
+assert(api.getApiInfoServer().apiVersion === '1.2.2', 'public API version check failed');
 assert(matches.buyers.length === 1 && matches.buyers[0].material === 'ฟางข้าว', 'buyer download mapping failed');
 assert(matches.buyers[0].purchaseAfterHarvestDays === 3, 'buyer harvest-days download mapping failed');
 
