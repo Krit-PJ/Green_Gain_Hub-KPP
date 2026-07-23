@@ -54,14 +54,13 @@ global.Session = { getScriptTimeZone: () => 'Asia/Bangkok' };
 global.ScriptApp = { getProjectTriggers: () => [], newTrigger: () => ({ timeBased(){return this;}, everyDays(){return this;}, atHour(){return this;}, create(){} }), deleteTrigger(){} };
 
 const code = fs.readFileSync(require('path').join(__dirname, '..', 'apps-script', 'Code.gs'), 'utf8');
-const api = new Function(code + '; return { loginServer, getUserProfileServer, saveDataServer, getMatchingDataServer, verifyDatabaseSchema, testMapExpiryRule, ensureBuyerHarvestDaysColumn_ };')();
+const api = new Function(code + '; return { loginServer, getUserProfileServer, saveDataServer, getMatchingDataServer, verifyDatabaseSchema, ensureBuyerHarvestDaysColumn_, restoreLegacyExpiredFarmers_, setupDailyTrigger, autoExpireFarmers };')();
 
 function assert(value, message) { if (!value) throw new Error(message); }
 
 assert(api.ensureBuyerHarvestDaysColumn_().startsWith('PASS'), 'buyers schema migration failed');
 assert(sheets.buyers.rows[0][16] === 'Purchase_After_Harvest_Days', 'buyers Q1 header was not appended');
 assert(api.verifyDatabaseSchema().startsWith('PASS'), 'schema verification failed');
-assert(api.testMapExpiryRule().startsWith('PASS'), 'expiry boundary failed');
 
 const login = api.loginServer({ username: '0812345678' });
 assert(login.status === 'success' && login.role === 'farmer', 'login mapping failed');
@@ -82,6 +81,27 @@ assert(newFarmer[12] === '0812345678' && newFarmer[13] === 'เหง้าม�
 const matches = api.getMatchingDataServer(session);
 assert(matches.buyers.length === 1 && matches.buyers[0].material === 'ฟางข้าว', 'buyer download mapping failed');
 assert(matches.buyers[0].purchaseAfterHarvestDays === 3, 'buyer harvest-days download mapping failed');
+
+// ALL must include old and future harvest dates when status is Open and coordinates exist.
+sheets.farmers.rows.push(
+  ['f-old',new Date(),'เกษตรกร','วันเก่า','0811111111','ข้าว',new Date('2024-01-01'),new Date('2024-06-01'),'2 ไร่',16.41,99.41,'Open','0811111111','ฟางข้าว','','','',''],
+  ['f-no-coord',new Date(),'เกษตรกร','ไม่มีพิกัด','0822222222','ข้าว',new Date('2024-01-01'),new Date('2024-06-01'),'2 ไร่','','','Open','0822222222','ฟางข้าว','','','',''],
+  ['f-deleted',new Date(),'เกษตรกร','ลบแล้ว','0833333333','ข้าว',new Date('2024-01-01'),new Date('2024-06-01'),'2 ไร่',16.43,99.43,'Deleted','0833333333','ฟางข้าว','','','','']
+);
+const allMatches = api.getMatchingDataServer(session);
+assert(allMatches.farmers.some(f => f.id === 'f-old'), 'old harvest date must remain visible when Open with coordinates');
+assert(!allMatches.farmers.some(f => f.id === 'f-no-coord'), 'farmer without coordinates must remain hidden');
+assert(!allMatches.farmers.some(f => f.id === 'f-deleted'), 'non-Open farmer must remain hidden');
+
+// setup migration restores only legacy Expired rows and never recreates the expiry trigger.
+sheets.farmers.rows.push(
+  ['f-expired',new Date(),'เกษตรกร','หมดอายุเดิม','0844444444','ข้าว',new Date('2024-01-01'),new Date('2024-06-01'),'2 ไร่',16.44,99.44,'Expired','0844444444','ฟางข้าว','','2024-06-11',false,'']
+);
+assert(api.restoreLegacyExpiredFarmers_().startsWith('PASS: restored 1'), 'legacy Expired row was not restored');
+assert(sheets.farmers.rows.at(-1)[11] === 'Open', 'legacy Expired status must become Open');
+assert(sheets.farmers.rows.at(-1)[15] === '', 'legacy expiry date must be cleared');
+assert(api.setupDailyTrigger().includes('removed'), 'legacy trigger cleanup failed');
+assert(api.autoExpireFarmers().includes('disabled'), 'legacy expiry entry point must not mutate records');
 
 const buyerSession = { phone: '0899999999', role: 'buyer', name: 'ผู้ซื้อ ทดสอบ' };
 const buyerSaved = api.saveDataServer({

@@ -231,35 +231,28 @@
          
          <div class="bg-white p-3 md:p-4 rounded-lg shadow mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs md:text-sm font-bold text-gray-600">
             <span class="flex items-center gap-2"><i class="fa-solid fa-location-dot text-green-500 text-lg md:text-xl"></i> เกษตรกร</span>
-            <span class="flex items-center gap-2"><i class="fa-solid fa-location-dot text-red-500 text-lg md:text-xl"></i> สถานที่รับซื้อ</span>
+            <span class="flex items-center gap-2"><i class="fa-solid fa-location-dot text-blue-500 text-lg md:text-xl"></i> ผู้รับซื้อ</span>
          </div>
 
          <div id="harvestFilterPanel" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-3 sm:p-4 mt-4">
             <div class="flex items-start gap-2 mb-3">
               <i class="fa-solid fa-calendar-days text-emerald-700 mt-1"></i>
               <div>
-                <h3 class="font-bold text-emerald-900">เลือกข้อมูลที่คาดว่าจะเก็บเกี่ยว</h3>
-                <p class="text-xs text-emerald-700">สำหรับผู้รับซื้อ: เลือกดูทุกช่วงเวลา แยกตามปี หรือแยกตามเดือน</p>
+                <h3 class="font-bold text-emerald-900">ช่วงเวลาเก็บเกี่ยวผลผลิต</h3>
+                <p class="text-xs text-emerald-700">สำหรับผู้รับซื้อ: ข้อมูลที่แสดงบนแผนที่เป็นข้อมูลของเกษตรกร (ผู้ขาย)</p>
+                <p class="text-xs text-emerald-800 font-medium mt-1">เมื่อเลือก “ทั้งหมด” ระบบจะแสดงเกษตรกรสถานะ Open ที่มีพิกัดทั้งหมด โดยไม่กรองวันเก็บเกี่ยว ปี หรือเดือน</p>
               </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label class="label-text">รูปแบบข้อมูล</label>
-                <select id="harvestViewMode" class="input-field" onchange="updateHarvestFilterControls(true)">
-                  <option value="ALL">ทั้งหมด</option>
-                  <option value="YEAR">รายปี</option>
-                  <option value="MONTH">รายเดือน</option>
-                </select>
-              </div>
-              <div>
                 <label class="label-text">ปีที่คาดว่าจะเก็บเกี่ยว</label>
-                <select id="harvestYearFilter" class="input-field" onchange="refreshHarvestMatches()" disabled>
-                  <option value="">เลือกปี</option>
+                <select id="harvestPeriodFilter" class="input-field" onchange="updateHarvestFilterControls(true)">
+                  <option value="ALL">ทั้งหมด</option>
                 </select>
               </div>
-              <div>
-                <label class="label-text">เดือนที่คาดว่าจะเก็บเกี่ยว</label>
-                <select id="harvestMonthFilter" class="input-field" onchange="refreshHarvestMatches()" disabled>
+              <div id="harvestMonthFromGroup" class="hidden">
+                <label class="label-text">ตั้งแต่เดือน</label>
+                <select id="harvestMonthFrom" class="input-field" onchange="updateHarvestMonthRange('from')">
                   <option value="1">มกราคม</option>
                   <option value="2">กุมภาพันธ์</option>
                   <option value="3">มีนาคม</option>
@@ -272,6 +265,23 @@
                   <option value="10">ตุลาคม</option>
                   <option value="11">พฤศจิกายน</option>
                   <option value="12">ธันวาคม</option>
+                </select>
+              </div>
+              <div id="harvestMonthToGroup" class="hidden">
+                <label class="label-text">ถึงเดือน</label>
+                <select id="harvestMonthTo" class="input-field" onchange="updateHarvestMonthRange('to')">
+                  <option value="1">มกราคม</option>
+                  <option value="2">กุมภาพันธ์</option>
+                  <option value="3">มีนาคม</option>
+                  <option value="4">เมษายน</option>
+                  <option value="5">พฤษภาคม</option>
+                  <option value="6">มิถุนายน</option>
+                  <option value="7">กรกฎาคม</option>
+                  <option value="8">สิงหาคม</option>
+                  <option value="9">กันยายน</option>
+                  <option value="10">ตุลาคม</option>
+                  <option value="11">พฤศจิกายน</option>
+                  <option value="12" selected>ธันวาคม</option>
                 </select>
               </div>
             </div>
@@ -327,6 +337,18 @@
       return Number.isFinite(n) && String(value).trim() !== '' ? n : fallback;
     }
 
+    function getRoleMarkerIcon(role) {
+      const color = role === 'buyer' ? 'blue' : 'green';
+      return new L.Icon({
+        iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+    }
+
     function harvestDateParts(value) {
       const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (!match) return null;
@@ -345,41 +367,46 @@
       panel.classList.toggle('hidden', !isBuyer);
       if (!isBuyer) return;
 
-      const yearSelect = document.getElementById('harvestYearFilter');
-      const previousYear = yearSelect.value;
-      availableHarvestYears = [...new Set((farmers || [])
+      const periodSelect = document.getElementById('harvestPeriodFilter');
+      const previousPeriod = periodSelect.value;
+      const currentYear = new Date().getFullYear();
+      const dataYears = [...new Set((farmers || [])
         .map(f => harvestDateParts(f.harvestDate || f.harvest))
         .filter(Boolean)
         .map(parts => parts.year))]
-        .sort((a, b) => a - b);
+        .filter(year => year !== currentYear)
+        .sort((a, b) => b - a);
+      availableHarvestYears = [currentYear, ...dataYears];
 
-      yearSelect.innerHTML = '<option value="">เลือกปี</option>' + availableHarvestYears
-        .map(year => `<option value="${year}">พ.ศ. ${year + 543}</option>`)
+      periodSelect.innerHTML = '<option value="ALL">ทั้งหมด</option>' + availableHarvestYears
+        .map(year => `<option value="${year}">พ.ศ. ${year + 543}${year === currentYear ? ' (ปีปัจจุบัน)' : ''}</option>`)
         .join('');
 
-      if (availableHarvestYears.includes(Number(previousYear))) {
-        yearSelect.value = previousYear;
-      } else if (availableHarvestYears.length) {
-        const currentYear = new Date().getFullYear();
-        yearSelect.value = String(availableHarvestYears.includes(currentYear) ? currentYear : availableHarvestYears[0]);
-      }
+      periodSelect.value = previousPeriod === 'ALL' || availableHarvestYears.includes(Number(previousPeriod))
+        ? previousPeriod
+        : 'ALL';
       updateHarvestFilterControls(false);
     }
 
     function updateHarvestFilterControls(shouldRefresh) {
-      const mode = document.getElementById('harvestViewMode')?.value || 'ALL';
-      const yearSelect = document.getElementById('harvestYearFilter');
-      const monthSelect = document.getElementById('harvestMonthFilter');
-      if (!yearSelect || !monthSelect) return;
-      yearSelect.disabled = mode === 'ALL';
-      monthSelect.disabled = mode !== 'MONTH';
-      if (mode !== 'ALL' && !yearSelect.value && availableHarvestYears.length) {
-        yearSelect.value = String(availableHarvestYears[0]);
-      }
-      if (mode === 'MONTH' && !monthSelect.value) {
-        monthSelect.value = String(new Date().getMonth() + 1);
-      }
+      const period = document.getElementById('harvestPeriodFilter')?.value || 'ALL';
+      const monthFromGroup = document.getElementById('harvestMonthFromGroup');
+      const monthToGroup = document.getElementById('harvestMonthToGroup');
+      const showMonths = period !== 'ALL';
+      monthFromGroup?.classList.toggle('hidden', !showMonths);
+      monthToGroup?.classList.toggle('hidden', !showMonths);
       if (shouldRefresh) refreshHarvestMatches();
+    }
+
+    function updateHarvestMonthRange(changedField) {
+      const monthFrom = document.getElementById('harvestMonthFrom');
+      const monthTo = document.getElementById('harvestMonthTo');
+      if (!monthFrom || !monthTo) return;
+      if (Number(monthFrom.value) > Number(monthTo.value)) {
+        if (changedField === 'from') monthTo.value = monthFrom.value;
+        else monthFrom.value = monthTo.value;
+      }
+      refreshHarvestMatches();
     }
 
     function refreshHarvestMatches() {
@@ -390,28 +417,34 @@
 
     function filterFarmersByHarvestPeriod(farmers) {
       if (currentUser?.role !== 'buyer') return farmers || [];
-      const mode = document.getElementById('harvestViewMode')?.value || 'ALL';
-      if (mode === 'ALL') return farmers || [];
-      const selectedYear = Number(document.getElementById('harvestYearFilter')?.value);
-      const selectedMonth = Number(document.getElementById('harvestMonthFilter')?.value);
+      const period = document.getElementById('harvestPeriodFilter')?.value || 'ALL';
+      if (period === 'ALL') return farmers || [];
+      const selectedYear = Number(period);
+      const monthFrom = Number(document.getElementById('harvestMonthFrom')?.value);
+      const monthTo = Number(document.getElementById('harvestMonthTo')?.value);
       if (!selectedYear) return [];
       return (farmers || []).filter(farmer => {
         const parts = harvestDateParts(farmer.harvestDate || farmer.harvest);
         if (!parts || parts.year !== selectedYear) return false;
-        return mode === 'YEAR' || parts.month === selectedMonth;
+        return parts.month >= monthFrom && parts.month <= monthTo;
       });
     }
 
     function updateHarvestFilterSummary(count) {
       const summary = document.getElementById('harvestFilterSummary');
       if (!summary || currentUser?.role !== 'buyer') return;
-      const mode = document.getElementById('harvestViewMode')?.value || 'ALL';
-      const year = Number(document.getElementById('harvestYearFilter')?.value);
-      const month = Number(document.getElementById('harvestMonthFilter')?.value);
-      let period = 'ทุกช่วงเวลา';
-      if (mode === 'YEAR' && year) period = `ปี พ.ศ. ${year + 543}`;
-      if (mode === 'MONTH' && year && month) period = `${THAI_MONTHS[month - 1]} พ.ศ. ${year + 543}`;
-      summary.textContent = `พบข้อมูลคาดว่าจะเก็บเกี่ยว ${count} แปลง (${period})`;
+      const periodValue = document.getElementById('harvestPeriodFilter')?.value || 'ALL';
+      const year = Number(periodValue);
+      const monthFrom = Number(document.getElementById('harvestMonthFrom')?.value);
+      const monthTo = Number(document.getElementById('harvestMonthTo')?.value);
+      let period = 'ทั้งหมด: สถานะ Open และมีพิกัด';
+      if (year) {
+        const months = monthFrom === monthTo
+          ? THAI_MONTHS[monthFrom - 1]
+          : `${THAI_MONTHS[monthFrom - 1]}–${THAI_MONTHS[monthTo - 1]}`;
+        period = `${months} พ.ศ. ${year + 543}`;
+      }
+      summary.textContent = `พบข้อมูลเกษตรกรที่คาดว่าจะเก็บเกี่ยว ${count} แปลง (${period})`;
     }
 
     function clearMatchingMarkers() {
@@ -727,7 +760,7 @@
 
         <div class="mt-5 sm:mt-6 border-t pt-5 sm:pt-6">
           <label class="label-text font-bold">พิกัดแปลง / สถานที่รับซื้อ <span class="required-mark">*</span></label>
-          <p class="text-xs text-gray-500 mb-3">กดดึงพิกัดปัจจุบัน หรือเลื่อนหมุดสีน้ำเงินบนแผนที่ให้ตรงกับสถานที่ของท่าน</p>
+          <p class="text-xs text-gray-500 mb-3">กดดึงพิกัดปัจจุบัน หรือเลื่อนหมุดสีเขียวบนแผนที่ให้ตรงกับสถานที่ของท่าน</p>
           
           <button type="button" onclick="getGPS('miniMap-${index}')" class="w-full md:w-auto bg-indigo-100 text-indigo-700 py-3 px-6 rounded-lg font-bold mb-4 flex items-center justify-center gap-2 hover:bg-indigo-200 transition">
             <i class="fa-solid fa-location-crosshairs"></i> ดึง GPS ปัจจุบัน
@@ -942,7 +975,10 @@
       document.getElementById('lng-'+ id).value = Number(lng).toFixed(6);
       if(miniMarkers[mapId]) miniMaps[mapId].removeLayer(miniMarkers[mapId]);
 
-      const marker = L.marker([lat, lng], { draggable: true }).addTo(miniMaps[mapId]);
+      const marker = L.marker([lat, lng], {
+        draggable: true,
+        icon: getRoleMarkerIcon(currentUser?.role)
+      }).addTo(miniMaps[mapId]);
       miniMarkers[mapId] = marker;
 
 
@@ -974,9 +1010,7 @@
           mainMap.removeLayer(mapMarkers['user']);
         }
 
-        const gIcon = new L.Icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34]});
-        const rIcon = new L.Icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34]});
-        const icon = currentUser.role == 'farmer' ? gIcon : rIcon;
+        const icon = getRoleMarkerIcon(currentUser.role);
 
         mapMarkers['user'] = L.marker([lat, lng], {icon: icon}).addTo(mainMap).bindPopup('📍 ตำแหน่งของคุณ');
         mainMap.setView([lat, lng], 9);
@@ -994,8 +1028,6 @@
       lastMatchingLng = userLng;
       google.script.run
         .withSuccessHandler(function(data) {
-          const gIcon = new L.Icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34]});
-          const rIcon = new L.Icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34]});
           const list = document.getElementById('matchList');
           list.innerHTML = '';
           clearMatchingMarkers();
@@ -1009,7 +1041,7 @@
           if(targets.length === 0) list.innerHTML = '<div class="col-span-1 md:col-span-2 text-center text-gray-400 py-8">ยังไม่พบข้อมูลคู่ค้าในระบบขณะนี้</div>';
 
           const cards = targets.map((t, index) => {
-            const icon = isFarmer ? rIcon : gIcon;
+            const icon = getRoleMarkerIcon(isFarmer ? 'buyer' : 'farmer');
             const marker = L.marker([t.lat, t.lng], {icon: icon}).addTo(mainMap);
             let desc = '';
 

@@ -1,10 +1,9 @@
 /**
- * Green Gain Hub 1.0.0 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 1.2.0 — API-only bridge from GitHub Pages to Google Sheets.
  * Database: Google Sheets / file storage: Google Drive.
  */
 const DEFAULT_SPREADSHEET_ID = '1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA';
 const DEFAULT_SESSION_TTL_SECONDS = 21600; // 6 hours
-const DEFAULT_MAP_EXPIRY_DAYS = 10;
 const MATERIAL_TYPES = ['ฟางข้าว', 'ใบอ้อย', 'เหง้ามันสำปะหลัง', 'อื่นๆ'];
 const PUBLIC_METHODS = ['loginServer', 'registerServer'];
 const PRIVATE_METHODS = ['getUserProfileServer', 'saveDataServer', 'deleteDataServer', 'getMatchingDataServer'];
@@ -117,8 +116,10 @@ function deleteDataServer(input, session) {
 
 function getMatchingDataServer(session) {
   // session is intentionally required even though matching data is shared.
+  // "ALL" on the buyer screen must receive every Open farmer with coordinates.
+  // Harvest date, year, month and the former 10-day expiry rule are not applied here.
   const farmers = dataRows_(sheet_('farmers')).filter(function (r) {
-    return String(r[11]).trim() === 'Open' && isMapVisible_(r[7], r[11], new Date()) && hasCoordinates_(r[9], r[10]);
+    return String(r[11]).trim() === 'Open' && hasCoordinates_(r[9], r[10]);
   }).map(farmerPublic_);
   const buyers = dataRows_(sheet_('buyers')).filter(function (r) {
     return String(r[11]).trim() === 'Active' && hasCoordinates_(r[5], r[6]);
@@ -237,24 +238,17 @@ function buyerPublic_(r) {
   };
 }
 
-/** Marks old Open records Expired. Install with setupDailyTrigger(). */
+/** Legacy compatibility entry point. Farmer records no longer expire by harvest date. */
 function autoExpireFarmers() {
-  const sh = sheet_('farmers');
-  const rows = dataRows_(sh);
-  const now = new Date();
-  rows.forEach(function (r, i) {
-    if (String(r[11]) === 'Open' && !isMapVisible_(r[7], r[11], now)) {
-      sh.getRange(i + 2, 12).setValue('Expired');
-      sh.getRange(i + 2, 18).setValue(now);
-    }
-  });
+  return 'SKIPPED: harvest-date expiry is disabled';
 }
 
+/** Removes every legacy trigger so old deployments cannot expire records later. */
 function setupDailyTrigger() {
   ScriptApp.getProjectTriggers().filter(function (t) {
     return t.getHandlerFunction() === 'autoExpireFarmers';
   }).forEach(function (t) { ScriptApp.deleteTrigger(t); });
-  ScriptApp.newTrigger('autoExpireFarmers').timeBased().everyDays(1).atHour(1).create();
+  return 'PASS: legacy expiry trigger removed';
 }
 
 /** Run before deployment to verify the new database and required columns. */
@@ -279,9 +273,9 @@ function verifyDatabaseSchema() {
 function setupSystem() {
   const migration = ensureBuyerHarvestDaysColumn_();
   const schema = verifyDatabaseSchema();
-  const expiry = testMapExpiryRule();
-  setupDailyTrigger();
-  return migration + '\n' + schema + '\n' + expiry + '\nPASS: daily trigger installed';
+  const restored = restoreLegacyExpiredFarmers_();
+  const trigger = setupDailyTrigger();
+  return migration + '\n' + schema + '\n' + restored + '\n' + trigger;
 }
 
 /** Adds the new buyers column without moving or rewriting any existing column. */
@@ -296,27 +290,35 @@ function ensureBuyerHarvestDaysColumn_() {
   return 'PASS: buyers column Q is ready';
 }
 
-/** Run once in the Apps Script editor: day 10 must be true and day 11 false. */
-function testMapExpiryRule() {
-  const harvest = new Date(2026, 0, 1);
-  const day10 = new Date(2026, 0, 11, 23, 59, 59);
-  const day11 = new Date(2026, 0, 12, 0, 0, 0);
-  if (!isMapVisible_(harvest, 'Open', day10)) throw new Error('Day 10 should be visible');
-  if (isMapVisible_(harvest, 'Open', day11)) throw new Error('Day 11 should be hidden');
-  return 'PASS: visible through day 10; hidden from day 11';
-}
-
-function isMapVisible_(harvestValue, status, now) {
-  if (String(status).trim() !== 'Open') return false;
-  const harvest = toDate_(harvestValue);
-  if (!harvest) return true;
-  const expireExclusive = new Date(harvest.getFullYear(), harvest.getMonth(), harvest.getDate() + mapExpiryDays_() + 1, 0, 0, 0, 0);
-  return now.getTime() < expireExclusive.getTime();
+/**
+ * Restores rows marked Expired by versions that enforced harvest date +10 days.
+ * Deleted rows and every other status are preserved.
+ */
+function restoreLegacyExpiredFarmers_() {
+  const sh = sheet_('farmers');
+  const rows = dataRows_(sh);
+  let restored = 0;
+  rows.forEach(function (r, i) {
+    const row = i + 2;
+    let status = String(r[11]).trim();
+    if (status === 'Expired') {
+      sh.getRange(row, 12).setValue('Open');
+      sh.getRange(row, 18).setValue(new Date());
+      status = 'Open';
+      restored++;
+    }
+    if (status === 'Open') {
+      sh.getRange(row, 16).setValue('');
+      sh.getRange(row, 17).setFormula('=L' + row + '="Open"');
+    }
+  });
+  return 'PASS: restored ' + restored + ' legacy Expired farmer record(s) to Open';
 }
 
 function setFarmerFormulas_(sh, row) {
-  sh.getRange(row, 16).setFormula('=IF(H' + row + '="","",H' + row + '+10)');
-  sh.getRange(row, 17).setFormula('=IF(L' + row + '<>"Open",FALSE,IF(H' + row + '="",TRUE,TODAY()<=P' + row + '))');
+  // Keep the existing P/Q columns for schema compatibility, but do not expire by harvest date.
+  sh.getRange(row, 16).setValue('');
+  sh.getRange(row, 17).setFormula('=L' + row + '="Open"');
 }
 
 function spreadsheet_() {
@@ -389,11 +391,6 @@ function setting_(key, fallback) {
 function sessionTtlSeconds_() {
   const seconds = Number(setting_('SESSION_TTL_SECONDS', DEFAULT_SESSION_TTL_SECONDS));
   return isFinite(seconds) && seconds >= 300 && seconds <= 21600 ? Math.floor(seconds) : DEFAULT_SESSION_TTL_SECONDS;
-}
-
-function mapExpiryDays_() {
-  const days = Number(setting_('MAP_EXPIRY_DAYS', DEFAULT_MAP_EXPIRY_DAYS));
-  return isFinite(days) && days >= 0 && days <= 365 ? Math.floor(days) : DEFAULT_MAP_EXPIRY_DAYS;
 }
 
 function purchaseAfterHarvestDays_(value) {
