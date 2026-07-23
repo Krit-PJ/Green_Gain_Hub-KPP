@@ -54,7 +54,7 @@ global.Session = { getScriptTimeZone: () => 'Asia/Bangkok' };
 global.ScriptApp = { getProjectTriggers: () => [], newTrigger: () => ({ timeBased(){return this;}, everyDays(){return this;}, atHour(){return this;}, create(){} }), deleteTrigger(){} };
 
 const code = fs.readFileSync(require('path').join(__dirname, '..', 'apps-script', 'Code.gs'), 'utf8');
-const api = new Function(code + '; return { loginServer, getUserProfileServer, saveDataServer, getMatchingDataServer, verifyDatabaseSchema, ensureBuyerHarvestDaysColumn_, restoreLegacyExpiredFarmers_, setupDailyTrigger, autoExpireFarmers };')();
+const api = new Function(code + '; return { loginServer, getApiInfoServer, getUserProfileServer, saveDataServer, getMatchingDataServer, verifyDatabaseSchema, verifyLiveMatchingData, ensureBuyerHarvestDaysColumn_, restoreLegacyExpiredFarmers_, setupDailyTrigger, autoExpireFarmers };')();
 
 function assert(value, message) { if (!value) throw new Error(message); }
 
@@ -79,6 +79,8 @@ const newFarmer = sheets.farmers.rows.at(-1);
 assert(newFarmer[12] === '0812345678' && newFarmer[13] === 'เหง้ามันสำปะหลัง' && newFarmer.length === 18, 'farmer column mapping failed');
 
 const matches = api.getMatchingDataServer(session);
+assert(matches.apiVersion === '1.2.1', 'matching API version is missing or stale');
+assert(api.getApiInfoServer().apiVersion === '1.2.1', 'public API version check failed');
 assert(matches.buyers.length === 1 && matches.buyers[0].material === 'ฟางข้าว', 'buyer download mapping failed');
 assert(matches.buyers[0].purchaseAfterHarvestDays === 3, 'buyer harvest-days download mapping failed');
 
@@ -92,6 +94,7 @@ const allMatches = api.getMatchingDataServer(session);
 assert(allMatches.farmers.some(f => f.id === 'f-old'), 'old harvest date must remain visible when Open with coordinates');
 assert(!allMatches.farmers.some(f => f.id === 'f-no-coord'), 'farmer without coordinates must remain hidden');
 assert(!allMatches.farmers.some(f => f.id === 'f-deleted'), 'non-Open farmer must remain hidden');
+assert(api.verifyLiveMatchingData().includes('harvest expiry and Map_Visible are ignored'), 'live matching verification failed');
 
 // setup migration restores only legacy Expired rows and never recreates the expiry trigger.
 sheets.farmers.rows.push(

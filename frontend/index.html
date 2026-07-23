@@ -312,6 +312,7 @@
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    const EXPECTED_API_VERSION = String(window.GGH_CONFIG?.BUILD_VERSION || '1.2.1');
     let currentUser = null;
     let lastMatchingLat = null;
     let lastMatchingLng = null;
@@ -445,6 +446,16 @@
         period = `${months} พ.ศ. ${year + 543}`;
       }
       summary.textContent = `พบข้อมูลเกษตรกรที่คาดว่าจะเก็บเกี่ยว ${count} แปลง (${period})`;
+    }
+
+    function matchingApiCompatibilityError(data) {
+      if (!data || !Array.isArray(data.farmers) || !Array.isArray(data.buyers)) {
+        return 'Backend ส่งข้อมูลไม่ครบ กรุณา Deploy Apps Script ชุดล่าสุด';
+      }
+      if (String(data.apiVersion || '') !== EXPECTED_API_VERSION) {
+        return `Backend ยังไม่ใช่เวอร์ชัน ${EXPECTED_API_VERSION} กรุณา Deploy Apps Script เป็น New version`;
+      }
+      return '';
     }
 
     function clearMatchingMarkers() {
@@ -1031,6 +1042,12 @@
           const list = document.getElementById('matchList');
           list.innerHTML = '';
           clearMatchingMarkers();
+          const compatibilityError = matchingApiCompatibilityError(data);
+          if (compatibilityError) {
+            list.innerHTML = `<div class="col-span-1 md:col-span-2 text-center text-red-700 bg-red-50 border border-red-200 rounded-xl p-4">${escapeHtml(compatibilityError)}</div>`;
+            Swal.fire('ต้องอัปเดต Backend', compatibilityError, 'warning');
+            return;
+          }
           let targets = [];
           let isFarmer = currentUser.role === 'farmer';
           configureHarvestFilters(data.farmers);

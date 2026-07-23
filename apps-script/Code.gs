@@ -1,11 +1,12 @@
 /**
- * Green Gain Hub 1.2.0 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 1.2.1 — API-only bridge from GitHub Pages to Google Sheets.
  * Database: Google Sheets / file storage: Google Drive.
  */
+const APP_VERSION = '1.2.1';
 const DEFAULT_SPREADSHEET_ID = '1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA';
 const DEFAULT_SESSION_TTL_SECONDS = 21600; // 6 hours
 const MATERIAL_TYPES = ['ฟางข้าว', 'ใบอ้อย', 'เหง้ามันสำปะหลัง', 'อื่นๆ'];
-const PUBLIC_METHODS = ['loginServer', 'registerServer'];
+const PUBLIC_METHODS = ['loginServer', 'registerServer', 'getApiInfoServer'];
 const PRIVATE_METHODS = ['getUserProfileServer', 'saveDataServer', 'deleteDataServer', 'getMatchingDataServer'];
 
 /** JSONP endpoint used by the static GitHub Pages frontend. */
@@ -36,10 +37,21 @@ function apiMethods_() {
   return {
     loginServer: function (args) { return loginServer(args[0]); },
     registerServer: function (args) { return registerServer(args[0]); },
+    getApiInfoServer: function () { return getApiInfoServer(); },
     getUserProfileServer: function (args, session) { return getUserProfileServer(session); },
     saveDataServer: function (args, session) { return saveDataServer(args[0], session); },
     deleteDataServer: function (args, session) { return deleteDataServer(args[0], session); },
     getMatchingDataServer: function (args, session) { return getMatchingDataServer(session); }
+  };
+}
+
+/** Public, non-sensitive deployment check used to detect a stale Apps Script version. */
+function getApiInfoServer() {
+  return {
+    status: 'success',
+    success: true,
+    apiVersion: APP_VERSION,
+    feature: 'ALL_OPEN_FARMERS_WITH_COORDINATES'
   };
 }
 
@@ -118,13 +130,29 @@ function getMatchingDataServer(session) {
   // session is intentionally required even though matching data is shared.
   // "ALL" on the buyer screen must receive every Open farmer with coordinates.
   // Harvest date, year, month and the former 10-day expiry rule are not applied here.
-  const farmers = dataRows_(sheet_('farmers')).filter(function (r) {
-    return String(r[11]).trim() === 'Open' && hasCoordinates_(r[9], r[10]);
-  }).map(farmerPublic_);
+  const farmers = openFarmersWithCoordinates_().map(farmerPublic_);
   const buyers = dataRows_(sheet_('buyers')).filter(function (r) {
     return String(r[11]).trim() === 'Active' && hasCoordinates_(r[5], r[6]);
   }).map(buyerPublic_);
-  return { status: 'success', success: true, farmers: farmers, buyers: buyers, generatedAt: new Date().toISOString() };
+  return {
+    status: 'success',
+    success: true,
+    apiVersion: APP_VERSION,
+    farmers: farmers,
+    buyers: buyers,
+    generatedAt: new Date().toISOString()
+  };
+}
+
+/**
+ * Single source of truth for the buyer's "ALL" option.
+ * Deliberately ignores Havest_Date, Map_Expire_Date and Map_Visible.
+ */
+function openFarmersWithCoordinates_() {
+  return dataRows_(sheet_('farmers')).filter(function (r) {
+    return String(r[11] || '').trim().toLowerCase() === 'open' &&
+      hasCoordinates_(r[9], r[10]);
+  });
 }
 
 function saveFarmer_(data, session) {
@@ -276,6 +304,16 @@ function setupSystem() {
   const restored = restoreLegacyExpiredFarmers_();
   const trigger = setupDailyTrigger();
   return migration + '\n' + schema + '\n' + restored + '\n' + trigger;
+}
+
+/**
+ * Run from the Apps Script editor after setupSystem().
+ * The returned count must match Open farmer rows with valid Lat/Lng in farmers!A:R.
+ */
+function verifyLiveMatchingData() {
+  const rows = openFarmersWithCoordinates_();
+  return 'PASS: API ' + APP_VERSION + ' returns ' + rows.length +
+    ' Open farmer record(s) with coordinates; harvest expiry and Map_Visible are ignored';
 }
 
 /** Adds the new buyers column without moving or rewriting any existing column. */

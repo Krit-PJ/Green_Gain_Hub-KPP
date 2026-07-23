@@ -1,4 +1,4 @@
-# Deploy Green Gain Hub 1.2.0
+# Deploy Green Gain Hub 1.2.1
 
 Repository: `Krit-PJ/Green_Gain_Hub-KPP`
 
@@ -6,9 +6,10 @@ Repository: `Krit-PJ/Green_Gain_Hub-KPP`
 
 1. Open the Google Sheet and choose **Extensions > Apps Script**.
 2. Replace all code in `Code.gs` with `apps-script/Code.gs` from this package, then save.
-3. Run `setupSystem()` once. It verifies the schema, restores legacy `Expired` farmers to `Open`, clears the old expiry rule, removes the legacy trigger, and must return PASS.
-4. Choose **Deploy > Manage deployments > Edit > New version > Deploy**. Keep **Execute as: Me** and **Who has access: Anyone**.
-5. Keep the existing Web App URL ending in `AKfycbxdispDx1h_HQ_6N4-GeKP3l6f8tuo4LdPvao5e8qUuUPIOxae1k-dWn9fVj44FlRnJ/exec`.
+3. Run `setupSystem()` once. It verifies the schema, adds `buyers!Q1`, restores legacy `Expired` farmers to `Open`, clears the old expiry rule, updates `Map_Visible`, removes the legacy trigger, and must return PASS.
+4. Run `verifyLiveMatchingData()`. The returned count must match every `Open` row with valid `Lat` and `Lng`; `Havest_Date`, `Map_Expire_Date`, and `Map_Visible` are ignored.
+5. Choose **Deploy > Manage deployments > Edit > New version > Deploy**. Keep **Execute as: Me** and **Who has access: Anyone**.
+6. Keep the existing Web App URL ending in `AKfycbxdispDx1h_HQ_6N4-GeKP3l6f8tuo4LdPvao5e8qUuUPIOxae1k-dWn9fVj44FlRnJ/exec`.
 
 ## 2. Copy this package into the repository root
 
@@ -19,7 +20,7 @@ The repository root must contain `.github`, `frontend`, `apps-script`, `tests`, 
 1. Open `Krit-PJ/Green_Gain_Hub-KPP`.
 2. Choose **Repository > Show in Explorer**.
 3. Copy every item from this package into that folder, including `.github`.
-4. Commit to `main` with `Deploy Green Gain Hub 1.2.0`.
+4. Commit to `main` with `Deploy Green Gain Hub 1.2.1`.
 5. Push origin.
 
 ## 4. GitHub Pages

@@ -1,4 +1,4 @@
-# Green Gain Hub 1.2.0 — แสดงเกษตรกร Open ทั้งหมด
+# Green Gain Hub 1.2.1 — แก้ข้อมูล Google Sheet ไม่แสดง
 
 รุ่นนี้ปรับความหมายของ “ทั้งหมด” ในเมนู “แผนที่ & คู่ค้า” สำหรับผู้รับซื้อ ให้แสดงข้อมูลเกษตรกรผู้ขายทุกระเบียนที่มีสถานะ `Open` และมีพิกัดละติจูด–ลองจิจูด โดยไม่ใช้วันเก็บเกี่ยว ปี เดือน หรือกฎ 10 วันมาซ่อนข้อมูล
 
@@ -61,7 +61,7 @@ window.GGH_CONFIG = {
   SHEETS_API_URL: 'https://script.google.com/macros/s/AKfycbxdispDx1h_HQ_6N4-GeKP3l6f8tuo4LdPvao5e8qUuUPIOxae1k-dWn9fVj44FlRnJ/exec',
   SPREADSHEET_ID: '1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA',
   REQUEST_TIMEOUT_MS: 30000,
-  BUILD_VERSION: '1.2.0'
+  BUILD_VERSION: '1.2.1'
 };
 ```
 
@@ -99,6 +99,8 @@ URL หน้าเว็บจะคงเดิมในรูป `https://USE
 ## 5. ตรวจสอบก่อนใช้งาน
 
 - `setupSystem()` แสดง PASS ครบ
+- Run `verifyLiveMatchingData()` และตรวจว่าจำนวนที่รายงานตรงกับแถว `Open` ที่มีพิกัด
+- หาก Frontend แจ้ง “Backend ยังไม่ใช่เวอร์ชัน 1.2.1” ต้อง Deploy Apps Script แบบ New version ก่อน
 - ตรวจว่า `SHEETS_API_URL` ใน `config.js` ตรงกับ Deployment URL ด้านบน
 - ทดสอบลงทะเบียนด้วยหมายเลขใหม่หนึ่งรายการ
 - ทดสอบ Upload ข้อมูล Farmer และ Buyer

@@ -24,6 +24,8 @@ new vm.Script(inlineScript[1], { filename: 'frontend/index.html' });
   'function harvestDateParts',
   'function filterFarmersByHarvestPeriod',
   'function updateHarvestFilterSummary',
+  'function matchingApiCompatibilityError',
+  'Backend ยังไม่ใช่เวอร์ชัน',
   'filterFarmersByHarvestPeriod(data.farmers)',
   "getRoleMarkerIcon(isFarmer ? 'buyer' : 'farmer')",
   "getRoleMarkerIcon(currentUser?.role)"
