@@ -1,8 +1,8 @@
 /**
- * Green Gain Hub 1.2.2 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 1.3.1 — API-only bridge from GitHub Pages to Google Sheets.
  * Database: Google Sheets / file storage: Google Drive.
  */
-const APP_VERSION = '1.2.2';
+const APP_VERSION = '1.3.1';
 const DEFAULT_SPREADSHEET_ID = '1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA';
 const DEFAULT_SESSION_TTL_SECONDS = 21600; // 6 hours
 const MATERIAL_TYPES = ['ฟางข้าว', 'ใบอ้อย', 'เหง้ามันสำปะหลัง', 'อื่นๆ'];
@@ -51,7 +51,7 @@ function getApiInfoServer() {
     status: 'success',
     success: true,
     apiVersion: APP_VERSION,
-    feature: 'ALL_OPEN_FARMERS_WITH_COORDINATES'
+    feature: 'OPPOSITE_ROLE_CONTACT_AND_NAVIGATION'
   };
 }
 
@@ -127,17 +127,17 @@ function deleteDataServer(input, session) {
 }
 
 function getMatchingDataServer(session) {
-  // session is intentionally required even though matching data is shared.
-  // "ALL" on the buyer screen must receive every Open farmer with coordinates.
-  // Harvest date, year, month and the former 10-day expiry rule are not applied here.
-  const farmers = openFarmersWithCoordinates_().map(farmerPublic_);
-  const buyers = dataRows_(sheet_('buyers')).filter(function (r) {
-    return String(r[11]).trim() === 'Active' && hasCoordinates_(r[5], r[6]);
-  }).map(buyerPublic_);
+  // Enforce partner-only visibility at the API layer. Empty arrays are retained
+  // for backward compatibility with the existing Frontend response structure.
+  const isFarmer = session.role === 'farmer';
+  const farmers = isFarmer ? [] : openFarmersWithCoordinates_().map(farmerPublic_);
+  const buyers = isFarmer ? activeBuyersWithCoordinates_().map(buyerPublic_) : [];
   return {
     status: 'success',
     success: true,
     apiVersion: APP_VERSION,
+    viewerRole: session.role,
+    visibleRole: isFarmer ? 'buyer' : 'farmer',
     farmers: farmers,
     buyers: buyers,
     generatedAt: new Date().toISOString()
@@ -152,6 +152,14 @@ function openFarmersWithCoordinates_() {
   return dataRows_(sheet_('farmers')).filter(function (r) {
     return String(r[11] || '').trim().toLowerCase() === 'open' &&
       hasCoordinates_(r[9], r[10]);
+  });
+}
+
+/** Returns only Active buyers with valid coordinates. */
+function activeBuyersWithCoordinates_() {
+  return dataRows_(sheet_('buyers')).filter(function (r) {
+    return String(r[11] || '').trim().toLowerCase() === 'active' &&
+      hasCoordinates_(r[5], r[6]);
   });
 }
 

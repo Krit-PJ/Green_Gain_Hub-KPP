@@ -1,4 +1,4 @@
-# Deploy Green Gain Hub 1.2.2
+# Deploy Green Gain Hub 1.3.1
 
 Repository: `Krit-PJ/Green_Gain_Hub-KPP`
 
@@ -20,7 +20,7 @@ The repository root must contain `.github`, `frontend`, `apps-script`, `tests`, 
 1. Open `Krit-PJ/Green_Gain_Hub-KPP`.
 2. Choose **Repository > Show in Explorer**.
 3. Copy every item from this package into that folder, including `.github`.
-4. Commit to `main` with `Deploy Green Gain Hub 1.2.2`.
+4. Commit to `main` with `Deploy Green Gain Hub 1.3.1`.
 5. Push origin.
 
 ## 4. GitHub Pages
@@ -45,4 +45,6 @@ Production URL:
 - Log in as a buyer, open the map, and confirm “ช่วงเวลาเก็บเกี่ยวผลผลิต” supports “ทั้งหมด”, shows the current Buddhist year first, and lists other available years below it.
 - Select “ทั้งหมด” and confirm every `Open` farmer with coordinates is shown without a harvest-date, year, or month filter.
 - Select a Buddhist year plus a start and end month, then confirm the farmer cards, green pins, and result count update together.
-- Log in as a farmer and confirm buyer pins are blue. Confirm editable location pins follow the same role colors.
+- Log in as a farmer and confirm only buyer cards/pins are visible; no farmer partner data is returned.
+- Log in as a buyer and confirm only farmer cards/pins are visible; no buyer partner data is returned.
+- Tap the phone and navigation buttons and confirm they always target the opposite role.

@@ -239,7 +239,7 @@
               <i class="fa-solid fa-calendar-days text-emerald-700 mt-1"></i>
               <div>
                 <h3 class="font-bold text-emerald-900">ช่วงเวลาเก็บเกี่ยวผลผลิต</h3>
-                <p class="text-xs text-emerald-700">สำหรับผู้รับซื้อ: ข้อมูลที่แสดงบนแผนที่เป็นข้อมูลของเกษตรกร (ผู้ขาย)</p>
+                <p class="text-xs text-emerald-700">สำหรับผู้รับซื้อ: ระบบแสดงเฉพาะหมุดสีเขียวของแปลงเกษตรกร</p>
                 <p class="text-xs text-emerald-800 font-medium mt-1">เมื่อเลือก “ทั้งหมด” ระบบจะแสดงเกษตรกรสถานะ Open ที่มีพิกัดทั้งหมด โดยไม่กรองวันเก็บเกี่ยว ปี หรือเดือน</p>
               </div>
             </div>
@@ -288,6 +288,8 @@
             <p id="harvestFilterSummary" class="text-sm font-bold text-emerald-800 mt-3"></p>
          </div>
          
+         <p id="mapPinSummary" class="text-sm font-bold text-blue-800 bg-blue-50 border border-blue-200 rounded-xl p-3 mt-4"></p>
+
          <h3 class="font-bold text-gray-700 text-base sm:text-lg mt-6 mb-3 sm:mb-4 border-l-4 border-green-500 pl-2">รายชื่อคู่ค้าที่แนะนำ</h3>
          <p class="label-text leading-relaxed"><span class="required-mark">*</span> ระยะทางที่แสดงผลเป็นระยะทางกระจัด ไม่ใช่ระยะทางตามการเดินทางจริง</p>
          
@@ -312,7 +314,7 @@
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-    const EXPECTED_API_VERSION = String(window.GGH_CONFIG?.BUILD_VERSION || '1.2.2');
+    const EXPECTED_API_VERSION = String(window.GGH_CONFIG?.BUILD_VERSION || '1.3.1');
     let currentUser = null;
     let lastMatchingLat = null;
     let lastMatchingLng = null;
@@ -454,6 +456,14 @@
       }
       if (String(data.apiVersion || '') !== EXPECTED_API_VERSION) {
         return `Backend ยังไม่ใช่เวอร์ชัน ${EXPECTED_API_VERSION} กรุณา Deploy Apps Script เป็น New version`;
+      }
+      const expectedVisibleRole = currentUser?.role === 'farmer' ? 'buyer' : 'farmer';
+      if (data.viewerRole !== currentUser?.role || data.visibleRole !== expectedVisibleRole) {
+        return 'Backend ส่งข้อมูลไม่ตรงกับบทบาทผู้ใช้ กรุณาออกจากระบบ เข้าสู่ระบบใหม่ และตรวจสอบ Deployment';
+      }
+      if ((currentUser?.role === 'farmer' && data.farmers.length) ||
+          (currentUser?.role === 'buyer' && data.buyers.length)) {
+        return 'Backend ยังไม่ได้จำกัดข้อมูลเฉพาะคู่ค้าฝั่งตรงข้าม กรุณา Deploy Apps Script ชุดล่าสุด';
       }
       return '';
     }
@@ -1034,6 +1044,43 @@
     }
 
 
+    function contactPhone(value) {
+      const phone = String(value || '').replace(/\D/g, '');
+      return /^0\d{9}$/.test(phone) ? phone : '';
+    }
+
+    function navigationUrl(lat, lng) {
+      if (!validCoordinates(lat, lng)) return '';
+      const destination = encodeURIComponent(`${Number(lat)},${Number(lng)}`);
+      return `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving&dir_action=navigate`;
+    }
+
+    function mapPointDescription(item, role) {
+      if (role === 'buyer') {
+        const purchasePeriod = !item.purchaseAfterHarvestDays || item.purchaseAfterHarvestDays === 'ALL' || Number(item.purchaseAfterHarvestDays) === 0
+          ? 'ทั้งหมด'
+          : `${escapeHtml(item.purchaseAfterHarvestDays)} วันหลังเก็บเกี่ยว`;
+        return `<b>${escapeHtml(item.name)}</b><br>ประเภท: ผู้รับซื้อ<br>รับซื้อ: ${escapeHtml(item.material)}<br>ช่วงเวลารับซื้อ: ${purchasePeriod}<br>ความชื้น: ${escapeHtml(item.quality)}<br>ราคารับซื้อ: ${escapeHtml(item.price)} บ./ไร่`;
+      }
+      return `<b>${escapeHtml(item.name)}</b><br>ประเภท: แปลงเกษตรกร<br>พืช: ${escapeHtml(item.crop)}<br>เศษวัสดุ: ${escapeHtml(item.material || '-')}<br>พื้นที่: ${escapeHtml(item.area)}<br>เก็บเกี่ยว: ${escapeHtml(item.harvest || '-')}`;
+    }
+
+    function mobileActionLinks(item, role, compact) {
+      const phone = contactPhone(item.phone);
+      const routeUrl = navigationUrl(item.lat, item.lng);
+      const callBg = role === 'buyer' ? '#1d4ed8' : '#15803d';
+      const callBorder = role === 'buyer' ? '#1e3a8a' : '#14532d';
+      const callAction = phone
+        ? `<a href="tel:${phone}" target="_top" aria-label="โทรหา ${escapeHtml(item.name)} ที่หมายเลข ${phone}"
+             style="flex:1; text-align:center; background:${callBg}; color:white; padding:8px 6px; border-radius:8px; font-size:12px; font-weight:bold; text-decoration:none; border:1px solid ${callBorder};">📞 โทร ${phone}</a>`
+        : `<span style="flex:1; text-align:center; background:#e5e7eb; color:#6b7280; padding:8px 6px; border-radius:8px; font-size:12px; font-weight:bold;">ไม่มีเบอร์โทรที่ใช้ได้</span>`;
+      const routeAction = routeUrl
+        ? `<a href="${routeUrl}" target="_blank" rel="noopener noreferrer" aria-label="นำทางไปยัง ${escapeHtml(item.name)}"
+             style="flex:1; text-align:center; background:#2563eb; color:white; padding:8px 6px; border-radius:8px; font-size:12px; font-weight:bold; text-decoration:none; border:1px solid #1e3a8a;">🧭 เริ่มนำทาง</a>`
+        : '';
+      return `<div style="margin-top:${compact ? '8px' : '10px'}; display:flex; gap:6px; flex-direction:column">${callAction}${routeAction}</div>`;
+    }
+
     function loadMatchingData(userLat, userLng) {
       lastMatchingLat = userLat;
       lastMatchingLng = userLng;
@@ -1048,64 +1095,70 @@
             Swal.fire('ต้องอัปเดต Backend', compatibilityError, 'warning');
             return;
           }
-          let targets = [];
-          let isFarmer = currentUser.role === 'farmer';
+          const isFarmer = currentUser.role === 'farmer';
           configureHarvestFilters(data.farmers);
-          if(isFarmer) targets = data.buyers;
-          else targets = filterFarmersByHarvestPeriod(data.farmers);
-          updateHarvestFilterSummary(targets.length);
+          const partnerRole = isFarmer ? 'buyer' : 'farmer';
+          const partnerTargets = isFarmer
+            ? (data.buyers || [])
+            : filterFarmersByHarvestPeriod(data.farmers);
+          const mapPoints = partnerTargets.map(item => ({ item, role: partnerRole }));
+          if (!isFarmer) updateHarvestFilterSummary(partnerTargets.length);
 
-          if(targets.length === 0) list.innerHTML = '<div class="col-span-1 md:col-span-2 text-center text-gray-400 py-8">ยังไม่พบข้อมูลคู่ค้าในระบบขณะนี้</div>';
-
-          const cards = targets.map((t, index) => {
-            const icon = getRoleMarkerIcon(isFarmer ? 'buyer' : 'farmer');
-            const marker = L.marker([t.lat, t.lng], {icon: icon}).addTo(mainMap);
-            let desc = '';
-
-            if(isFarmer) {
-              const purchasePeriod = !t.purchaseAfterHarvestDays || t.purchaseAfterHarvestDays === 'ALL' || Number(t.purchaseAfterHarvestDays) === 0
-                ? 'ทั้งหมด'
-                : `${escapeHtml(t.purchaseAfterHarvestDays)} วันหลังเก็บเกี่ยว`;
-              desc = `<b>${escapeHtml(t.name)}</b><br>รับซื้อ: ${escapeHtml(t.material)}<br>ช่วงเวลารับซื้อ: ${purchasePeriod}<br>ความชื้น: ${escapeHtml(t.quality)}<br>ราคารับซื้อ: ${escapeHtml(t.price)} บ./ไร่`;
-            }
-            else desc = `<b>${escapeHtml(t.name)}</b><br>พืช: ${escapeHtml(t.crop)}<br>เศษวัสดุ: ${escapeHtml(t.material || '-')}<br>พื้นที่: ${escapeHtml(t.area)}<br>เก็บเกี่ยว: ${escapeHtml(t.harvest || '-')}`;
-
-            const cleanPhone = t.phone.replace(/[^0-9]/g, '');
-            const callBg    = isFarmer ? '#dc2626' : '#15803d';  // red-600 or green-700
-            const callBorder = isFarmer ? '#991b1b' : '#14532d';
-            const actionBtns = `
-            <div style="margin-top:10px; display:flex; gap:5px; flex-direction: column">
-              <a href="tel:${cleanPhone}" target="_top" 
-                style="flex:1; text-align:center; background:${callBg}; color:white; padding:6px 0; border-radius:6px; font-size:12px; font-weight:bold; text-decoration:none; border:1px solid ${callBorder};">📞 โทร ${cleanPhone} </a>
-              <a href="https://www.google.com/maps/search/?api=1&query=${t.lat},%20${t.lng}" target="_blank" 
-                style="flex:1; text-align:center; background:#2563eb; color:white; padding:6px 0; border-radius:6px; font-size:12px; font-weight:bold; text-decoration:none; border:1px solid #1e3a8a;">📍 นำทาง</a>
-            </div>`;
-
-            marker.bindPopup(desc + actionBtns);
-
-            const markerId = `m-${index}`;
+          const markerIds = {};
+          const bounds = [[Number(userLat), Number(userLng)]];
+          mapPoints.forEach(({ item, role }, index) => {
+            if (!validCoordinates(item.lat, item.lng)) return;
+            const markerId = `m-${role}-${safeId(item.id) || index}`;
+            const marker = L.marker([Number(item.lat), Number(item.lng)], {
+              icon: getRoleMarkerIcon(role)
+            }).addTo(mainMap);
+            marker.bindPopup(mapPointDescription(item, role) + mobileActionLinks(item, role, true));
             mapMarkers[markerId] = marker;
+            markerIds[`${role}:${item.id}`] = markerId;
+            bounds.push([Number(item.lat), Number(item.lng)]);
+          });
+
+          const pinSummary = document.getElementById('mapPinSummary');
+          if (pinSummary) {
+            const roleLabel = isFarmer ? 'จุดผู้รับซื้อ' : 'แปลงเกษตรกร';
+            pinSummary.textContent = `แผนที่แสดงคู่ค้าเฉพาะฝั่งตรงข้าม ${partnerTargets.length} ${roleLabel} กดหมุดเพื่อโทรติดต่อหรือเริ่มนำทาง`;
+          }
+          if (bounds.length > 1) {
+            mainMap.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 });
+          }
+
+          if(partnerTargets.length === 0) list.innerHTML = '<div class="col-span-1 md:col-span-2 text-center text-gray-400 py-8">ยังไม่พบข้อมูลคู่ค้าในระบบขณะนี้</div>';
+
+          const cards = partnerTargets.map((t, index) => {
+            const desc = mapPointDescription(t, partnerRole);
+            const markerId = markerIds[`${partnerRole}:${t.id}`] || '';
             const dist = calcDist(userLat, userLng, t.lat, t.lng).toFixed(1);
+            const phone = contactPhone(t.phone);
+            const routeUrl = navigationUrl(t.lat, t.lng);
+            const roleColor = partnerRole === 'buyer' ? 'blue' : 'green';
+            const callClass = partnerRole === 'buyer'
+              ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+              : 'bg-green-50 text-green-700 hover:bg-green-100';
 
             const html = `
-              <div class="match-card bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 relative flex flex-col h-full" onclick="focusMarker('${markerId}', ${t.lat}, ${t.lng})">
+              <div class="match-card bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 relative flex flex-col h-full" onclick="focusMarker('${markerId}', ${Number(t.lat)}, ${Number(t.lng)})">
                 <div class="flex justify-between items-start gap-3 mb-auto">
                   <div class="min-w-0">
                     <h4 class="font-bold text-gray-800 text-base sm:text-lg break-words">${escapeHtml(t.name)}</h4>
                     <div class="text-sm text-gray-600 mt-2 leading-relaxed">${desc.replace(/<b>.*?<\/b><br>/, '')}</div>
                   </div>
-                  <div class="text-right  ${isFarmer ? 'bg-red-50' : 'bg-green-50'} px-2 py-1 rounded-lg">
-                    <span class="block text-xl font-bold ${isFarmer ? 'text-red-700' : 'text-green-700'}">${dist}</span>
-                    <span class="text-[10px] ${isFarmer ? 'text-red-600' : 'text-green-600'} uppercase font-bold">กม.</span>
+                  <div class="text-right ${roleColor === 'blue' ? 'bg-blue-50' : 'bg-green-50'} px-2 py-1 rounded-lg">
+                    <span class="block text-xl font-bold ${roleColor === 'blue' ? 'text-blue-700' : 'text-green-700'}">${dist}</span>
+                    <span class="text-[10px] ${roleColor === 'blue' ? 'text-blue-600' : 'text-green-600'} uppercase font-bold">กม.</span>
                   </div>
                 </div>
                 <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-2">
-                  <a href="tel:${cleanPhone}" target="_top" onclick="event.stopPropagation()" class="flex-1 ${isFarmer ? 'bg-red-50' : 'bg-green-50'} ${isFarmer ? 'text-red-700' : 'text-green-700'} py-2.5 rounded-xl font-bold text-center hover:${isFarmer? 'bg-red-200':'bg-green-200'} transition text-sm flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-phone"></i> โทรติดต่อ
+                  ${phone
+                    ? `<a href="tel:${phone}" target="_top" onclick="event.stopPropagation()" class="${callClass} py-2.5 rounded-xl font-bold text-center transition text-sm flex items-center justify-center gap-2"><i class="fa-solid fa-phone"></i> โทรติดต่อ</a>`
+                    : `<span class="bg-gray-100 text-gray-500 py-2.5 rounded-xl font-bold text-center text-sm flex items-center justify-center gap-2"><i class="fa-solid fa-phone-slash"></i> ไม่มีเบอร์โทร</span>`}
+                  <a href="${routeUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="bg-blue-600 text-white py-2.5 rounded-xl font-bold text-center hover:bg-blue-700 transition text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-route"></i> เริ่มนำทาง
                   </a>
-                  <button class="flex-1 bg-gray-50 text-gray-600 border border-gray-200 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-100 transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-map-pin"></i> ดูบนแผนที่
-                  </button>
                 </div>
               </div>
             `;

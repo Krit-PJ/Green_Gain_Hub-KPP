@@ -17,12 +17,12 @@ assert(
   config.includes('AKfycbwQLSoTT71Tsgt2IITpkQKE57qBvYrA9MLSt-Yg6r3-1a2X04mJ0xmqMHEK-tcV2iPe/exec'),
   'deployment URL is missing or stale'
 );
-assert(config.includes("BUILD_VERSION: '1.2.2'"), 'frontend build version is missing or stale');
+assert(config.includes("BUILD_VERSION: '1.3.1'"), 'frontend build version is missing or stale');
 
 [
   'id="harvestFilterPanel"',
   'ช่วงเวลาเก็บเกี่ยวผลผลิต',
-  'ข้อมูลที่แสดงบนแผนที่เป็นข้อมูลของเกษตรกร (ผู้ขาย)',
+  'ระบบแสดงเฉพาะหมุดสีเขียวของแปลงเกษตรกร',
   'id="harvestPeriodFilter"',
   '<option value="ALL">ทั้งหมด</option>',
   'เมื่อเลือก “ทั้งหมด” ระบบจะแสดงเกษตรกรสถานะ Open ที่มีพิกัดทั้งหมด โดยไม่กรองวันเก็บเกี่ยว ปี หรือเดือน',
@@ -32,9 +32,19 @@ assert(config.includes("BUILD_VERSION: '1.2.2'"), 'frontend build version is mis
   'function filterFarmersByHarvestPeriod',
   'function updateHarvestFilterSummary',
   'function matchingApiCompatibilityError',
+  'function contactPhone',
+  'function navigationUrl',
+  'function mapPointDescription',
+  'function mobileActionLinks',
   'Backend ยังไม่ใช่เวอร์ชัน',
   'filterFarmersByHarvestPeriod(data.farmers)',
-  "getRoleMarkerIcon(isFarmer ? 'buyer' : 'farmer')",
+  "const partnerRole = isFarmer ? 'buyer' : 'farmer'",
+  'const mapPoints = partnerTargets.map(item => ({ item, role: partnerRole }))',
+  'Backend ยังไม่ได้จำกัดข้อมูลเฉพาะคู่ค้าฝั่งตรงข้าม',
+  'mainMap.fitBounds(bounds',
+  'กดหมุดเพื่อโทรติดต่อหรือเริ่มนำทาง',
+  'href="tel:${phone}"',
+  'https://www.google.com/maps/dir/?api=1&destination=',
   "getRoleMarkerIcon(currentUser?.role)"
 ].forEach(text => assert(html.includes(text), `missing component: ${text}`));
 
@@ -83,4 +93,22 @@ assert(runFilter(farmers).map(f => f.id).join(',') === 'f1,f2,f3', 'full-year fi
 context.currentUser.role = 'farmer';
 assert(runFilter(farmers).length === 5, 'farmer view must not be filtered');
 
-console.log('PASS: buyer harvest period, farmer data source, marker colors, and frontend syntax');
+const phoneBody = html.match(/function contactPhone\(value\) \{([\s\S]*?)\n    \}/);
+assert(phoneBody, 'contactPhone function was not found');
+const contactPhone = new Function('value', phoneBody[1]);
+assert(contactPhone('081-234-5678') === '0812345678', 'smartphone call number normalization failed');
+assert(contactPhone('123') === '', 'invalid telephone must not create a tel link');
+
+const navigationBody = html.match(/function navigationUrl\(lat, lng\) \{([\s\S]*?)\n    \}/);
+assert(navigationBody, 'navigationUrl function was not found');
+const navigationUrl = new Function('validCoordinates', 'lat', 'lng', navigationBody[1]).bind(null, (lat, lng) =>
+  Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) &&
+  Number(lat) >= -90 && Number(lat) <= 90 && Number(lng) >= -180 && Number(lng) <= 180
+);
+const route = navigationUrl(16.48, 99.52);
+assert(route.includes('/maps/dir/?api=1'), 'Google Maps directions endpoint is missing');
+assert(route.includes('destination=16.48%2C99.52'), 'navigation coordinates were not encoded correctly');
+assert(route.includes('travelmode=driving'), 'driving navigation mode is missing');
+assert(route.includes('dir_action=navigate'), 'turn-by-turn navigation action is missing');
+
+console.log('PASS: opposite-role-only map pins, mobile call/navigation actions, harvest filter, marker colors, and frontend syntax');

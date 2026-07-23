@@ -79,8 +79,11 @@ const newFarmer = sheets.farmers.rows.at(-1);
 assert(newFarmer[12] === '0812345678' && newFarmer[13] === 'เหง้ามันสำปะหลัง' && newFarmer.length === 18, 'farmer column mapping failed');
 
 const matches = api.getMatchingDataServer(session);
-assert(matches.apiVersion === '1.2.2', 'matching API version is missing or stale');
-assert(api.getApiInfoServer().apiVersion === '1.2.2', 'public API version check failed');
+assert(matches.apiVersion === '1.3.1', 'matching API version is missing or stale');
+assert(api.getApiInfoServer().apiVersion === '1.3.1', 'public API version check failed');
+assert(api.getApiInfoServer().feature === 'OPPOSITE_ROLE_CONTACT_AND_NAVIGATION', 'map feature flag is missing or stale');
+assert(matches.viewerRole === 'farmer' && matches.visibleRole === 'buyer', 'farmer visibility metadata is incorrect');
+assert(matches.farmers.length === 0, 'farmer must not receive other farmer records');
 assert(matches.buyers.length === 1 && matches.buyers[0].material === 'ฟางข้าว', 'buyer download mapping failed');
 assert(matches.buyers[0].purchaseAfterHarvestDays === 3, 'buyer harvest-days download mapping failed');
 
@@ -90,7 +93,10 @@ sheets.farmers.rows.push(
   ['f-no-coord',new Date(),'เกษตรกร','ไม่มีพิกัด','0822222222','ข้าว',new Date('2024-01-01'),new Date('2024-06-01'),'2 ไร่','','','Open','0822222222','ฟางข้าว','','','',''],
   ['f-deleted',new Date(),'เกษตรกร','ลบแล้ว','0833333333','ข้าว',new Date('2024-01-01'),new Date('2024-06-01'),'2 ไร่',16.43,99.43,'Deleted','0833333333','ฟางข้าว','','','','']
 );
-const allMatches = api.getMatchingDataServer(session);
+const buyerViewSession = { phone: '0899999999', role: 'buyer', name: 'ผู้ซื้อ ทดสอบ' };
+const allMatches = api.getMatchingDataServer(buyerViewSession);
+assert(allMatches.viewerRole === 'buyer' && allMatches.visibleRole === 'farmer', 'buyer visibility metadata is incorrect');
+assert(allMatches.buyers.length === 0, 'buyer must not receive other buyer records');
 assert(allMatches.farmers.some(f => f.id === 'f-old'), 'old harvest date must remain visible when Open with coordinates');
 assert(!allMatches.farmers.some(f => f.id === 'f-no-coord'), 'farmer without coordinates must remain hidden');
 assert(!allMatches.farmers.some(f => f.id === 'f-deleted'), 'non-Open farmer must remain hidden');
