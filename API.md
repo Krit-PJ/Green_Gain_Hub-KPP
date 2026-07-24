@@ -1,39 +1,25 @@
-# API Contract
+# Green Gain Hub API 1.4.1
 
-Endpoint:
+Frontend เรียก Google Apps Script ผ่าน JSONP ที่ URL `/exec` เดิม
 
-`https://script.google.com/macros/s/AKfycbwQLSoTT71Tsgt2IITpkQKE57qBvYrA9MLSt-Yg6r3-1a2X04mJ0xmqMHEK-tcV2iPe/exec`
+## Matching response
 
-Transport: JSONP จาก GitHub Pages เพื่อรองรับ cross-origin โดยไม่ฝัง credential ใน Browser
+`getMatchingDataServer()` ส่ง:
 
-## Public methods
+- `viewerRole`: บทบาทของ session
+- `visibleRole`: บทบาทคู่ค้าที่อนุญาตให้เห็น
+- `farmers`: มีข้อมูลเฉพาะเมื่อผู้ดูเป็นผู้รับซื้อ
+- `buyers`: มีข้อมูลเฉพาะเมื่อผู้ดูเป็นเกษตรกร
+- `ownPlots`: มีเฉพาะแปลงที่เป็นเจ้าของ session เกษตรกร และเป็นค่าว่างสำหรับผู้รับซื้อ
 
-- `loginServer({ username })`
-- `registerServer({ role, name, phone })`
+`ownPlots` ไม่ใช่คู่ค้าสำหรับโทรหรือนำทาง จึงไม่มีปุ่มติดต่อใน Frontend
 
-## Session-required methods
+## Compatibility
 
-- `getUserProfileServer()`
-- `saveDataServer(payload)`
-- `deleteDataServer(payload)`
-- `getMatchingDataServer()`
+- รองรับเบอร์โทรศัพท์ 9 หลักจากข้อมูลเก่าที่เลข `0` ด้านหน้าหาย
+- ส่งวันที่ให้ Frontend เป็น ISO `yyyy-mm-dd`
+- อ่านวันที่เดิมแบบ `d/m/yyyy` และปี พ.ศ. ได้
+- คอลัมน์ `Purchase_After_Harvest_Days` คงไว้ แต่ไม่เป็นเงื่อนไขของ API อีกต่อไป
 
-ข้อมูลผู้ซื้อที่บันทึกและส่งกลับมีฟิลด์ `purchaseAfterHarvestDays` เป็น `ALL` (ทั้งหมด) หรือจำนวนเต็ม 1–15 ข้อมูลเดิมที่เป็น 0 หรือยังไม่มีค่าจะอ่านเป็น `ALL`
-
-`getMatchingDataServer()` ส่ง `apiVersion: "1.3.1"` และจำกัดข้อมูลตามบทบาทจาก session:
-
-- ผู้ขาย/เกษตรกรได้รับเฉพาะ `buyers`: ผู้รับซื้อสถานะ `Active` ที่มีพิกัดถูกต้อง ส่วน `farmers` เป็นอาร์เรย์ว่าง
-- ผู้รับซื้อได้รับเฉพาะ `farmers`: เกษตรกรสถานะ `Open` ที่มีพิกัดถูกต้อง โดยไม่อ่าน `Map_Visible` และไม่ใช้กฎ 10 วัน ส่วน `buyers` เป็นอาร์เรย์ว่าง
-- `viewerRole` ระบุบทบาทผู้ใช้ และ `visibleRole` ระบุบทบาทคู่ค้าที่อนุญาตให้เห็น
-
-Frontend แสดงเฉพาะหมุด รายชื่อ เบอร์โทรศัพท์ และปลายทางนำทางของบทบาทฝั่งตรงข้าม หมุดเกษตรกรเป็นสีเขียวและหมุดผู้รับซื้อเป็นสีน้ำเงิน
-
-`getApiInfoServer()` เป็นคำสั่งสาธารณะสำหรับตรวจว่า Web App Deployment ใช้ Backend เวอร์ชัน 1.3.1 แล้ว โดยไม่ส่งข้อมูลส่วนบุคคลจากชีต
-
-เมื่อผู้รับซื้อเลือก `ALL` Frontend ส่งต่อข้อมูล `farmers` ทั้งชุดโดยไม่กรองปี เดือน หรือวันเก็บเกี่ยวเพิ่มเติม
-
-ปุ่ม `โทรติดต่อ` ใช้ URI `tel:` กับหมายเลขโทรศัพท์ 10 หลัก และปุ่ม `เริ่มนำทาง` ใช้ Google Maps Directions URL พร้อม `destination`, `travelmode=driving` และ `dir_action=navigate`
-
-หลัง `loginServer` สำเร็จ Frontend เก็บ session token ใน `sessionStorage` และแนบ token กับคำขอถัดไป Session มีอายุสูงสุด 6 ชั่วโมง
-
-`doGet(e)` ใช้ allowlist จึงไม่สามารถเรียกฟังก์ชัน Apps Script อื่นจากภายนอกได้
+`getApiInfoServer()` ต้องรายงาน `apiVersion: "1.4.1"` และ
+`feature: "NORMALIZED_SHEET_FORMATS_BUYER_OVERVIEW_OWN_PLOTS"`

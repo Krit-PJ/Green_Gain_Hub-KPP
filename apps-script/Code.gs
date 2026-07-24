@@ -1,11 +1,17 @@
 /**
- * Green Gain Hub 1.3.1 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 1.4.1 — API-only bridge from GitHub Pages to Google Sheets.
  * Database: Google Sheets / file storage: Google Drive.
  */
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4.1';
 const DEFAULT_SPREADSHEET_ID = '1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA';
 const DEFAULT_SESSION_TTL_SECONDS = 21600; // 6 hours
 const MATERIAL_TYPES = ['ฟางข้าว', 'ใบอ้อย', 'เหง้ามันสำปะหลัง', 'อื่นๆ'];
+const CROP_MATERIAL_MAP = {
+  'ข้าวนาปี': 'ฟางข้าว',
+  'ข้าวนาปรัง': 'ฟางข้าว',
+  'อ้อยโรงงาน': 'ใบอ้อย',
+  'มันสำปะหลัง': 'เหง้ามันสำปะหลัง'
+};
 const PUBLIC_METHODS = ['loginServer', 'registerServer', 'getApiInfoServer'];
 const PRIVATE_METHODS = ['getUserProfileServer', 'saveDataServer', 'deleteDataServer', 'getMatchingDataServer'];
 
@@ -51,7 +57,7 @@ function getApiInfoServer() {
     status: 'success',
     success: true,
     apiVersion: APP_VERSION,
-    feature: 'OPPOSITE_ROLE_CONTACT_AND_NAVIGATION'
+    feature: 'CROP_MATERIAL_AUTO_VERSION_COMPATIBILITY'
   };
 }
 
@@ -80,6 +86,7 @@ function registerServer(input) {
   lock.waitLock(20000);
   try {
     const sh = sheet_('users');
+    ensureSheetDataFormats_();
     if (dataRows_(sh).some(function (r) { return normalizePhone_(r[0]) === phone; })) {
       throw new Error('หมายเลขโทรศัพท์นี้ลงทะเบียนแล้ว');
     }
@@ -132,6 +139,7 @@ function getMatchingDataServer(session) {
   const isFarmer = session.role === 'farmer';
   const farmers = isFarmer ? [] : openFarmersWithCoordinates_().map(farmerPublic_);
   const buyers = isFarmer ? activeBuyersWithCoordinates_().map(buyerPublic_) : [];
+  const ownPlots = isFarmer ? ownFarmerPlotsWithCoordinates_(session.phone).map(farmerPublic_) : [];
   return {
     status: 'success',
     success: true,
@@ -140,6 +148,7 @@ function getMatchingDataServer(session) {
     visibleRole: isFarmer ? 'buyer' : 'farmer',
     farmers: farmers,
     buyers: buyers,
+    ownPlots: ownPlots,
     generatedAt: new Date().toISOString()
   };
 }
@@ -163,9 +172,20 @@ function activeBuyersWithCoordinates_() {
   });
 }
 
+/** Every non-deleted plot owned by the logged-in farmer that has coordinates. */
+function ownFarmerPlotsWithCoordinates_(phone) {
+  return dataRows_(sheet_('farmers')).filter(function (r) {
+    return isOwned_(r, phone, 12) &&
+      String(r[11] || '').trim().toLowerCase() !== 'deleted' &&
+      hasCoordinates_(r[9], r[10]);
+  });
+}
+
 function saveFarmer_(data, session) {
   const sh = sheet_('farmers');
-  const material = validateMaterial_(data.materialType, data.materialOther);
+  ensureSheetDataFormats_();
+  const crop = cleanText_(data.crop, 150);
+  const material = farmerMaterialForCrop_(crop, data.materialType, data.materialOther);
   const harvest = parseDate_(data.harvestDate || data.havestDate, 'วันเก็บเกี่ยว');
   const plant = parseDate_(data.plantDate, 'วันเพาะปลูก');
   if (plant && harvest && plant.getTime() > harvest.getTime()) throw new Error('วันเก็บเกี่ยวต้องไม่ก่อนวันเพาะปลูก');
@@ -173,7 +193,7 @@ function saveFarmer_(data, session) {
   const now = new Date();
   const rowValues = [
     id, now, cleanText_(data.fname, 100), cleanText_(data.lname, 100),
-    normalizeContactPhone_(data.phone || session.phone), cleanText_(data.crop, 150), plant || '', harvest || '',
+    normalizeContactPhone_(data.phone || session.phone), crop, plant || '', harvest || '',
     cleanText_(data.area, 80), numberInRange_(data.lat, -90, 90, 'ละติจูด'),
     numberInRange_(data.lng, -180, 180, 'ลองจิจูด'), 'Open', session.phone, material.type, material.other,
     '', '', now
@@ -192,6 +212,7 @@ function saveFarmer_(data, session) {
       sh.appendRow(rowValues);
       row = sh.getLastRow();
     }
+    formatFarmerRow_(sh, row);
     setFarmerFormulas_(sh, row);
   } finally {
     lock.releaseLock();
@@ -201,17 +222,16 @@ function saveFarmer_(data, session) {
 
 function saveBuyer_(data, session) {
   const sh = sheet_('buyers');
-  ensureBuyerHarvestDaysColumn_();
+  ensureSheetDataFormats_();
   const material = validateMaterial_(data.materialType || data.material, data.materialOther);
   const id = cleanText_(data.id, 100) || newId_();
   const now = new Date();
-  const purchaseAfterHarvestDays = purchaseAfterHarvestDays_(data.purchaseAfterHarvestDays);
   const rowValues = [
     id, now, cleanText_(data.fname, 100), cleanText_(data.lname, 100),
     normalizeContactPhone_(data.phone || session.phone), numberInRange_(data.lat, -90, 90, 'ละติจูด'),
     numberInRange_(data.lng, -180, 180, 'ลองจิจูด'), material.resolved,
     cleanText_(data.quality, 100), nonNegative_(data.price, 'ราคา'), cleanText_(data.capacity, 80),
-    'Active', session.phone, material.type, material.other, now, purchaseAfterHarvestDays
+    'Active', session.phone, material.type, material.other, now, 'ALL'
   ];
   requireFields_(rowValues, [[2, 'ชื่อ'], [4, 'โทรศัพท์'], [8, 'คุณภาพ'], [10, 'ปริมาณ']]);
   const lock = LockService.getScriptLock();
@@ -225,7 +245,9 @@ function saveBuyer_(data, session) {
       sh.getRange(row, 1, 1, 17).setValues([rowValues]);
     } else {
       sh.appendRow(rowValues);
+      row = sh.getLastRow();
     }
+    formatBuyerRow_(sh, row);
   } finally {
     lock.releaseLock();
   }
@@ -237,7 +259,7 @@ function farmerRecords_(phone) {
     return isOwned_(r, phone, 12) && String(r[11]) !== 'Deleted';
   }).map(function (r) {
     return {
-      id: text_(r[0]), timestamp: dateTime_(r[1]), fname: text_(r[2]), lname: text_(r[3]), phone: text_(r[4]),
+      id: text_(r[0]), timestamp: dateTime_(r[1]), fname: text_(r[2]), lname: text_(r[3]), phone: displayPhone_(r[4]),
       crop: text_(r[5]), plantDate: dateInput_(r[6]), harvestDate: dateInput_(r[7]), area: text_(r[8]),
       lat: maybeNumber_(r[9]), lng: maybeNumber_(r[10]), recordStatus: text_(r[11]), materialType: text_(r[13]), materialOther: text_(r[14])
     };
@@ -249,10 +271,9 @@ function buyerRecords_(phone) {
     return isOwned_(r, phone, 12) && String(r[11]) !== 'Deleted';
   }).map(function (r) {
     return {
-      id: text_(r[0]), timestamp: dateTime_(r[1]), fname: text_(r[2]), lname: text_(r[3]), phone: text_(r[4]),
+      id: text_(r[0]), timestamp: dateTime_(r[1]), fname: text_(r[2]), lname: text_(r[3]), phone: displayPhone_(r[4]),
       lat: maybeNumber_(r[5]), lng: maybeNumber_(r[6]), material: text_(r[7]), quality: text_(r[8]), price: maybeNumber_(r[9]), capacity: text_(r[10]),
-      recordStatus: text_(r[11]), materialType: text_(r[13]), materialOther: text_(r[14]),
-      purchaseAfterHarvestDays: purchaseAfterHarvestDays_(r[16])
+      recordStatus: text_(r[11]), materialType: text_(r[13]), materialOther: text_(r[14])
     };
   });
 }
@@ -260,7 +281,7 @@ function buyerRecords_(phone) {
 function farmerPublic_(r) {
   return {
     id: text_(r[0]), name: (text_(r[2]) + ' ' + text_(r[3])).trim(), fname: text_(r[2]), lname: text_(r[3]),
-    phone: text_(r[4]), crop: text_(r[5]), harvest: dateInput_(r[7]), harvestDate: dateInput_(r[7]), area: text_(r[8]), lat: Number(r[9]), lng: Number(r[10]),
+    phone: displayPhone_(r[4]), crop: text_(r[5]), harvest: dateInput_(r[7]), harvestDate: dateInput_(r[7]), area: text_(r[8]), lat: Number(r[9]), lng: Number(r[10]),
     materialType: text_(r[13]), materialOther: text_(r[14]), material: resolvedMaterial_(r[13], r[14], r[5])
   };
 }
@@ -268,9 +289,8 @@ function farmerPublic_(r) {
 function buyerPublic_(r) {
   return {
     id: text_(r[0]), name: (text_(r[2]) + ' ' + text_(r[3])).trim(), fname: text_(r[2]), lname: text_(r[3]),
-    phone: text_(r[4]), lat: Number(r[5]), lng: Number(r[6]),
-    material: resolvedMaterial_(r[13], r[14], r[7]), quality: text_(r[8]), price: maybeNumber_(r[9]), capacity: text_(r[10]),
-    purchaseAfterHarvestDays: purchaseAfterHarvestDays_(r[16])
+    phone: displayPhone_(r[4]), lat: Number(r[5]), lng: Number(r[6]),
+    material: resolvedMaterial_(r[13], r[14], r[7]), quality: text_(r[8]), price: maybeNumber_(r[9]), capacity: text_(r[10])
   };
 }
 
@@ -308,10 +328,12 @@ function verifyDatabaseSchema() {
 /** One-time administrator setup after pasting this code into a new project. */
 function setupSystem() {
   const migration = ensureBuyerHarvestDaysColumn_();
+  const formats = ensureSheetDataFormats_();
+  const normalized = normalizeLegacySheetData_();
   const schema = verifyDatabaseSchema();
   const restored = restoreLegacyExpiredFarmers_();
   const trigger = setupDailyTrigger();
-  return migration + '\n' + schema + '\n' + restored + '\n' + trigger;
+  return migration + '\n' + formats + '\n' + normalized + '\n' + schema + '\n' + restored + '\n' + trigger;
 }
 
 /**
@@ -334,6 +356,79 @@ function ensureBuyerHarvestDaysColumn_() {
     throw new Error('buyers: column Q is already used by ' + current);
   }
   return 'PASS: buyers column Q is ready';
+}
+
+/**
+ * Preserve the legacy schema while making future Sheet display and writes
+ * consistent: phone values are text and farmer dates use ISO yyyy-mm-dd.
+ */
+function ensureSheetDataFormats_() {
+  const users = sheet_('users');
+  const farmers = sheet_('farmers');
+  const buyers = sheet_('buyers');
+  users.getRange('A:A').setNumberFormat('@');
+  farmers.getRange('E:E').setNumberFormat('@');
+  farmers.getRange('M:M').setNumberFormat('@');
+  farmers.getRange('G:H').setNumberFormat('yyyy-mm-dd');
+  buyers.getRange('E:E').setNumberFormat('@');
+  buyers.getRange('M:M').setNumberFormat('@');
+  return 'PASS: phone columns are text and farmer dates use yyyy-mm-dd';
+}
+
+function formatFarmerRow_(sh, row) {
+  sh.getRange(row, 5).setNumberFormat('@');
+  sh.getRange(row, 7, 1, 2).setNumberFormat('yyyy-mm-dd');
+  sh.getRange(row, 13).setNumberFormat('@');
+}
+
+function formatBuyerRow_(sh, row) {
+  sh.getRange(row, 5).setNumberFormat('@');
+  sh.getRange(row, 13).setNumberFormat('@');
+}
+
+/**
+ * Idempotent one-time cleanup for values that Google Sheets previously coerced.
+ * Ambiguous or invalid values are left unchanged.
+ */
+function normalizeLegacySheetData_() {
+  let phoneChanges = 0;
+  let dateChanges = 0;
+  [
+    { sh: sheet_('users'), columns: [1] },
+    { sh: sheet_('farmers'), columns: [5, 13] },
+    { sh: sheet_('buyers'), columns: [5, 13] }
+  ].forEach(function (entry) {
+    if (entry.sh.getLastRow() < 2) return;
+    entry.columns.forEach(function (column) {
+      const values = entry.sh.getRange(2, column, entry.sh.getLastRow() - 1, 1).getValues();
+      values.forEach(function (rowValue, index) {
+        const original = rowValue[0];
+        const normalized = normalizePhone_(original);
+        if (/^0\d{9}$/.test(normalized) && String(original) !== normalized) {
+          entry.sh.getRange(index + 2, column).setValue(normalized);
+          phoneChanges++;
+        }
+      });
+    });
+  });
+
+  const farmers = sheet_('farmers');
+  if (farmers.getLastRow() >= 2) {
+    [7, 8].forEach(function (column) {
+      const values = farmers.getRange(2, column, farmers.getLastRow() - 1, 1).getValues();
+      values.forEach(function (rowValue, index) {
+        const original = rowValue[0];
+        if (!original || original instanceof Date) return;
+        const normalized = toDate_(original);
+        if (normalized) {
+          farmers.getRange(index + 2, column).setValue(normalized);
+          dateChanges++;
+        }
+      });
+    });
+  }
+  return 'PASS: normalized ' + phoneChanges + ' legacy phone value(s) and ' +
+    dateChanges + ' legacy date value(s)';
 }
 
 /**
@@ -439,19 +534,6 @@ function sessionTtlSeconds_() {
   return isFinite(seconds) && seconds >= 300 && seconds <= 21600 ? Math.floor(seconds) : DEFAULT_SESSION_TTL_SECONDS;
 }
 
-function purchaseAfterHarvestDays_(value) {
-  // New format: ALL or an integer from 1–15. Legacy 0/blank values become ALL.
-  if (value === '' || value === null || value === undefined || value === 0 || String(value).trim().toUpperCase() === 'ALL') {
-    return 'ALL';
-  }
-  const days = Number(value);
-  const maxDays = 15;
-  if (!isFinite(days) || Math.floor(days) !== days || days < 1 || days > maxDays) {
-    throw new Error('กรุณาเลือกทั้งหมด หรือจำนวนเต็มตั้งแต่ 1 ถึง ' + maxDays + ' วันหลังเก็บเกี่ยว');
-  }
-  return days;
-}
-
 function validateMaterial_(type, other) {
   type = cleanText_(type, 80);
   other = cleanText_(other, 150);
@@ -461,6 +543,18 @@ function validateMaterial_(type, other) {
   if (type === 'อื่นๆ' && !other) throw new Error('กรุณาระบุชนิดเศษวัสดุอื่นๆ');
   if (type !== 'อื่นๆ') other = '';
   return { type: type, other: other, resolved: type === 'อื่นๆ' ? other : type };
+}
+
+/**
+ * Known crops always determine their residue type on the server. This prevents
+ * stale Frontends or edited requests from saving an inconsistent combination.
+ * "อื่นๆ" remains available for crops that are not in the fixed crop list.
+ */
+function farmerMaterialForCrop_(crop, requestedType, requestedOther) {
+  const automaticType = CROP_MATERIAL_MAP[cleanText_(crop, 150)];
+  return automaticType
+    ? { type: automaticType, other: '', resolved: automaticType }
+    : validateMaterial_(requestedType, requestedOther);
 }
 
 function resolvedMaterial_(type, other, fallback) {
@@ -484,8 +578,23 @@ function parseDate_(value, label) {
 function toDate_(v) {
   if (v instanceof Date && !isNaN(v.getTime())) return v;
   if (!v) return null;
-  const d = new Date(v);
-  return isNaN(d.getTime()) ? null : d;
+  const value = String(v).trim();
+  let m = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/);
+  let year, month, day;
+  if (m) {
+    year = Number(m[1]);
+    month = Number(m[2]);
+    day = Number(m[3]);
+  } else {
+    m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return null;
+    day = Number(m[1]);
+    month = Number(m[2]);
+    year = Number(m[3]);
+  }
+  if (year > 2400) year -= 543;
+  const d = new Date(year, month - 1, day);
+  return d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day ? d : null;
 }
 
 function numberInRange_(v, min, max, label) {
@@ -522,7 +631,16 @@ function normalizeRole_(v) {
   return role;
 }
 
-function normalizePhone_(v) { return String(v || '').replace(/\D/g, ''); }
+function normalizePhone_(v) {
+  const digits = String(v === null || v === undefined ? '' : v).replace(/\D/g, '');
+  // A numeric Sheet cell may drop the leading zero from a Thai mobile number.
+  return /^\d{9}$/.test(digits) ? '0' + digits : digits;
+}
+
+function displayPhone_(v) {
+  const phone = normalizePhone_(v);
+  return /^0\d{9}$/.test(phone) ? phone : text_(v);
+}
 
 function normalizeContactPhone_(v) {
   const phone = normalizePhone_(v);

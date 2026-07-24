@@ -17,7 +17,8 @@ assert(
   config.includes('AKfycbwQLSoTT71Tsgt2IITpkQKE57qBvYrA9MLSt-Yg6r3-1a2X04mJ0xmqMHEK-tcV2iPe/exec'),
   'deployment URL is missing or stale'
 );
-assert(config.includes("BUILD_VERSION: '1.3.1'"), 'frontend build version is missing or stale');
+assert(config.includes("BUILD_VERSION: '1.4.1'"), 'frontend build version is missing or stale');
+assert(config.includes("MINIMUM_API_VERSION: '1.3.1'"), 'minimum compatible API version is missing');
 
 [
   'id="harvestFilterPanel"',
@@ -32,14 +33,27 @@ assert(config.includes("BUILD_VERSION: '1.3.1'"), 'frontend build version is mis
   'function filterFarmersByHarvestPeriod',
   'function updateHarvestFilterSummary',
   'function matchingApiCompatibilityError',
+  'function isVersionAtLeast',
+  'function syncFarmerMaterial',
+  "'ข้าวนาปี': 'ฟางข้าว'",
+  "'ข้าวนาปรัง': 'ฟางข้าว'",
+  "'อ้อยโรงงาน': 'ใบอ้อย'",
+  "'มันสำปะหลัง': 'เหง้ามันสำปะหลัง'",
   'function contactPhone',
   'function navigationUrl',
   'function mapPointDescription',
   'function mobileActionLinks',
-  'Backend ยังไม่ใช่เวอร์ชัน',
+  'Array.isArray(data.ownPlots)',
+  "const ownPlots = isFarmer ? (data.ownPlots || []) : []",
+  "concat(ownPlots.map(item => ({ item, role: 'farmer', own: true })))",
+  'ประเภท: แปลงของฉัน',
+  'พิกัดแปลง',
+  'พิกัดสถานที่รับซื้อ',
+  'ปุ่มโทรและนำทางใช้ได้เฉพาะคู่ค้า',
+  'Backend ต่ำกว่าเวอร์ชันขั้นต่ำ',
   'filterFarmersByHarvestPeriod(data.farmers)',
   "const partnerRole = isFarmer ? 'buyer' : 'farmer'",
-  'const mapPoints = partnerTargets.map(item => ({ item, role: partnerRole }))',
+  'const mapPoints = partnerTargets.map(item => ({ item, role: partnerRole, own: false }))',
   'Backend ยังไม่ได้จำกัดข้อมูลเฉพาะคู่ค้าฝั่งตรงข้าม',
   'mainMap.fitBounds(bounds',
   'กดหมุดเพื่อโทรติดต่อหรือเริ่มนำทาง',
@@ -49,7 +63,23 @@ assert(config.includes("BUILD_VERSION: '1.3.1'"), 'frontend build version is mis
 ].forEach(text => assert(html.includes(text), `missing component: ${text}`));
 
 assert(!html.includes('marker-icon-red.png'), 'red marker must not remain');
+assert(!html.includes('ต้องการรับซื้อภายในกี่วันหลังเก็บเกี่ยว'), 'retired buyer input is still visible');
+assert(!html.includes('select[name="purchaseAfterHarvestDays"]'), 'retired buyer input is still submitted');
+assert(!html.includes('ช่วงเวลารับซื้อ:'), 'retired buyer condition is still shown on partner cards');
 assert(html.includes("const color = role === 'buyer' ? 'blue' : 'green';"), 'role marker colors are incorrect');
+assert(html.includes('name="materialType" disabled'), 'farmer material field must be automatic');
+assert(html.includes('ระบบกำหนดอัตโนมัติตามชนิดพืช'), 'automatic material explanation is missing');
+
+const versionBody = html.match(/function isVersionAtLeast\(actual, minimum\) \{([\s\S]*?)\n    \}/);
+assert(versionBody, 'isVersionAtLeast function was not found');
+const versionPartsBody = html.match(/function versionParts\(value\) \{([\s\S]*?)\n    \}/);
+assert(versionPartsBody, 'versionParts function was not found');
+const versionParts = new Function('value', versionPartsBody[1]);
+const isVersionAtLeast = new Function('versionParts', 'actual', 'minimum', versionBody[1]).bind(null, versionParts);
+assert(isVersionAtLeast('1.3.1', '1.3.1'), 'equal compatible version was rejected');
+assert(isVersionAtLeast('1.4.0', '1.3.1'), 'newer compatible version was rejected');
+assert(!isVersionAtLeast('1.3.0', '1.3.1'), 'older incompatible version was accepted');
+assert(!isVersionAtLeast('', '1.3.1'), 'missing API version was accepted');
 
 const datePartsBody = html.match(/function harvestDateParts\(value\) \{([\s\S]*?)\n    \}/);
 assert(datePartsBody, 'harvestDateParts function was not found');
@@ -111,4 +141,4 @@ assert(route.includes('destination=16.48%2C99.52'), 'navigation coordinates were
 assert(route.includes('travelmode=driving'), 'driving navigation mode is missing');
 assert(route.includes('dir_action=navigate'), 'turn-by-turn navigation action is missing');
 
-console.log('PASS: opposite-role-only map pins, mobile call/navigation actions, harvest filter, marker colors, and frontend syntax');
+console.log('PASS: version compatibility, automatic crop/material mapping, own plots, partner-only actions, buyer overview, labels, harvest filter, and frontend syntax');

@@ -4,5 +4,6 @@ window.GGH_CONFIG = {
   // ใช้เพื่อแสดงอ้างอิงเท่านั้น สิทธิ์อ่าน/เขียนอยู่ที่ API ไม่ได้ฝังใน GitHub
   SPREADSHEET_ID: '1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA',
   REQUEST_TIMEOUT_MS: 30000,
-  BUILD_VERSION: '1.3.1'
+  BUILD_VERSION: '1.4.1',
+  MINIMUM_API_VERSION: '1.3.1'
 };

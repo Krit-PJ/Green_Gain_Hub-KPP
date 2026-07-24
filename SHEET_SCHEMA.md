@@ -1,42 +1,25 @@
-# Google Sheet ที่ระบบ 1.3.1 ใช้งาน
+# Google Sheet schema — Green Gain Hub 1.4.1
 
-[1.Green Gain HUB_KPP](https://docs.google.com/spreadsheets/d/1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA/edit)
+รุ่นนี้ไม่เพิ่ม ลบ หรือเปลี่ยนลำดับคอลัมน์
 
-ระบบใช้ข้อมูลจริงในแท็บ `users`, `farmers`, `buyers` โดยไม่อ่านแท็บทดสอบ
+## farmers
 
-ตัวกรอง “ช่วงเวลาเก็บเกี่ยวผลผลิต” ของผู้รับซื้อ ใช้ค่า `farmers!H` (`Havest_Date`) เฉพาะเมื่อเลือกปี พ.ศ. และช่วงเดือน หากเลือก “ทั้งหมด” จะไม่กรองวันเก็บเกี่ยว ปี หรือเดือน รุ่น 1.3.1 ไม่เพิ่มหรือลำดับคอลัมน์ใหม่ และใช้พิกัดเดิมใน `farmers!J:K` กับ `buyers!F:G`
+- `E Phone`: รูปแบบข้อความ
+- `G Plant_Date`: รูปแบบแสดงผล `yyyy-mm-dd`
+- `H Havest_Date`: รูปแบบแสดงผล `yyyy-mm-dd`
+- `J:K Lat/Lng`: พิกัดแปลง
+- `M Owner_Telephone`: รูปแบบข้อความและเป็นคีย์หลักของเจ้าของแปลง
+- `Q Map_Visible`: คงไว้เพื่อความเข้ากันได้
 
-## users — A:I
+## buyers
 
-`Telephone, Password, Status, Name, System, Consent, Consent_Timestamp, Created_At, Updated_At`
+- `E Phone`: รูปแบบข้อความ
+- `F:G Lat/Lng`: พิกัดสถานที่รับซื้อ
+- `M Owner_Telephone`: รูปแบบข้อความ
+- `Q Purchase_After_Harvest_Days`: คงไว้เพื่อไม่ทำลาย schema แต่รุ่น 1.4.1 ไม่ใช้กรองหรือแสดงผล
 
-- คอลัมน์ Password เป็นโครงสร้างเดิมและ API รุ่น 0.7 ไม่อ่านหรือเขียนรหัสผ่าน
-- เข้าสู่ระบบด้วย Telephone ตามพฤติกรรมระบบเดิม
-- รายการลงทะเบียนใหม่เก็บ Consent และวันเวลาโดยอัตโนมัติ
+## users
 
-## farmers — A:R
+- `A Telephone`: รูปแบบข้อความ
 
-| ช่วง | ข้อมูล |
-|---|---|
-| A:L | โครงสร้างเดิม: ID, Timestamp, Name, Surname, Phone, Crop, Plant_Date, Havest_Date, Area, Lat, Lng, Stasus |
-| M | Owner_Telephone — เจ้าของรายการ |
-| N | Material_Type — ฟางข้าว / ใบอ้อย / เหง้ามันสำปะหลัง / อื่นๆ |
-| O | Material_Other — รายละเอียดเมื่อเลือกอื่นๆ |
-| P | Map_Expire_Date — คอลัมน์เดิมเพื่อความเข้ากันได้ (รุ่น 1.3.1 ไม่ใช้และล้างค่าในรายการ Open) |
-| Q | Map_Visible — คอลัมน์เดิมเพื่อความเข้ากันได้ แสดงค่า TRUE เมื่อสถานะเป็น Open |
-| R | Updated_At |
-
-## buyers — A:Q
-
-| ช่วง | ข้อมูล |
-|---|---|
-| A:L | โครงสร้างเดิม: ID, Timestamp, Name, Surname, Phone, Lat, Lng, Material, Quality, Price, Capacity, Status |
-| M | Owner_Telephone — เจ้าของรายการ |
-| N | Material_Type |
-| O | Material_Other |
-| P | Updated_At |
-| Q | Purchase_After_Harvest_Days — ผู้ซื้อเลือก `ALL` (ทั้งหมด) หรือ 1–15 วัน (ข้อมูลเดิมที่ว่าง/0 ใช้ `ALL`) |
-
-Backend ตรวจสิทธิ์ด้วย Owner_Telephone และใช้ Phone เป็น fallback เฉพาะข้อมูลเก่าที่ยังไม่มี Owner_Telephone
-
-ไม่ต้องเพิ่ม ลบ หรือย้ายคอลัมน์ใน Google Sheet แต่ต้อง Run `setupSystem()` หนึ่งครั้งหลังวางโค้ดใหม่ เพื่อคืนรายการ `Expired` จากกฎเดิมเป็น `Open` และยกเลิก Trigger หมดอายุเดิม
+`setupSystem()` กำหนดรูปแบบคอลัมน์ และแปลงเฉพาะข้อมูลเก่าที่ระบุได้แน่นอน ได้แก่ เบอร์ 9 หลักที่เลขศูนย์นำหน้าหาย และวันที่ที่ตรงกับ `yyyy-mm-dd` หรือ `d/m/yyyy` ค่าที่กำกวม/ไม่ถูกต้องจะไม่ถูกแก้
