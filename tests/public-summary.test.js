@@ -60,7 +60,31 @@ global.ContentService = {
 const root = path.join(__dirname, '..', 'apps-script');
 const districts = fs.readFileSync(path.join(root, 'Districts.gs'), 'utf8');
 const code = fs.readFileSync(path.join(root, 'Code.gs'), 'utf8');
-const api = new Function(districts + '\n' + code + '; return { doGet, buildPublicSummary_, parseAreaRai_, leadingNumber_, districtList_, districtForPoint_, getApiInfoServer };')();
+let fetched = [];
+let upstream = 'ok';
+const smartBodies = {
+  summary: { ok: true, api_version: '1', endpoint: 'summary', generated_at: '2026-11-03 07:00:00', data: {
+    round: { round: 2, label: 'ครั้งที่ 2', start: '2026-10-27', end: '2026-11-02', due: '2026-11-03' }, districts_total: 11,
+    reported: { count: 3, districts: ['D01', 'D04', 'D05'] }, status_counts: { accepted: 1, submitted: 2, draft: 1, returned: 0, none: 7 },
+    items: [{ id: 'R31', code: '2.2', label: 'ไถกลบตอซัง/การใช้สารย่อยสลาย', unit: 'ไร่', week: 120, cumulative: 950, districts_reporting_yes: 3,
+      by_district: { D04: { week: 100, cumulative: 800 } } }],
+    other_activities: [] } },
+  districts: { ok: true, data: { round: {}, districts: [
+    { code: 'D04', name: 'ขาณุวรลักษบุรี', amp_code: '6204', status: 'accepted', counted: true, late: false, items: { R31: { week: 100, cumulative: 800, unit: 'ไร่' } } },
+    { code: 'D02', name: 'ไทรงาม', amp_code: '6202', status: 'none', counted: false, late: false, items: { R31: { week: null, cumulative: null, unit: 'ไร่' } } }] } },
+  timeseries: { ok: true, data: { scope: 'province', items: [], series: [
+    { round: 1, label: 'ครั้งที่ 1', start: '2026-10-20', end: '2026-10-26', reported: 2, values: { R31: { week: 830, cumulative: 830 } } },
+    { round: 2, label: 'ครั้งที่ 2', start: '2026-10-27', end: '2026-11-02', reported: 3, values: { R31: { week: 120, cumulative: 950 } } }] } },
+  meta: { ok: true, data: { site: 'KPP Smart Agri-Materials', office: 'สำนักงานเกษตรจังหวัดกำแพงเพชร', title: 'แบบรายงาน', season: '2569 - 2570' } }
+};
+global.UrlFetchApp = { fetchAll: reqs => reqs.map(r => {
+  fetched.push(r.url);
+  const ep = r.url.match(/endpoint=(\w+)/)[1];
+  if (upstream === 'down') return { getResponseCode: () => 500, getContentText: () => 'err' };
+  if (upstream === 'badkey') return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ ok: false, error: 'API Key ไม่ถูกต้องหรือถูกยกเลิกแล้ว', code: 'invalid_key' }) };
+  return { getResponseCode: () => 200, getContentText: () => JSON.stringify(smartBodies[ep]) };
+}) };
+const api = new Function(districts + '\n' + code + '; return { doGet, buildPublicSummary_, parseAreaRai_, leadingNumber_, districtList_, districtForPoint_, getApiInfoServer, getSmartAgriReports_, verifySmartAgriConnection };')();
 
 // Helpers
 assert(Math.abs(api.parseAreaRai_('20 ไร่ 1 งาน 25 ตร.ว.') - 20.3125) < 1e-9, 'area parsing failed');
@@ -120,4 +144,37 @@ const apiNoDistricts = new Function(code + '; return { buildPublicSummary_ };')(
 const s2 = apiNoDistricts.buildPublicSummary_(now);
 assert(s2.totals.farmerPlots === 5 && s2.byDistrict.length === 1 && s2.byDistrict[0].code === 'OTHER', 'summary must degrade gracefully without Districts.gs');
 
+// Smart Agri-Materials proxy
+cache.clear(); props = {};
+let rep = api.getSmartAgriReports_(true);
+assert(rep.ok === false && rep.configured === false && fetched.length === 0, 'proxy must not call upstream without SMART_AGRI_API_KEY');
+assert(api.verifySmartAgriConnection().startsWith('INFO:'), 'unconfigured proxy must report INFO, not FAIL');
+props = { SMART_AGRI_API_KEY: 'kpp_testkey123' };
+cache.clear();
+rep = api.getSmartAgriReports_(true);
+assert(rep.ok && rep.round.round === 2 && rep.reportedCount === 3 && rep.districtsTotal === 11, 'proxy normalization of summary failed');
+assert(rep.items[0].id === 'R31' && rep.items[0].cumulative === 950 && rep.items[0].unit === 'ไร่', 'proxy items mapping failed');
+const kh = rep.byDistrict.find(d => d.code === '6204');
+assert(kh && kh.status === 'accepted' && kh.items.R31.cumulative === 800, 'proxy must key districts by amp_code');
+assert(rep.byDistrict.find(d => d.code === '6202').items.R31.cumulative === null, 'missing values must stay null, not 0');
+assert(rep.series.length === 2 && rep.series[1].values.R31.cumulative === 950, 'proxy timeseries mapping failed');
+assert(fetched.length === 4 && fetched.every(u => u.includes('key=kpp_testkey123') && u.includes('items=agri') && u.startsWith('https://script.google.com/macros/s/AKfycbxoo4')), 'proxy must call the Smart Agri deployment with key server-side');
+const before = fetched.length;
+api.getSmartAgriReports_(false);
+assert(fetched.length === before, 'proxy result must be cached');
+api.doGet({ parameter: { api: 'v1', endpoint: 'summary' } });
+out = JSON.parse(lastOutput.body);
+assert(out.ok && out.data.reports.ok && out.data.reports.items[0].id === 'R31', 'summary must include Smart Agri reports');
+assert(!lastOutput.body.includes('kpp_testkey123'), 'API key must never be sent to the browser');
+cache.clear(); upstream = 'badkey';
+rep = api.getSmartAgriReports_(true);
+assert(rep.ok === false && rep.configured === true && /API Key/.test(rep.error), 'upstream API errors must surface as ok:false');
+cache.clear(); upstream = 'down';
+api.doGet({ parameter: { api: 'v1', endpoint: 'summary' } });
+out = JSON.parse(lastOutput.body);
+assert(out.ok && out.data.totals.farmerPlots === 5 && out.data.reports.ok === false, 'upstream outage must not break the GGH summary');
+assert(api.verifySmartAgriConnection().startsWith('FAIL:'), 'configured but failing proxy must report FAIL');
+upstream = 'ok'; props = {};
+
+console.log('PASS: Smart Agri-Materials proxy — key stays server-side, normalization, cache, graceful failure');
 console.log('PASS: public summary v1 — aggregates, district mapping, BioRate, privacy, routing and key gate');

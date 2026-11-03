@@ -13,6 +13,11 @@ const APP_VERSION = '1.5.0';
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
 const SUMMARY_CACHE_SECONDS = 300;
 const SUMMARY_CACHE_KEY = 'summary:v1:' + APP_VERSION;
+// KPP Smart Agri-Materials (รายงานการจัดการเศษวัสดุรายอำเภอ) — อ่านผ่าน Data API v1 ฝั่ง Server
+// API Key เก็บใน Script Property SMART_AGRI_API_KEY เท่านั้น (ไม่อยู่ใน GitHub/หน้าเว็บ)
+const SMART_AGRI_DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbxoo4VuAomjDPaDPXgEF6y0CFVxBfor-4OmIi3bQVik7FCgAx_7XghYmeav7BHDbpLcaw/exec';
+const SMART_AGRI_CACHE_KEY = 'smartagri:v1:' + APP_VERSION;
+const SMART_AGRI_ITEMS = 'agri';
 const DEFAULT_SESSION_TTL_SECONDS = 21600; // 6 hours
 const MATERIAL_TYPES = ['ฟางข้าว', 'ใบอ้อย', 'เหง้ามันสำปะหลัง', 'อื่นๆ'];
 const CROP_MATERIAL_MAP = {
@@ -83,7 +88,9 @@ function publicApiResponse_(p, callback) {
     requireSummaryKey_(p.key);
     const endpoint = String(p.endpoint || 'summary');
     if (endpoint === 'summary') {
-      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getPublicSummary_(p.refresh === '1') };
+      const data = getPublicSummary_(p.refresh === '1');
+      data.reports = getSmartAgriReports_(p.refresh === '1');
+      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: data };
     } else if (endpoint === 'health') {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, feature: getApiInfoServer().feature,
         generatedAt: new Date().toISOString() };
@@ -388,6 +395,106 @@ function pointInRing_(x, y, ring) {
   return inside;
 }
 
+/* ------------------------------------------------------------------------- *
+ * KPP Smart Agri-Materials reports (read-only proxy).
+ * Calls the external Data API v1 server-side so the API key never reaches
+ * the browser. Failures return { ok:false } and never break the GGH summary.
+ * ------------------------------------------------------------------------- */
+
+function getSmartAgriReports_(forceRefresh) {
+  const cache = CacheService.getScriptCache();
+  if (!forceRefresh) {
+    const hit = cache.get(SMART_AGRI_CACHE_KEY);
+    if (hit) return JSON.parse(hit);
+  }
+  const reports = fetchSmartAgriReports_();
+  // Cache failures briefly so a broken upstream is retried soon without hammering it.
+  try { cache.put(SMART_AGRI_CACHE_KEY, JSON.stringify(reports), reports.ok ? SUMMARY_CACHE_SECONDS : 60); } catch (err) { /* too large */ }
+  return reports;
+}
+
+function fetchSmartAgriReports_() {
+  const props = PropertiesService.getScriptProperties();
+  const key = String(props.getProperty('SMART_AGRI_API_KEY') || '').trim();
+  const base = String(props.getProperty('SMART_AGRI_API_URL') || SMART_AGRI_DEFAULT_URL).trim();
+  const source = { name: 'KPP Smart Agri-Materials', office: '', title: '' };
+  if (!key) return { ok: false, configured: false, source: source, error: 'ยังไม่ได้ตั้งค่า SMART_AGRI_API_KEY ใน Script Properties' };
+  try {
+    const url = function (endpoint) {
+      return base + (base.indexOf('?') >= 0 ? '&' : '?') + 'api=v1&endpoint=' + endpoint +
+        '&items=' + SMART_AGRI_ITEMS + '&key=' + encodeURIComponent(key);
+    };
+    const responses = UrlFetchApp.fetchAll(['summary', 'districts', 'timeseries', 'meta'].map(function (endpoint) {
+      return { url: url(endpoint), muteHttpExceptions: true, followRedirects: true };
+    }));
+    const bodies = responses.map(function (res) {
+      if (res.getResponseCode() !== 200) throw new Error('Smart Agri API HTTP ' + res.getResponseCode());
+      const body = JSON.parse(res.getContentText());
+      if (!body || body.ok === false) throw new Error('Smart Agri API: ' + (body && (body.error || body.code) || 'error'));
+      return body;
+    });
+    return normalizeSmartAgri_(bodies[0], bodies[1], bodies[2], bodies[3]);
+  } catch (err) {
+    return { ok: false, configured: true, source: source, error: cleanText_(err && err.message || err, 200) };
+  }
+}
+
+/** Reshape the external API into the compact, district-keyed form used by the dashboard. */
+function normalizeSmartAgri_(summaryBody, districtsBody, seriesBody, metaBody) {
+  const s = summaryBody.data || {};
+  const d = (districtsBody && districtsBody.data) || {};
+  const ts = (seriesBody && seriesBody.data) || {};
+  const meta = (metaBody && metaBody.data) || {};
+  const items = (s.items || []).map(function (it) {
+    return { id: text_(it.id), code: text_(it.code), label: text_(it.label), unit: text_(it.unit),
+      week: numOrNull_(it.week), cumulative: numOrNull_(it.cumulative), districtsYes: Number(it.districts_reporting_yes) || 0 };
+  });
+  const byDistrict = (d.districts || []).map(function (x) {
+    const values = {};
+    Object.keys(x.items || {}).forEach(function (id) {
+      values[id] = { week: numOrNull_(x.items[id].week), cumulative: numOrNull_(x.items[id].cumulative) };
+    });
+    return { code: text_(x.amp_code), sourceCode: text_(x.code), name: text_(x.name), status: text_(x.status) || 'none',
+      counted: !!x.counted, late: !!x.late, items: values };
+  });
+  const series = (ts.series || []).map(function (r) {
+    const values = {};
+    Object.keys(r.values || {}).forEach(function (id) {
+      values[id] = { week: numOrNull_(r.values[id].week), cumulative: numOrNull_(r.values[id].cumulative) };
+    });
+    return { round: Number(r.round) || 0, label: text_(r.label), start: text_(r.start), end: text_(r.end), reported: Number(r.reported) || 0, values: values };
+  });
+  const round = s.round || {};
+  return {
+    ok: true,
+    configured: true,
+    source: { name: text_(meta.site) || 'KPP Smart Agri-Materials', office: text_(meta.office), title: text_(meta.title), season: text_(meta.season) },
+    generatedAt: text_(summaryBody.generated_at),
+    round: { round: Number(round.round) || 0, label: text_(round.label), start: text_(round.start), end: text_(round.end), due: text_(round.due) },
+    districtsTotal: Number(s.districts_total) || byDistrict.length,
+    reportedCount: s.reported ? Number(s.reported.count) || 0 : 0,
+    statusCounts: s.status_counts || {},
+    items: items,
+    byDistrict: byDistrict,
+    series: series
+  };
+}
+
+function numOrNull_(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return isFinite(n) ? n : null;
+}
+
+/** Run from the editor after setting SMART_AGRI_API_KEY to confirm the connection. */
+function verifySmartAgriConnection() {
+  CacheService.getScriptCache().remove(SMART_AGRI_CACHE_KEY);
+  const r = fetchSmartAgriReports_();
+  if (!r.ok) return (r.configured ? 'FAIL: ' : 'INFO: ') + r.error;
+  return 'PASS: Smart Agri-Materials — round ' + r.round.round + ' (' + r.round.label + '), ' + r.reportedCount + '/' +
+    r.districtsTotal + ' district(s) reported, ' + r.items.length + ' indicator(s)';
+}
+
 /** Saves change the dashboard immediately instead of waiting for the cache to expire. */
 function invalidateSummary_() {
   try { CacheService.getScriptCache().remove(SUMMARY_CACHE_KEY); } catch (err) { /* best effort */ }
@@ -677,7 +784,8 @@ function setupSystem() {
   const trigger = setupDailyTrigger();
   invalidateSummary_();
   const summary = verifyPublicSummary();
-  return migration + '\n' + formats + '\n' + normalized + '\n' + schema + '\n' + restored + '\n' + trigger + '\n' + summary;
+  const reports = verifySmartAgriConnection();
+  return migration + '\n' + formats + '\n' + normalized + '\n' + schema + '\n' + restored + '\n' + trigger + '\n' + summary + '\n' + reports;
 }
 
 /**
