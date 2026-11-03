@@ -79,3 +79,30 @@ Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts
 - `null` = ยังไม่มีรายงาน (ไม่ใช่ 0)
 - ถ้าเรียกไม่สำเร็จ: `{ "ok": false, "configured": true|false, "error": "..." }` ส่วนอื่นของ summary ยังทำงาน
 - คีย์ไม่ถูกส่งไปที่ browser (มีเทสต์ตรวจ)
+
+## 1.6.0: `data.crops` (ข้อมูลเพาะปลูก)
+
+```json
+"crops": { "ok": true, "source": "ระบบฐานข้อมูลทะเบียนเกษตรกรกลาง กรมส่งเสริมการเกษตร", "crops": [{
+  "crop": "ข้าวนาปี", "season": "2569/70", "material": "ฟางข้าว", "monthType": "harvest",
+  "asOfMonth": 202610, "currentMonth": 202611,
+  "totalRai": 1177773.92, "harvestedRai": 912774.35, "remainingRai": 264999.57, "currentMonthRai": 199680.82, "nextMonthRai": 58147.83,
+  "months": [{ "month": 202607, "areaRai": 7333.8, "households": 364, "plots": 590 }],
+  "byDistrict": [{ "code": "6201", "name": "เมืองกำแพงเพชร", "totalRai": 173887, "harvestedRai": 140613, "remainingRai": 33273, "months": { "202607": 1765.5 } }],
+  "residue": null } ] }
+```
+
+- `asOfMonth` = เดือนที่ผ่านมา (คงเหลือ = total − ผลรวมเดือน ≤ asOfMonth) หน้าเว็บเลือกเดือนอื่นได้ โดยคำนวณจาก `months`
+- `residue` มีค่าเมื่อกำหนด BioRate (ตัน/ไร่) ของชนิดเศษวัสดุใน `Research_Refs`
+
+### รายตำบล
+
+`/exec?api=v1&endpoint=crop&crop=ข้าวนาปี&season=2569/70&district=6201` → `{ subdistricts: [{ code, name, totalRai, harvestedRai, remainingRai, months }] }`
+
+## Admin API (POST)
+
+`POST /exec` body (text/plain): `{"method":"…","args":[…],"token":"…"}` → `{ok, result|error}`
+- `adminLoginServer({phone,password})` คืน `token` (2 ชั่วโมง)
+- Admin: `cropTypesListServer`, `cropTypeSaveServer`, `cropImportCheckServer`, `cropImportCommitServer`, `cropImportsListServer`, `cropImportDeleteServer`, `cacheClearServer`, `adminMeServer`, `adminChangePasswordServer`, `adminLogoutServer`
+- Super Admin: `settingsGetServer`, `settingsSaveServer`, `smartAgriTestServer`, `adminsListServer`, `adminSaveServer`, `adminResetPasswordServer`, `adminLogServer`
+- RPC ของเกษตรกร/ผู้รับซื้อเรียกผ่าน POST ไม่ได้

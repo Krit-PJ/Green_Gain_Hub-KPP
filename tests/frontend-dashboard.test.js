@@ -13,12 +13,21 @@ new vm.Script(js, { filename: 'frontend/assets/dashboard.js' });
 
 // Landing keeps the login contract used by the existing app script.
 ['id="loginPage"', 'id="loginPhone"', 'id="loginBtn"', 'onclick="login()"', "toggleAuth('register')", 'id="registerPage"'].forEach(s => assert(html.includes(s), 'login markup missing: ' + s));
-['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashSearch"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=1.5.1') && html.includes('assets/dashboard.css?v=1.5.1'), 'dashboard assets are not linked');
+['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashSearch"',
+  'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="reports"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
+assert(html.includes('assets/dashboard.js?v=1.6.0') && html.includes('assets/dashboard.css?v=1.6.0'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
-assert(js.includes("api: 'v1', endpoint: 'summary'"), 'dashboard must call api=v1&endpoint=summary');
+assert(js.includes("api: 'v1', endpoint: 'summary'") && js.includes("endpoint: 'crop'"), 'dashboard must call the summary and crop endpoints');
+// Admin page: crop must be chosen before a file can be picked; admin calls go through POST only.
+const admin = fs.readFileSync(path.join(front, 'admin.html'), 'utf8');
+const adminJs = fs.readFileSync(path.join(front, 'assets', 'admin.js'), 'utf8');
+new vm.Script(adminJs, { filename: 'frontend/assets/admin.js' });
+assert(/id="fileInput"[^>]*disabled/.test(admin), 'file input must start disabled until a crop is chosen');
+assert(admin.indexOf('assets/config.js') < admin.indexOf('assets/admin.js') && admin.includes('assets/crop-import.js'), 'admin page scripts missing');
+assert(adminJs.includes("method: 'POST'") && !/localStorage/.test(adminJs), 'admin API must use POST and keep the token out of localStorage');
+assert(/noindex/.test(admin), 'admin page must not be indexed');
 assert(!/getMatchingDataServer|\.phone\b|\.lat\b|\.lng\b/.test(js), 'dashboard must not touch personal or plot-level data');
 
 // Boundaries: 11 Kamphaeng Phet districts with attribution.
