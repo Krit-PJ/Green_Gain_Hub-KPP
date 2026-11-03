@@ -1,13 +1,17 @@
 /**
- * Green Gain Hub 1.5.0 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 1.6.0 — API-only bridge from GitHub Pages to Google Sheets.
+ * Files: Code.gs (this), Districts.gs (boundaries), Admin.gs (Super Admin/Admin, doPost),
+ *        Crops.gs (crop area import + crop summary).
  * Database: Google Sheets / file storage: Google Drive.
  *
  * Endpoints (same /exec URL):
  *   ?action=rpc&method=...            JSONP RPC used by the logged-in app (unchanged)
  *   ?api=v1&endpoint=summary[&key=]   Public, aggregate-only dashboard data (JSON or JSONP)
+ *   ?api=v1&endpoint=crop&crop=&season=&district=   Public sub-district crop breakdown
  *   ?api=v1&endpoint=health           Public version check
+ *   POST {method,args,token}          Admin API (Admin.gs)
  */
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -72,7 +76,7 @@ function getApiInfoServer() {
     status: 'success',
     success: true,
     apiVersion: APP_VERSION,
-    feature: 'PUBLIC_SUMMARY_DASHBOARD'
+    feature: 'CROP_IMPORT_ADMIN'
   };
 }
 
@@ -90,7 +94,10 @@ function publicApiResponse_(p, callback) {
     if (endpoint === 'summary') {
       const data = getPublicSummary_(p.refresh === '1');
       data.reports = getSmartAgriReports_(p.refresh === '1');
+      data.crops = getCropSummary_(p.refresh === '1');
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: data };
+    } else if (endpoint === 'crop') {
+      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getCropDetail_(p) };
     } else if (endpoint === 'health') {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, feature: getApiInfoServer().feature,
         generatedAt: new Date().toISOString() };
@@ -785,7 +792,13 @@ function setupSystem() {
   invalidateSummary_();
   const summary = verifyPublicSummary();
   const reports = verifySmartAgriConnection();
-  return migration + '\n' + formats + '\n' + normalized + '\n' + schema + '\n' + restored + '\n' + trigger + '\n' + summary + '\n' + reports;
+  const adminSchema = ensureAdminSchema_();
+  const cropSchema = ensureCropSchema_();
+  const superAdmin = ensureSuperAdmin_();
+  invalidateCropSummary_();
+  const out = [migration, formats, normalized, schema, restored, trigger, summary, reports, adminSchema, cropSchema, superAdmin].join('\n');
+  console.log(out);
+  return out;
 }
 
 /**
@@ -1124,5 +1137,6 @@ function dateTime_(v) {
 function publicError_(err) {
   const msg = String(err && err.message || err || 'เกิดข้อผิดพลาด');
   if (msg === 'SESSION_EXPIRED') return 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง';
+  if (msg === 'ADMIN_SESSION_EXPIRED') return 'ADMIN_SESSION_EXPIRED';
   return cleanText_(msg, 300) || 'เกิดข้อผิดพลาด';
 }
