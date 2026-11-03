@@ -78,6 +78,9 @@ const post = (method, args, token) => { api.doPost({ postData: { contents: JSON.
 const ok = (r, msg) => { assert(r.ok, msg + ': ' + r.error); return r.result; };
 
 /* ---------- setup + super bootstrap ---------- */
+props.SUPER_ADMIN_PASSWORD = '123456789';
+assert(/FAIL: SUPER_ADMIN_PASSWORD/.test(api.setupSystem()) && props.SUPER_ADMIN_PASSWORD, 'weak bootstrap password must be reported, not thrown, and kept for correction');
+props.SUPER_ADMIN_PASSWORD = 'Start1234';
 const setup = api.setupSystem();
 assert(/PASS: admins and admin_log/.test(setup) && /PASS: crop_types/.test(setup) && /PASS: Super Admin "krit"/.test(setup), 'setupSystem must create admin/crop schema and Super Admin:\n' + setup);
 assert(!('SUPER_ADMIN_PASSWORD' in props), 'plain Super Admin password must be removed from Script Properties');

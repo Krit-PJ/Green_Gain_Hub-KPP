@@ -120,7 +120,7 @@ function ensureSuperAdmin_() {
       'INFO: no Super Admin yet — set Script Properties SUPER_ADMIN_USERNAME and SUPER_ADMIN_PASSWORD, then run setupSystem()';
   }
   if (!validUsername_(username)) return 'FAIL: SUPER_ADMIN_USERNAME must be 3–32 characters (a–z, 0–9, . _ -)';
-  validatePassword_(password);
+  try { validatePassword_(password); } catch (err) { return 'FAIL: SUPER_ADMIN_PASSWORD — ' + err.message; }
   const sh = sheetByName_('admins');
   const row = findAdminRow_(username);
   const salt = Utilities.getUuid();
