@@ -20,4 +20,6 @@
 | `crop_imports` | Import_ID, Crop, Season, Month_Type, File_Name, Rows, Total_Rai, Periods, Status, Imported_At, Imported_By, Replaced_By, Note | Status = `active`/`replaced`/`deleted` หน้าแรกใช้เฉพาะ `active` |
 | `crop_stats` | Import_ID, Crop, Season, Month_Type, Period, Level, Code, Name, Households, Plots, Area_Rai | 1 แถว = 1 พื้นที่ × 1 เดือน, Level = province/district/subdistrict |
 
+| `visit_stats` (1.7.0) | Date, Visits, Updated_At | 1 แถว = 1 วัน (yyyy-MM-dd เวลาไทย) ยอดรวมทั้งหมดอยู่ที่ `Config!visit_count` |
+
 ห้ามแก้ไขชีตเหล่านี้ด้วยมือระหว่างใช้งาน ให้จัดการผ่านหน้า `admin.html`

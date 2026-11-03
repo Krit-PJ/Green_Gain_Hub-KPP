@@ -17,7 +17,7 @@ assert(
   config.includes('AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT/exec'),
   'deployment URL is missing or stale'
 );
-assert(config.includes("BUILD_VERSION: '1.6.0'"), 'frontend build version is missing or stale');
+assert(config.includes("BUILD_VERSION: '1.7.0'"), 'frontend build version is missing or stale');
 assert(config.includes("MINIMUM_API_VERSION: '1.3.1'"), 'minimum compatible API version is missing');
 
 [

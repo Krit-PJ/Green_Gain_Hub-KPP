@@ -275,3 +275,7 @@ body.ggh-landing-on main { max-width: 84rem; }
 .ggh-staff-link a { color: var(--ggh-muted); text-decoration: underline; }
 .ggh-landing[data-tab="overview"] .ggh-district h4:first-of-type { margin-top: .5rem; }
 .ggh-kpis-4 .ggh-kpi:last-child { border-left: 1px solid var(--ggh-line); }
+/* ---------- 1.7.0 footer counter ---------- */
+.ggh-counter { display: flex; flex-wrap: wrap; justify-content: center; gap: .25rem .6rem; font-size: .82rem; color: #d7ecd9; margin: 0 0 .9rem; font-variant-numeric: tabular-nums; }
+.ggh-counter b { color: #fff; font-weight: 700; }
+.ggh-counter[hidden] { display: none; }

@@ -106,3 +106,11 @@ Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts
 - Admin: `cropTypesListServer`, `cropTypeSaveServer`, `cropImportCheckServer`, `cropImportCommitServer`, `cropImportsListServer`, `cropImportDeleteServer`, `cacheClearServer`, `adminMeServer`, `adminChangePasswordServer`, `adminLogoutServer`
 - Super Admin: `settingsGetServer`, `settingsSaveServer`, `smartAgriTestServer`, `adminsListServer`, `adminSaveServer`, `adminResetPasswordServer`, `adminLogServer`
 - RPC ของเกษตรกร/ผู้รับซื้อเรียกผ่าน POST ไม่ได้
+
+## 1.7.0: ตัวนับผู้เข้าชม และรายงาน
+
+- `GET /exec?api=v1&endpoint=hit` นับ 1 ครั้ง (หน้าเว็บเรียกครั้งแรกของ session) → `{ today, month, total, date }`
+- `GET /exec?api=v1&endpoint=visits` อ่านอย่างเดียว (cache 60 วินาที) → รูปแบบเดียวกัน
+- Admin: `reportCatalogServer()` → หมวด/ส่วนรายงานที่สิทธิ์นี้เลือกได้ และรายการพืช
+- Admin: `reportDataServer({sections:[…], crop, season, asOf, title, unmaskPhones})` → `{ title, generatedAt, generatedBy, phonesMasked, sections:[{ key, title, columns, rows, totals, notes }] }` (สูงสุด 20 ส่วน; ส่วน `market.plots`, `market.buyers`, `audit.log` เฉพาะ Super Admin; `unmaskPhones` มีผลเฉพาะ Super Admin)
+- Admin: `reportExportLogServer({format:'print'|'xlsx'|'csv', sections})` บันทึกการส่งออก

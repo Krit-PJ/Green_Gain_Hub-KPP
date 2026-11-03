@@ -13,7 +13,7 @@
   const monthLabel = (ym) => { const y = Math.floor(ym / 100), m = ym % 100; return `${TH_MONTHS[m - 1]} ${String(y + 543).slice(-2)}`; };
   const STATUS_TH = { active: 'ใช้งาน', replaced: 'ถูกแทนที่', deleted: 'ลบแล้ว', disabled: 'ระงับ' };
   const ACTION_TH = { login: 'เข้าสู่ระบบ', crop_import: 'นำเข้าข้อมูลเพาะปลูก', crop_import_delete: 'ลบชุดข้อมูล', crop_type_save: 'บันทึกชนิดพืช',
-    settings_save: 'แก้ไขการเชื่อมต่อ API', admin_create: 'เพิ่มผู้ดูแล', admin_update: 'แก้ไขผู้ดูแล', password_change: 'เปลี่ยนรหัสผ่าน',
+    settings_save: 'แก้ไขการเชื่อมต่อ API', report_view: 'ดูรายงาน', report_export: 'ส่งออกรายงาน', admin_create: 'เพิ่มผู้ดูแล', admin_update: 'แก้ไขผู้ดูแล', password_change: 'เปลี่ยนรหัสผ่าน',
     password_reset: 'ตั้งรหัสผ่านใหม่ให้ผู้ดูแล', super_bootstrap: 'สร้าง Super Admin', cache_clear: 'อัปเดตหน้าแรก' };
 
   const state = { token: sessionStorage.getItem(TOKEN_KEY) || '', me: null, types: [], crop: '', file: null, parsed: null, check: null };
@@ -48,6 +48,7 @@
   /* ---------------- auth ---------------- */
   function signOut(msg) {
     state.token = ''; state.me = null; sessionStorage.removeItem(TOKEN_KEY);
+    if (typeof rep !== 'undefined') { rep.catalog = null; rep.data = null; }
     $('viewApp').classList.add('hidden'); $('admUser').classList.add('hidden'); $('viewLogin').classList.remove('hidden');
     $('loginError').textContent = msg || '';
   }
@@ -78,7 +79,7 @@
   $('admLogout').addEventListener('click', async () => { try { await call('adminLogoutServer'); } catch (e) { /* ignore */ } signOut(); });
 
   /* ---------------- navigation ---------------- */
-  const loaders = { history: loadHistory, crops: loadCropTypesTable, api: loadApi, admins: loadAdmins, log: loadLog };
+  const loaders = { history: loadHistory, crops: loadCropTypesTable, reports: loadReportCatalog, api: loadApi, admins: loadAdmins, log: loadLog };
   function show(view) {
     document.querySelectorAll('.adm-nav [data-view]').forEach((b) => { if (b.dataset.view === view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
     document.querySelectorAll('[data-panel]').forEach((p) => p.classList.toggle('hidden', p.dataset.panel !== view));
@@ -341,6 +342,148 @@
     try { const r = await call('adminChangePasswordServer', { current: f.current.value, next: f.next.value }); f.reset(); setResult('pwResult', r.message, true); }
     catch (err) { setResult('pwResult', err.message, false); }
   });
+
+  /* ---------------- reports ---------------- */
+  const rep = { catalog: null, data: null, request: null };
+  const CONTACT_SECTIONS = ['market.plots', 'market.buyers'];
+
+  async function loadReportCatalog() {
+    if (rep.catalog) return;
+    rep.catalog = await call('reportCatalogServer');
+    const c = rep.catalog;
+    $('reportCrop').innerHTML = c.crops.length ? c.crops.map((x) => `<option value="${esc(x.key)}">${esc(x.crop)} ปี ${esc(x.season)}</option>`).join('') : '<option value="">ยังไม่มีข้อมูลเพาะปลูก</option>';
+    fillAsOf();
+    $('reportSections').innerHTML = c.groups.map((g) => `<fieldset class="adm-section-group"><legend>${esc(g.title)}</legend>` +
+      g.sections.map((x) => `<label class="adm-check ${x.allowed ? '' : 'is-disabled'}"><input type="checkbox" name="section" value="${esc(x.key)}" ${x.allowed ? '' : 'disabled'}>` +
+        `${esc(x.title)}${x.superOnly ? ' <span class="adm-badge disabled">Super Admin</span>' : ''}</label>`).join('') + '</fieldset>').join('');
+    $('reportSections').addEventListener('change', syncReportForm);
+    syncReportForm();
+  }
+  function fillAsOf() {
+    const c = rep.catalog.crops.find((x) => x.key === $('reportCrop').value);
+    const sel = $('reportAsOf');
+    if (!c) { sel.innerHTML = ''; return; }
+    const add = (ym, n) => { const y = Math.floor(ym / 100), m = ym % 100 - 1 + n; return (y + Math.floor(m / 12)) * 100 + ((m % 12) + 12) % 12 + 1; };
+    const opts = [];
+    for (let ym = add(c.firstMonth, -1); ym <= c.lastMonth; ym = add(ym, 1)) opts.push(ym);
+    if (!opts.includes(c.asOfMonth)) opts.push(c.asOfMonth);
+    opts.sort((a, b) => a - b);
+    sel.innerHTML = opts.map((ym) => `<option value="${ym}" ${ym === c.asOfMonth ? 'selected' : ''}>${monthLabel(ym)}${ym === c.asOfMonth ? ' (เดือนที่ผ่านมา)' : ''}</option>`).join('');
+  }
+  function chosenSections() { return [...document.querySelectorAll('#reportSections input[name="section"]:checked')].map((i) => i.value); }
+  function syncReportForm() {
+    const keys = chosenSections();
+    $('reportCropFields').querySelectorAll('select[name="cropKey"], select[name="asOf"]').forEach((el) => { el.disabled = !keys.some((k) => k.startsWith('crops.')); });
+    $('reportUnmaskWrap').classList.toggle('hidden', !(state.me && state.me.role === 'super' && keys.some((k) => CONTACT_SECTIONS.includes(k))));
+    $('reportBuild').disabled = !keys.length;
+  }
+  $('reportCrop').addEventListener('change', fillAsOf);
+  $('reportAll').addEventListener('click', () => { document.querySelectorAll('#reportSections input:not([disabled])').forEach((i) => { i.checked = true; }); syncReportForm(); });
+  $('reportNone').addEventListener('click', () => { document.querySelectorAll('#reportSections input').forEach((i) => { i.checked = false; }); syncReportForm(); });
+
+  $('reportForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const input = { title: f.title.value.trim(), sections: chosenSections(), cropKey: f.cropKey.value, asOf: Number(f.asOf.value) || undefined,
+      unmaskPhones: !!(f.unmaskPhones && f.unmaskPhones.checked && !$('reportUnmaskWrap').classList.contains('hidden')) };
+    busy($('reportBuild'), 'กำลังสร้างรายงาน…', async () => {
+      try {
+        rep.data = await call('reportDataServer', input);
+        rep.request = input;
+        renderReport(rep.data);
+        setResult('reportResult', `สร้างรายงานแล้ว ${rep.data.sections.length} ส่วน`, true);
+        $('reportActions').classList.remove('hidden');
+        $('reportDoc').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) { setResult('reportResult', err.message, false); }
+    });
+  });
+
+  const cellText = (v, type) => (v === null || v === undefined || v === '' ? '' : type === 'number' && typeof v === 'number' ? fmt(v, 2) : String(v));
+  function renderReport(d) {
+    const doc = $('reportDoc');
+    doc.classList.remove('hidden');
+    doc.innerHTML = `<header class="adm-report-head">
+        <p class="adm-report-office">${esc(d.office)}</p>
+        <h1>${esc(d.title)}</h1>
+        ${d.crop ? `<p>${esc(d.crop.crop)} ปีการผลิต ${esc(d.crop.season)} ข้อมูล ณ สิ้น${esc(monthLabel(d.crop.asOf))}</p>` : ''}
+        <p class="adm-muted">จัดทำเมื่อ ${esc(d.generatedAt)} โดย ${esc(d.generatedBy)}${d.sections.some((x) => CONTACT_SECTIONS.includes(x.key)) ? (d.phonesMasked ? ' · ปิดบังเบอร์โทร' : ' · แสดงเบอร์โทรเต็ม') : ''}</p>
+      </header>` + d.sections.map((sec) => `<section class="adm-report-sec">
+        <h2>${esc(sec.group)}: ${esc(sec.title)}</h2>
+        ${sec.subtitle ? `<p class="adm-muted">${esc(sec.subtitle)}</p>` : ''}
+        <table><thead><tr>${sec.columns.map((c) => `<th class="${c.type === 'number' ? 'num' : ''}">${esc(c.label)}</th>`).join('')}</tr></thead>
+        <tbody>${sec.rows.length ? sec.rows.map((r) => `<tr>${sec.columns.map((c) => `<td class="${c.type === 'number' ? 'num' : ''}">${esc(cellText(r[c.key], c.type))}</td>`).join('')}</tr>`).join('')
+          : `<tr><td colspan="${sec.columns.length}" class="adm-muted">ไม่มีข้อมูล</td></tr>`}</tbody>
+        ${sec.totals ? `<tfoot><tr>${sec.columns.map((c) => `<td class="${c.type === 'number' ? 'num' : ''}">${esc(cellText(sec.totals[c.key], c.type))}</td>`).join('')}</tr></tfoot>` : ''}
+        </table>
+        ${(sec.notes || []).map((n) => `<p class="adm-report-note">${esc(n)}</p>`).join('')}
+      </section>`).join('');
+  }
+
+  function stamp() { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; }
+  function logExport(format) { call('reportExportLogServer', { format, sections: rep.request.sections, unmaskPhones: rep.request.unmaskPhones }).catch(() => {}); }
+  function download(blob, name) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  $('reportPrint').addEventListener('click', () => {
+    if (!rep.data) return;
+    let style = $('reportPageStyle');
+    if (!style) { style = document.createElement('style'); style.id = 'reportPageStyle'; document.head.appendChild(style); }
+    style.textContent = `@page { size: A4 ${$('reportForm').orientation.value}; margin: 12mm; }`;
+    document.body.classList.add('is-printing-report');
+    logExport('print');
+    setTimeout(() => { window.print(); document.body.classList.remove('is-printing-report'); }, 50);
+  });
+
+  $('reportCsv').addEventListener('click', () => {
+    if (!rep.data) return;
+    const q = (v) => { const t = v === null || v === undefined ? '' : String(v); return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const lines = [[rep.data.title], [rep.data.office], ['จัดทำเมื่อ', rep.data.generatedAt, 'โดย', rep.data.generatedBy]];
+    if (rep.data.crop) lines.push([rep.data.crop.crop, 'ปีการผลิต ' + rep.data.crop.season, 'ข้อมูล ณ สิ้น' + monthLabel(rep.data.crop.asOf)]);
+    rep.data.sections.forEach((sec) => {
+      lines.push([], [sec.group + ': ' + sec.title]);
+      if (sec.subtitle) lines.push([sec.subtitle]);
+      lines.push(sec.columns.map((c) => c.label));
+      sec.rows.forEach((r) => lines.push(sec.columns.map((c) => r[c.key])));
+      if (sec.totals) lines.push(sec.columns.map((c) => sec.totals[c.key]));
+      (sec.notes || []).forEach((n) => lines.push([n]));
+    });
+    // BOM so Excel opens Thai text as UTF-8.
+    download(new Blob(['\ufeff' + lines.map((l) => l.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), `GGH_report_${stamp()}.csv`);
+    logExport('csv');
+  });
+
+  $('reportXlsx').addEventListener('click', () => busy($('reportXlsx'), 'กำลังสร้างไฟล์…', async () => {
+    if (!rep.data) return;
+    try {
+      await loadScript(SHEETJS);
+      const wb = XLSX.utils.book_new();
+      const cover = [[rep.data.title], [rep.data.office], ['จัดทำเมื่อ', rep.data.generatedAt], ['โดย', rep.data.generatedBy]];
+      if (rep.data.crop) cover.push(['พืช', rep.data.crop.crop + ' ปีการผลิต ' + rep.data.crop.season], ['ข้อมูล ณ สิ้น', monthLabel(rep.data.crop.asOf)]);
+      cover.push([], ['ส่วนของรายงาน']);
+      rep.data.sections.forEach((sec, i) => cover.push([`${i + 1}. ${sec.group}: ${sec.title}`]));
+      const cws = XLSX.utils.aoa_to_sheet(cover); cws['!cols'] = [{ wch: 28 }, { wch: 60 }];
+      XLSX.utils.book_append_sheet(wb, cws, 'สรุป');
+      const used = new Set(['สรุป']);
+      rep.data.sections.forEach((sec, i) => {
+        const aoa = [[sec.group + ': ' + sec.title]];
+        if (sec.subtitle) aoa.push([sec.subtitle]);
+        aoa.push(sec.columns.map((c) => c.label));
+        sec.rows.forEach((r) => aoa.push(sec.columns.map((c) => r[c.key] === undefined ? '' : r[c.key])));
+        if (sec.totals) aoa.push(sec.columns.map((c) => sec.totals[c.key] === undefined ? '' : sec.totals[c.key]));
+        (sec.notes || []).forEach((n) => aoa.push([n]));
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = sec.columns.map((c) => ({ wch: Math.min(40, Math.max(10, c.label.length + 2)) }));
+        let name = `${i + 1} ${sec.title}`.replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31).trim();
+        while (used.has(name)) name = name.slice(0, 28) + ' ' + i;
+        used.add(name);
+        XLSX.utils.book_append_sheet(wb, ws, name);
+      });
+      XLSX.writeFile(wb, `GGH_report_${stamp()}.xlsx`);
+      logExport('xlsx');
+    } catch (err) { toast(err.message); }
+  }));
 
   /* ---------------- start ---------------- */
   if (state.token) {

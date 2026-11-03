@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=1.6.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=1.7.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -404,15 +404,21 @@
     <div class="container mx-auto px-4">
       <h4 class="font-bold text-sm md:text-base mb-1">สำนักงานเกษตรจังหวัดกำแพงเพชร</h4>
       <p class="text-xs md:text-sm opacity-80 mb-3">กรมส่งเสริมการเกษตร กระทรวงเกษตรและสหกรณ์</p>
+      <p class="ggh-counter" id="visitCounter" aria-live="polite" hidden>
+        <span>ผู้เข้าชม</span>
+        <span>วันนี้ <b data-visit="today">–</b></span><span aria-hidden="true">·</span>
+        <span>เดือนนี้ <b data-visit="month">–</b></span><span aria-hidden="true">·</span>
+        <span>ทั้งหมด <b data-visit="total">–</b></span>
+      </p>
       <div class="border-t border-green-700 pt-3 text-[11px] md:text-xs text-green-300 opacity-80">
          Copyright © 2026 กรมส่งเสริมการเกษตร (พัฒนาโดย ดร. กิตติ โพธิ์จวง)
       </div>
     </div>
   </footer>
 
-  <script src="assets/config.js?v=1.6.0"></script>
-  <script src="assets/api-client.js?v=1.6.0"></script>
-  <script src="assets/dashboard.js?v=1.6.0" defer></script>
+  <script src="assets/config.js?v=1.7.0"></script>
+  <script src="assets/api-client.js?v=1.7.0"></script>
+  <script src="assets/dashboard.js?v=1.7.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
