@@ -1,8 +1,52 @@
-# Green Gain Hub 1.4.1
+# Green Gain Hub 1.5.0
+
+รุ่นนี้เปลี่ยนหน้าเข้าสู่ระบบเป็น **Dashboard สาธารณะรายอำเภอ** ของจังหวัดกำแพงเพชร และย้ายฐานข้อมูลไปที่โฟลเดอร์ Google Drive "7. Green Gain Hub" โดยคงโครงสร้าง Google Sheet, ระบบสมาชิก และ API เดิมไว้ทั้งหมด
+
+## สิ่งที่เปลี่ยน
+
+- หน้าแรกแสดงตัวเลขสรุป, แผนที่ระบายสีรายอำเภอ (11 อำเภอ), ปฏิทินเก็บเกี่ยว, สรุปตามชนิดเศษวัสดุ และตารางรายอำเภอ พร้อมกล่องเข้าสู่ระบบด้านข้าง (มือถือแสดงกล่องเข้าสู่ระบบก่อน)
+- แนวทางออกแบบอ้างอิง Smart Map นครปฐม (โทนเขียว `#1a7f37`, KPI รายอำเภอ, ค้นหาพื้นที่) แต่แสดงเฉพาะภาพรวม ไม่แสดงหมุดรายแปลง
+- Apps Script เพิ่ม `?api=v1&endpoint=summary` ส่งเฉพาะตัวเลขสรุป ไม่มีชื่อ เบอร์โทร รหัสรายการ หรือพิกัดแปลง (มีเทสต์ตรวจการรั่วไหล)
+- เพิ่มไฟล์ `apps-script/Districts.gs` (ขอบเขตอำเภอแบบย่อ) สำหรับจัดแปลงเข้าอำเภอจากพิกัด
+- สรุปข้อมูลเก็บ cache 5 นาที และล้าง cache ทันทีเมื่อมีการบันทึก/ลบข้อมูล
+- ถ้ากรอก `BioRate` (ตัน/ไร่) ในชีต `Research_Refs` Dashboard จะประมาณปริมาณเศษวัสดุให้ ถ้ากรอกชีต `Goals` (Active = TRUE) จะแสดงเป้าหมายโครงการ
+- Dashboard แสดง **ผลรายงานการจัดการเศษวัสดุรายอำเภอ** จากระบบ KPP Smart Agri-Materials (R29 ส่งเสริม, R30 แปรรูป, R31 ไถกลบ/ย่อยสลาย) คู่กับข้อมูลตลาด Green Gain Hub
+- Backend ดึงข้อมูล Smart Agri ผ่าน Data API v1 ฝั่ง Server ด้วย Script Property `SMART_AGRI_API_KEY` คีย์ไม่อยู่ใน GitHub หรือหน้าเว็บ
+- Frontend ชี้ไปที่ Deployment ใหม่ของ **Green Gain Hub KPP API** `AKfycbylUGpPc7g9…_pVB7WT`
+- ไฟล์ที่ราก Repository (`index.html`, `assets/`) ซิงก์ให้ตรงกับ `frontend/` แล้ว (GitHub Actions deploy จาก `frontend/`)
+
+## ระบบที่เกี่ยวข้อง
+
+| ระบบ | Apps Script | Deployment | บทบาท |
+| --- | --- | --- | --- |
+| Green Gain Hub KPP API | `1JfUtXCoOvrb_Nz2N6xgRBSiT72DSWV92pFepA20eNcGb8WUhDNuRLLSg` | `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` | Backend ของเว็บนี้ |
+| KPP Smart Agri-Materials v2 | `1zC7vLzhONGgwghZgaHxL3CbkNKwhwQ9zA5pu--bRSE2XqVxRhEGyDN1r` | `AKfycbxoo4VuAomjDPaDPXgEF6y0CFVxBfor-4OmIi3bQVik7FCgAx_7XghYmeav7BHDbpLcaw` | ระบบรายงานอำเภอ (อ่านอย่างเดียว ห้าม Deploy โค้ด GGH ทับ) |
+| GGH เดิม 1.4.1 | – | `AKfycbwQLSoTT71Tsgt2IITpkQKE57qBvYrA9MLSt-Yg6r3-1a2X04mJ0xmqMHEK-tcV2iPe` | ใช้ Sheet เดิม ควร Archive หลังสลับ |
+
+## ฐานข้อมูล
+
+- ใหม่: **Green Gain Hub KPP — Database (v1.5.0)** `1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw` ในโฟลเดอร์ "7. Green Gain Hub" — คัดลอกครบ 8 ชีตพร้อมข้อมูล (farmers 16 แปลง, buyers 9 ราย)
+- เดิม: `1_WNNYeCxeUYhDw8WA1A0NrR3NP6QO0oaM498vGsK1aA` — ไม่ได้ลบหรือแก้ไข ใช้เป็นสำรอง
+
+## ติดตั้ง
+
+ดูขั้นตอนใน [DEPLOY_NOW.md](DEPLOY_NOW.md)
+
+## เทสต์
+
+```bash
+for t in tests/*.test.js; do node "$t"; done
+```
+
+## ที่มาของข้อมูลขอบเขต
+
+ขอบเขตอำเภอจาก [chingchai/OpenGISData-Thailand](https://github.com/chingchai/OpenGISData-Thailand) สัญญาอนุญาต CC BY 4.0 (ย่อรูปทรงเพื่อลดขนาดไฟล์)
+
+## ประวัติรุ่น 1.4.1
 
 รุ่นนี้เพิ่มการจับคู่ชนิดพืชกับชนิดเศษวัสดุอัตโนมัติ และแก้การตรวจ Backend รุ่นใหม่กว่าให้ผ่านอย่างถูกต้อง โดยคงโครงสร้าง Google Sheet และระบบเดิม
 
-## สิ่งที่เปลี่ยน
+### สิ่งที่เปลี่ยน
 
 - Frontend ตรวจว่า Backend ไม่ต่ำกว่า `1.3.1` แทนการบังคับให้เลขเวอร์ชันตรงกันทุกตัว
 - `1.3.1`, `1.4.0` และ `1.4.1` จึงไม่ถูกปฏิเสธเพียงเพราะเลขเวอร์ชันไม่ตรงกัน แต่ยังตรวจโครงสร้าง response ที่จำเป็น
@@ -24,21 +68,10 @@
 - ผู้รับซื้อยังเห็นเฉพาะเกษตรกร `Open` ตามตัวกรองเดิม
 - ปุ่มโทรและนำทางยังสร้างเฉพาะรายการคู่ค้าฝั่งตรงข้าม
 
-## ความเป็นส่วนตัวของแผนที่
+### ความเป็นส่วนตัวของแผนที่
 
 - เกษตรกรได้รับข้อมูลผู้รับซื้อและแปลงของตนเองเท่านั้น
 - เกษตรกรไม่ได้รับข้อมูลแปลงของเกษตรกรรายอื่น
 - ผู้รับซื้อได้รับเฉพาะข้อมูลแปลงเกษตรกร ไม่ได้รับข้อมูลผู้รับซื้อรายอื่น
 - การรวมแปลงของบัญชีใช้ `Owner_Telephone` และใช้ `Phone` เป็นคีย์สำรองสำหรับข้อมูลเก่า
 
-## ติดตั้ง
-
-1. วาง `apps-script/Code.gs` แทน Code.gs เดิม
-2. บันทึกและ Run `setupSystem()` หนึ่งครั้ง
-3. Run `verifyLiveMatchingData()` เพื่อตรวจจำนวนแปลง `Open` ที่มีพิกัด
-4. แก้ไข Web App Deployment เดิม เลือก **เวอร์ชันใหม่** และ Deploy
-5. ตรวจให้ API รายงาน `apiVersion: "1.4.1"`
-6. นำไฟล์ในโฟลเดอร์ `frontend` วางที่ราก Repository แล้ว Commit/Push
-7. รอ GitHub Actions สำเร็จ จากนั้นเปิดเว็บแบบ Incognito หรือ Hard Refresh
-
-Deployment URL เดิมถูกกำหนดใน `frontend/assets/config.js` แล้ว

@@ -23,3 +23,59 @@ Frontend เรียก Google Apps Script ผ่าน JSONP ที่ URL `/e
 
 `getApiInfoServer()` ต้องรายงาน `apiVersion: "1.4.1"` และ
 `feature: "NORMALIZED_SHEET_FORMATS_BUYER_OVERVIEW_OWN_PLOTS"`
+
+---
+
+# Public API v1 (Green Gain Hub 1.5.0)
+
+URL เดียวกับ Web App (`/exec`) รองรับทั้ง `fetch` (JSON) และ JSONP (`&callback=`)
+
+| Endpoint | ตัวอย่าง |
+| --- | --- |
+| สรุป Dashboard | `/exec?api=v1&endpoint=summary&key=YOUR_KEY` |
+| ตรวจเวอร์ชัน | `/exec?api=v1&endpoint=health` |
+
+`key` ไม่บังคับ ยกเว้นตั้ง Script Property `SUMMARY_API_KEY` ไว้ (คีย์ในหน้าเว็บสาธารณะมองเห็นได้ จึงใช้กันการนำไปใช้ซ้ำแบบง่ายเท่านั้น) เพิ่ม `&refresh=1` เพื่อข้าม cache
+
+```json
+{
+  "ok": true, "api": "v1", "endpoint": "summary", "apiVersion": "1.5.0",
+  "data": {
+    "generatedAt": "...", "province": "กำแพงเพชร", "cacheSeconds": 300,
+    "totals": { "farmerPlots": 16, "farmers": 7, "plotsWithCoordinates": 16, "areaRai": 284.31,
+      "buyers": 9, "capacityTonPerDay": 250, "avgBuyerPriceBahtPerRai": 30,
+      "potentialValueBaht": 7614, "residueTon": null, "districtsCovered": 3, "districtsTotal": 11 },
+    "upcomingHarvest": { "days30": { "plots": 0, "areaRai": 0 }, "days60": { "plots": 0, "areaRai": 0 } },
+    "byDistrict": [{ "code": "6204", "name": "ขาณุวรลักษบุรี", "plots": 9, "farmers": 3, "areaRai": 184.75,
+      "buyers": 9, "capacityTonPerDay": 250, "residueTon": null, "materials": [{ "material": "ฟางข้าว", "areaRai": 154.25 }, { "material": "เหง้ามันสำปะหลัง", "areaRai": 30.5 }] }],
+    "byMaterial": [{ "material": "ฟางข้าว", "plots": 15, "areaRai": 253.81, "buyers": 9, "capacityTonPerDay": 250,
+      "avgBuyerPriceBahtPerRai": 30, "potentialValueBaht": 7614, "bioRateTonPerRai": null, "residueTon": null }],
+    "byCrop": [{ "crop": "ข้าวนาปรัง", "material": "ฟางข้าว", "plots": 6, "areaRai": 129.81 }],
+    "harvestByMonth": [{ "month": "2026-11", "plots": 0, "areaRai": 0, "isCurrent": true }],
+    "goals": [], "notes": { "area": "...", "price": "...", "residue": "...", "privacy": "..." }
+  }
+}
+```
+
+กติกา: นับเฉพาะแปลง `Open` และผู้รับซื้อ `Active`; พื้นที่แปลงจาก `ไร่-งาน-ตร.ว.`; อำเภอคำนวณจากพิกัดด้วย `Districts.gs` (ไม่มีพิกัด/อยู่นอกจังหวัด → `OTHER`); `potentialValueBaht` = พื้นที่ × ราคาเฉลี่ยของผู้รับซื้อวัสดุชนิดเดียวกัน
+
+## `data.reports` — KPP Smart Agri-Materials (เพิ่มใน summary)
+
+Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts|timeseries|meta&items=agri&key=…` ฝั่ง Server แล้วจัดรูปใหม่ (cache 5 นาที, ล้มเหลว cache 1 นาที)
+
+```json
+"reports": {
+  "ok": true, "configured": true,
+  "source": { "name": "KPP Smart Agri-Materials", "office": "...", "title": "...", "season": "2569 - 2570" },
+  "round": { "round": 2, "label": "ครั้งที่ 2", "start": "2026-10-29", "end": "2026-11-04", "due": "2026-11-06" },
+  "districtsTotal": 11, "reportedCount": 0, "statusCounts": { "accepted": 0, "submitted": 0, "draft": 0, "returned": 0, "none": 11 },
+  "items": [{ "id": "R31", "label": "ไถกลบตอซัง/การใช้สารย่อยสลาย", "unit": "ไร่", "week": null, "cumulative": null, "districtsYes": 0 }],
+  "byDistrict": [{ "code": "6201", "sourceCode": "D01", "name": "เมืองกำแพงเพชร", "status": "none", "items": { "R31": { "week": null, "cumulative": null } } }],
+  "series": [{ "round": 1, "label": "ครั้งที่ 1", "start": "2026-10-22", "end": "2026-10-28", "reported": 0, "values": { "R31": { "week": null, "cumulative": null } } }]
+}
+```
+
+- `code` = รหัสอำเภอ (amp_code) ตรงกับขอบเขตใน `Districts.gs`
+- `null` = ยังไม่มีรายงาน (ไม่ใช่ 0)
+- ถ้าเรียกไม่สำเร็จ: `{ "ok": false, "configured": true|false, "error": "..." }` ส่วนอื่นของ summary ยังทำงาน
+- คีย์ไม่ถูกส่งไปที่ browser (มีเทสต์ตรวจ)

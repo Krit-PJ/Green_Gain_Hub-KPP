@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#166534">
+  <meta name="theme-color" content="#1a7f37">
+  <meta name="description" content="Green Gain Hub กำแพงเพชร: ศูนย์กลางซื้อขายวัสดุเหลือใช้ทางการเกษตร ภาพรวมรายอำเภอ แปลงพร้อมขาย และจุดรับซื้อ">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -15,6 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/dashboard.css?v=1.5.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -80,22 +82,116 @@
 
   <main class="flex-grow pt-20 sm:pt-24 pb-10 sm:pb-12 px-3 sm:px-4 container mx-auto max-w-5xl">
 
-    <div id="loginPage" class="mt-2 sm:mt-8">
-      <div class="max-w-md mx-auto bg-white p-5 sm:p-8 rounded-2xl shadow-xl border-t-4 border-green-600">
-        <h2 class="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-5 sm:mb-6">เข้าสู่ระบบ</h2>
-        <p class="text-sm text-center text-gray-500 mb-4">โปรดกรอกหมายเลขโทรศัพท์ที่ลงทะเบียนไว้</p>
-        
-        <div class="input-group">
-          <label class="label-text">หมายเลขโทรศัพท์ 10 หลัก</label>
-          <input type="tel" id="loginPhone" class="input-field text-lg tracking-widest text-center font-bold" placeholder="08XXXXXXXX" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+    <div id="loginPage" class="ggh-landing">
+      <header class="ggh-intro">
+        <div>
+          <h2 class="ggh-title">วัสดุเหลือใช้ทางการเกษตร จังหวัดกำแพงเพชร</h2>
+          <p class="ggh-lede">ผลการจัดการเศษวัสดุแทนการเผาจากรายงานของอำเภอ กับแปลงที่พร้อมขายฟางข้าว ใบอ้อย เหง้ามันสำปะหลัง และจุดรับซื้อในแต่ละอำเภอ</p>
+        </div>
+        <p class="ggh-updated" id="dashUpdated" aria-live="polite">กำลังโหลดข้อมูล…</p>
+      </header>
+
+      <section class="ggh-kpis-wrap" aria-label="ตัวเลขสรุป">
+        <div class="ggh-kpi-group" id="dashReportKpis">
+          <h3 class="ggh-kpi-group-title"><span>ผลการจัดการเศษวัสดุ รายงานจากอำเภอ</span><span class="ggh-kpi-group-meta" id="dashReportRound"></span></h3>
+          <div class="ggh-kpis ggh-kpis-4">
+            <div class="ggh-kpi ggh-kpi-hero"><span class="ggh-kpi-value" data-rkpi="R31">–</span><span class="ggh-kpi-label">ไร่ ไถกลบตอซัง/ใช้สารย่อยสลาย</span><span class="ggh-kpi-sub" data-rkpi-sub="R31"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-rkpi="R30">–</span><span class="ggh-kpi-label">หมู่บ้าน/ชุมชน แปรรูปวัสดุเพิ่มมูลค่า</span><span class="ggh-kpi-sub" data-rkpi-sub="R30"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-rkpi="R29">–</span><span class="ggh-kpi-label">ครั้ง ส่งเสริมแปรรูปแทนการเผา</span><span class="ggh-kpi-sub" data-rkpi-sub="R29"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-rkpi="reported">–</span><span class="ggh-kpi-label">อำเภอที่ส่งรายงานแล้ว</span><span class="ggh-kpi-sub" data-rkpi-sub="reported"></span></div>
+          </div>
+        </div>
+        <div class="ggh-kpi-group">
+          <h3 class="ggh-kpi-group-title"><span>ตลาดเศษวัสดุ Green Gain Hub</span></h3>
+          <div class="ggh-kpis" id="dashKpis">
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="farmerPlots">–</span><span class="ggh-kpi-label">แปลงพร้อมขาย</span><span class="ggh-kpi-sub" data-kpi-sub="farmers"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="areaRai">–</span><span class="ggh-kpi-label">พื้นที่รวม (ไร่)</span><span class="ggh-kpi-sub" data-kpi-sub="districts"></span></div>
+            <div class="ggh-kpi ggh-kpi-harvest"><span class="ggh-kpi-value" data-kpi="upcoming">–</span><span class="ggh-kpi-label">ไร่ที่จะเก็บเกี่ยวใน 30 วัน</span><span class="ggh-kpi-sub" data-kpi-sub="upcoming"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="buyers">–</span><span class="ggh-kpi-label">จุดรับซื้อ</span><span class="ggh-kpi-sub" data-kpi-sub="capacity"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="price">–</span><span class="ggh-kpi-label">ราคารับซื้อเฉลี่ย (บาท/ไร่)</span><span class="ggh-kpi-sub" data-kpi-sub="value"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ggh-mapcard" aria-label="แผนที่รายอำเภอ">
+        <div class="ggh-mapbar">
+          <div class="ggh-metric" role="radiogroup" aria-label="ระบายสีแผนที่ตาม">
+            <button type="button" role="radio" aria-checked="false" data-metric="R31" data-source="reports">ไถกลบ/ย่อยสลาย (ไร่)</button>
+            <button type="button" role="radio" aria-checked="false" data-metric="R30" data-source="reports">แปรรูป (หมู่บ้าน)</button>
+            <button type="button" role="radio" aria-checked="false" data-metric="R29" data-source="reports">ส่งเสริม (ครั้ง)</button>
+            <button type="button" role="radio" aria-checked="true" data-metric="areaRai">แปลงพร้อมขาย (ไร่)</button>
+            <button type="button" role="radio" aria-checked="false" data-metric="buyers">จุดรับซื้อ</button>
+          </div>
+          <label class="ggh-search">
+            <span class="sr-only">ค้นหาอำเภอ</span>
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input id="dashSearch" type="search" list="dashDistrictList" placeholder="ค้นหาอำเภอ" autocomplete="off">
+            <datalist id="dashDistrictList"></datalist>
+          </label>
+        </div>
+        <div id="dashMap" class="ggh-map" role="img" aria-label="แผนที่จังหวัดกำแพงเพชร ระบายสีตามข้อมูลรายอำเภอ"></div>
+        <div class="ggh-legend" id="dashLegend" aria-hidden="true"></div>
+        <p class="ggh-note" id="dashSourceNote">แสดงเป็นภาพรวมรายอำเภอ ไม่แสดงชื่อ เบอร์โทร หรือตำแหน่งแปลง เข้าสู่ระบบเพื่อดูคู่ค้าบนแผนที่</p>
+      </section>
+
+      <aside class="ggh-side">
+        <div class="ggh-login" id="loginCard">
+          <h2 class="ggh-login-title">เข้าสู่ระบบ</h2>
+          <p class="ggh-login-help">กรอกหมายเลขโทรศัพท์ที่ลงทะเบียนไว้ เพื่อบันทึกแปลงหรือจุดรับซื้อ และดูคู่ค้าใกล้คุณ</p>
+          <div class="input-group">
+            <label class="label-text" for="loginPhone">หมายเลขโทรศัพท์ 10 หลัก</label>
+            <input type="tel" id="loginPhone" class="input-field text-lg tracking-widest text-center font-bold" placeholder="08XXXXXXXX" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')" onkeydown="if(event.key==='Enter'){login();}">
+          </div>
+          <button id="loginBtn" onclick="login()" class="w-full bg-green-700 text-white font-bold py-3 rounded-xl shadow-lg mt-1 hover:bg-green-800 transition">เข้าสู่ระบบ</button>
+          <div class="mt-5 text-center border-t pt-4">
+            <span class="text-sm text-gray-500">ยังไม่มีบัญชี?</span>
+            <button onclick="toggleAuth('register')" class="text-green-700 font-bold text-sm hover:underline">ลงทะเบียนใหม่ที่นี่</button>
+          </div>
         </div>
 
-        <button id="loginBtn" onclick="login()" class="w-full bg-green-700 text-white font-bold py-3 rounded-xl shadow-lg mt-4 hover:bg-green-800 transition">เข้าสู่ระบบ</button>
-        
-        <div class="mt-6 text-center border-t pt-4">
-          <button onclick="toggleAuth('register')" class="text-green-700 font-bold text-sm hover:underline">ลงทะเบียนใหม่ที่นี่</button>
+        <div class="ggh-district" id="dashDistrict" aria-live="polite">
+          <p class="ggh-district-empty">เลือกอำเภอบนแผนที่ หรือค้นหาชื่ออำเภอ เพื่อดูรายละเอียด</p>
         </div>
-      </div>
+      </aside>
+
+      <section class="ggh-panel ggh-trend" id="dashTrendWrap" aria-labelledby="dashTrendTitle">
+        <h3 id="dashTrendTitle" class="ggh-panel-title">ไถกลบตอซัง/ใช้สารย่อยสลาย สะสมรายครั้ง</h3>
+        <p class="ggh-panel-sub" id="dashTrendSub">ยอดสะสมทั้งจังหวัด (ไร่) จากรายงานที่ส่งแล้วหรือตรวจรับแล้ว</p>
+        <div id="dashTrend" class="ggh-columns ggh-columns-trend"></div>
+      </section>
+
+      <section class="ggh-panel ggh-harvest" aria-labelledby="dashHarvestTitle">
+        <h3 id="dashHarvestTitle" class="ggh-panel-title">ปฏิทินเก็บเกี่ยว</h3>
+        <p class="ggh-panel-sub">พื้นที่ (ไร่) ตามเดือนที่คาดว่าจะเก็บเกี่ยว ย้อนหลัง 6 เดือนถึงล่วงหน้า 6 เดือน</p>
+        <div id="dashHarvest" class="ggh-columns"></div>
+      </section>
+
+      <section class="ggh-panel ggh-materials" aria-labelledby="dashMaterialTitle">
+        <h3 id="dashMaterialTitle" class="ggh-panel-title">ตามชนิดเศษวัสดุ</h3>
+        <p class="ggh-panel-sub">พื้นที่แปลงพร้อมขาย และจำนวนจุดรับซื้อของวัสดุแต่ละชนิด</p>
+        <div id="dashMaterials" class="ggh-bars"></div>
+        <p class="ggh-footnote" id="dashResidueNote"></p>
+      </section>
+
+      <section class="ggh-panel ggh-table" aria-labelledby="dashTableTitle">
+        <h3 id="dashTableTitle" class="ggh-panel-title">รายอำเภอ</h3>
+        <p class="ggh-panel-sub">ตัวเลขรายงานเป็นยอดสะสมถึงครั้งล่าสุด เลือกแถวเพื่อดูอำเภอนั้นบนแผนที่</p>
+        <div class="ggh-table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">อำเภอ</th><th scope="col">รายงาน</th><th scope="col" class="num">ไถกลบ/ย่อยสลาย (ไร่)</th><th scope="col" class="ggh-col-share"><span class="sr-only">สัดส่วน</span></th><th scope="col" class="num">แปรรูป (หมู่บ้าน)</th><th scope="col" class="num">ส่งเสริม (ครั้ง)</th><th scope="col" class="num">แปลงพร้อมขาย</th><th scope="col" class="num">พื้นที่ (ไร่)</th><th scope="col" class="num">จุดรับซื้อ</th></tr>
+            </thead>
+            <tbody id="dashTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="ggh-panel ggh-goals hidden" id="dashGoalsWrap" aria-labelledby="dashGoalsTitle">
+        <h3 id="dashGoalsTitle" class="ggh-panel-title">เป้าหมายโครงการ</h3>
+        <ul id="dashGoals" class="ggh-goal-list"></ul>
+      </section>
+
+      <div class="ggh-tooltip" id="dashTooltip" role="tooltip" hidden></div>
     </div>
 
     <div id="pdpaModal" class="hidden pdpa-modal">
@@ -312,8 +408,9 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=1.4.1"></script>
-  <script src="assets/api-client.js?v=1.4.1"></script>
+  <script src="assets/config.js?v=1.5.0"></script>
+  <script src="assets/api-client.js?v=1.5.0"></script>
+  <script src="assets/dashboard.js?v=1.5.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -323,7 +420,7 @@
       'มันสำปะหลัง': 'เหง้ามันสำปะหลัง'
     });
     const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-    const BUILD_VERSION = String(window.GGH_CONFIG?.BUILD_VERSION || '1.4.1');
+    const BUILD_VERSION = String(window.GGH_CONFIG?.BUILD_VERSION || '1.5.0');
     const MINIMUM_API_VERSION = String(window.GGH_CONFIG?.MINIMUM_API_VERSION || '1.3.1');
     let currentUser = null;
     let lastMatchingLat = null;
