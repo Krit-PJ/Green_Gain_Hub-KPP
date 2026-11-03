@@ -3,7 +3,7 @@
 สถานะ 3 พ.ย. 2569: **Deploy แล้ว**
 
 - Apps Script: **Green Gain Hub KPP API** (`1JfUtXCoOvrb_Nz2N6xgRBSiT72DSWV92pFepA20eNcGb8WUhDNuRLLSg`, บัญชี noonoy.cmu@gmail.com)
-- Deployment เวอร์ชัน 1: `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` (Execute as: Me, Access: Anyone)
+- Deployment เวอร์ชัน 3 (1.7.0 — Reports + Counter): `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` (Execute as: Me, Access: Anyone)
 - Script Property: `SMART_AGRI_API_KEY` = คีย์ "Green Gain Hub — Backend proxy" (prefix `kpp_fa4750`) ของระบบ Smart Agri-Materials
 
 > ⚠️ `AKfycbxoo4…` เป็นของระบบ **KPP Smart Agri-Materials v2** ห้ามวางโค้ด GGH หรือ Deploy ทับ
