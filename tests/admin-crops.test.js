@@ -69,7 +69,7 @@ global.UrlFetchApp = { fetchAll: () => { throw new Error('no network in tests');
 console.log = () => {}; // setupSystem() logs its report; keep test output short
 
 const dir = path.join(__dirname, '..', 'apps-script');
-const src = ['Districts.gs', 'Code.gs', 'Admin.gs', 'Crops.gs'].map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
+const src = ['Districts.gs', 'Code.gs', 'Admin.gs', 'Crops.gs', 'Counter.gs', 'Reports.gs'].map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
 const api = new Function(src + '; return { doGet, doPost, setupSystem, buildCropSummary_, getCropDetail_, validateCropImport_, hashPassword_, requireAdmin_ };')();
 const parser = require('../frontend/assets/crop-import.js');
 const sample = parser.parse(require('./fixtures/rice-naphi-2569-70-harvest.json'));
@@ -171,7 +171,7 @@ assert(ok(post('cropTypesListServer', [], A), 'types').some((t) => t.crop === '�
 /* ---------- public API ---------- */
 api.doGet({ parameter: { api: 'v1', endpoint: 'summary', refresh: '1' } });
 const pub = JSON.parse(lastOut.body);
-assert(pub.ok && pub.apiVersion === '1.6.0' && pub.data.crops.ok && pub.data.crops.crops[0].crop === 'ข้าวนาปี', 'summary must include crops');
+assert(pub.ok && pub.apiVersion === '1.7.0' && pub.data.crops.ok && pub.data.crops.crops[0].crop === 'ข้าวนาปี', 'summary must include crops');
 assert(!lastOut.body.includes(superRow[4]) && !lastOut.body.includes('0899000003') && !lastOut.body.includes('admin.khanu'), 'public summary must not leak admin data');
 api.doGet({ parameter: { api: 'v1', endpoint: 'crop', crop: 'ข้าวนาปี', district: '6204' } });
 const det = JSON.parse(lastOut.body);

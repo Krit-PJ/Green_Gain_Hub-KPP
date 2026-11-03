@@ -7,8 +7,8 @@
   <meta name="robots" content="noindex">
   <title>ผู้ดูแลระบบ · Green Gain Hub กำแพงเพชร</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/dashboard.css?v=1.6.0">
-  <link rel="stylesheet" href="assets/admin.css?v=1.6.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=1.7.0">
+  <link rel="stylesheet" href="assets/admin.css?v=1.7.0">
 </head>
 <body class="adm">
   <header class="adm-top">
@@ -41,6 +41,7 @@
         <button type="button" data-view="import" aria-current="page">นำเข้าข้อมูลเพาะปลูก</button>
         <button type="button" data-view="history">ข้อมูลที่นำเข้าแล้ว</button>
         <button type="button" data-view="crops">ชนิดพืช</button>
+        <button type="button" data-view="reports">รายงาน</button>
         <button type="button" data-view="api" data-role="super">การเชื่อมต่อ API</button>
         <button type="button" data-view="admins" data-role="super">ผู้ดูแลระบบ</button>
         <button type="button" data-view="log" data-role="super">บันทึกการใช้งาน</button>
@@ -99,6 +100,37 @@
             <label class="adm-check"><input name="active" type="checkbox" checked> เปิดใช้งาน</label>
             <button type="submit" class="adm-btn adm-btn-primary">บันทึกชนิดพืช</button>
           </form>
+        </section>
+
+        <section class="adm-view hidden" data-panel="reports" aria-labelledby="repTitle">
+          <div class="adm-report-form">
+            <h2 id="repTitle">รายงาน</h2>
+            <p class="adm-muted">เลือกส่วนที่ต้องการ แล้วกดสร้างรายงาน จากนั้นพิมพ์ บันทึกเป็น PDF หรือดาวน์โหลด Excel/CSV ทุกครั้งที่ดูหรือส่งออกจะบันทึกในประวัติการใช้งาน</p>
+            <form class="adm-form adm-form-wide" id="reportForm">
+              <label>ชื่อรายงาน<input name="title" maxlength="150" value="รายงาน Green Gain Hub จังหวัดกำแพงเพชร"></label>
+              <div class="adm-fields" id="reportCropFields">
+                <label>พืชและปีการผลิต<select name="cropKey" id="reportCrop"></select></label>
+                <label>ข้อมูล ณ สิ้นเดือน<select name="asOf" id="reportAsOf"></select></label>
+                <label>การวางหน้ากระดาษ (พิมพ์/PDF)<select name="orientation"><option value="portrait">แนวตั้ง A4</option><option value="landscape">แนวนอน A4</option></select></label>
+              </div>
+              <div class="adm-sections" id="reportSections"></div>
+              <div class="adm-confirm">
+                <button type="button" class="adm-btn" id="reportAll">เลือกทั้งหมด</button>
+                <button type="button" class="adm-btn" id="reportNone">ล้างที่เลือก</button>
+              </div>
+              <label class="adm-check hidden" id="reportUnmaskWrap"><input type="checkbox" name="unmaskPhones"> แสดงเบอร์โทรเต็ม (Super Admin เท่านั้น และจะบันทึกในประวัติการใช้งาน)</label>
+              <div class="adm-confirm">
+                <button type="submit" class="adm-btn adm-btn-primary" id="reportBuild">สร้างรายงาน</button>
+              </div>
+              <p class="adm-result" id="reportResult" role="status"></p>
+            </form>
+            <div class="adm-report-actions hidden" id="reportActions">
+              <button type="button" class="adm-btn adm-btn-primary" id="reportPrint">พิมพ์ / บันทึก PDF</button>
+              <button type="button" class="adm-btn" id="reportXlsx">ดาวน์โหลด Excel</button>
+              <button type="button" class="adm-btn" id="reportCsv">ดาวน์โหลด CSV</button>
+            </div>
+          </div>
+          <article class="adm-report hidden" id="reportDoc" aria-label="ตัวอย่างรายงาน"></article>
         </section>
 
         <section class="adm-view hidden" data-panel="api" aria-labelledby="apiTitle">
@@ -161,8 +193,8 @@
 
   <div class="adm-toast" id="toast" role="status" hidden></div>
 
-  <script src="assets/config.js?v=1.6.0"></script>
-  <script src="assets/crop-import.js?v=1.6.0"></script>
-  <script src="assets/admin.js?v=1.6.0"></script>
+  <script src="assets/config.js?v=1.7.0"></script>
+  <script src="assets/crop-import.js?v=1.7.0"></script>
+  <script src="assets/admin.js?v=1.7.0"></script>
 </body>
 </html>

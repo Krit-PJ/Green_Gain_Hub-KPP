@@ -703,7 +703,24 @@
     });
   }
 
+  /* Visit counter (footer): counted once per browser session, read-only afterwards. */
+  function counter() {
+    const el = $('visitCounter');
+    if (!el || !API_BASE) return;
+    const FLAG = 'ggh_visit_counted';
+    let counted = false;
+    try { counted = sessionStorage.getItem(FLAG) === '1'; } catch (e) { counted = true; }
+    const url = apiUrl({ api: 'v1', endpoint: counted ? 'visits' : 'hit' });
+    getJson(url).catch(() => jsonp(url)).then((p) => {
+      if (!p || !p.ok || !p.data) return;
+      if (!counted) { try { sessionStorage.setItem(FLAG, '1'); } catch (e) { /* ignore */ } }
+      ['today', 'month', 'total'].forEach((k) => { const b = el.querySelector(`[data-visit="${k}"]`); if (b) b.textContent = fmt(p.data[k]); });
+      el.hidden = false;
+    }).catch(() => { /* counter is optional */ });
+  }
+
   function init() {
+    counter();
     if (!$('dashMap')) return;
     watchLanding(); bindTabs(); bindSearch();
     const cached = readCache();
