@@ -14,7 +14,7 @@ assert(inlineScript, 'main inline script was not found');
 new vm.Script(inlineScript[1], { filename: 'frontend/index.html' });
 new vm.Script(config, { filename: 'frontend/assets/config.js' });
 assert(
-  config.includes('AKfycbxoo4VuAomjDPaDPXgEF6y0CFVxBfor-4OmIi3bQVik7FCgAx_7XghYmeav7BHDbpLcaw/exec'),
+  config.includes('AKfycbwQLSoTT71Tsgt2IITpkQKE57qBvYrA9MLSt-Yg6r3-1a2X04mJ0xmqMHEK-tcV2iPe/exec'),
   'deployment URL is missing or stale'
 );
 assert(config.includes("BUILD_VERSION: '1.5.0'"), 'frontend build version is missing or stale');

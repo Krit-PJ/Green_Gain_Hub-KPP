@@ -30,7 +30,7 @@ body.ggh-landing-on main { max-width: 84rem; }
   gap: 1rem;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "intro" "login" "kpis" "map" "district" "harvest" "materials" "table" "goals";
+    "intro" "login" "kpis" "map" "district" "trend" "harvest" "materials" "table" "goals";
   color: var(--ggh-ink);
   margin-top: .25rem;
 }
@@ -38,7 +38,8 @@ body.ggh-landing-on main { max-width: 84rem; }
 .ggh-side { display: contents; }
 .ggh-intro { grid-area: intro; }
 .ggh-login { grid-area: login; }
-.ggh-kpis { grid-area: kpis; }
+.ggh-kpis-wrap { grid-area: kpis; display: grid; gap: .75rem; }
+.ggh-trend { grid-area: trend; }
 .ggh-mapcard { grid-area: map; }
 .ggh-district { grid-area: district; }
 .ggh-harvest { grid-area: harvest; }
@@ -174,8 +175,9 @@ body.ggh-landing-on main { max-width: 84rem; }
       "intro intro intro intro intro intro intro intro intro intro intro intro"
       "kpis kpis kpis kpis kpis kpis kpis kpis kpis kpis kpis kpis"
       "map map map map map map map map side side side side"
-      "harvest harvest harvest harvest harvest harvest harvest materials materials materials materials materials"
+      "trend trend trend trend trend trend trend harvest harvest harvest harvest harvest"
       "table table table table table table table table table table table table"
+      "materials materials materials materials materials materials materials materials materials materials materials materials"
       "goals goals goals goals goals goals goals goals goals goals goals goals";
     gap: 1.25rem;
   }
@@ -194,3 +196,31 @@ body.ggh-landing-on main { max-width: 84rem; }
   .ggh-col:nth-child(even):not(.is-current) .ggh-col-label { visibility: hidden; }
   .ggh-col-label { font-size: .68rem; }
 }
+
+/* KPI groups: two sources, each named once */
+.ggh-kpi-group-title { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem 1rem; align-items: baseline; font-size: .95rem; font-weight: 700; color: var(--ggh-green-dark); margin: 0 .25rem .4rem; }
+.ggh-kpi-group-meta { font-size: .8rem; font-weight: 400; color: var(--ggh-muted); }
+.ggh-kpi-group.is-unavailable .ggh-kpis { opacity: .55; }
+.ggh-kpi-hero .ggh-kpi-value { color: var(--ggh-green); font-size: 2.1rem; }
+.ggh-kpis-4 .ggh-kpi:last-child { grid-column: auto; border-left: 1px solid var(--ggh-line); }
+@media (min-width: 640px) {
+  .ggh-kpis-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ggh-kpi-hero .ggh-kpi-value { font-size: 2.4rem; }
+}
+
+/* Trend columns (cumulative by round) */
+.ggh-columns-trend { grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr)); }
+.ggh-columns-trend .ggh-col-bar { background: var(--ggh-seq-4); }
+.ggh-columns-trend .ggh-col.is-current .ggh-col-bar { background: var(--ggh-green-dark); }
+.ggh-columns-trend .ggh-col.is-current .ggh-col-label { color: var(--ggh-green-dark); }
+@media (max-width: 639px) { .ggh-columns-trend .ggh-col:nth-child(even):not(.is-current) .ggh-col-label { visibility: visible; } }
+
+/* Report status chips in panel/table */
+.ggh-status { display: inline-flex; align-items: center; gap: .3rem; font-size: .8rem; white-space: nowrap; }
+.ggh-status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #b8c2bb; }
+.ggh-status.s-accepted::before { background: var(--ggh-green); }
+.ggh-status.s-submitted::before { background: var(--ggh-seq-3); }
+.ggh-status.s-draft::before, .ggh-status.s-returned::before { background: var(--ggh-straw); }
+.ggh-district h4 { font-size: .85rem; font-weight: 700; color: var(--ggh-green-dark); margin-top: 1rem; display: flex; justify-content: space-between; gap: .5rem; }
+.ggh-metric button[data-source="reports"][disabled] { opacity: .45; cursor: not-allowed; }
+.ggh-harvest .ggh-col:nth-child(even):not(.is-current) .ggh-col-label { visibility: hidden; }

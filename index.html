@@ -86,26 +86,41 @@
       <header class="ggh-intro">
         <div>
           <h2 class="ggh-title">วัสดุเหลือใช้ทางการเกษตร จังหวัดกำแพงเพชร</h2>
-          <p class="ggh-lede">ภาพรวมแปลงที่พร้อมขายฟางข้าว ใบอ้อย และเหง้ามันสำปะหลัง กับจุดรับซื้อในแต่ละอำเภอ</p>
+          <p class="ggh-lede">ผลการจัดการเศษวัสดุแทนการเผาจากรายงานของอำเภอ กับแปลงที่พร้อมขายฟางข้าว ใบอ้อย เหง้ามันสำปะหลัง และจุดรับซื้อในแต่ละอำเภอ</p>
         </div>
         <p class="ggh-updated" id="dashUpdated" aria-live="polite">กำลังโหลดข้อมูล…</p>
       </header>
 
-      <section class="ggh-kpis" id="dashKpis" aria-label="ตัวเลขสรุป">
-        <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="farmerPlots">–</span><span class="ggh-kpi-label">แปลงพร้อมขาย</span><span class="ggh-kpi-sub" data-kpi-sub="farmers"></span></div>
-        <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="areaRai">–</span><span class="ggh-kpi-label">พื้นที่รวม (ไร่)</span><span class="ggh-kpi-sub" data-kpi-sub="districts"></span></div>
-        <div class="ggh-kpi ggh-kpi-harvest"><span class="ggh-kpi-value" data-kpi="upcoming">–</span><span class="ggh-kpi-label">ไร่ที่จะเก็บเกี่ยวใน 30 วัน</span><span class="ggh-kpi-sub" data-kpi-sub="upcoming"></span></div>
-        <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="buyers">–</span><span class="ggh-kpi-label">จุดรับซื้อ</span><span class="ggh-kpi-sub" data-kpi-sub="capacity"></span></div>
-        <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="price">–</span><span class="ggh-kpi-label">ราคารับซื้อเฉลี่ย (บาท/ไร่)</span><span class="ggh-kpi-sub" data-kpi-sub="value"></span></div>
+      <section class="ggh-kpis-wrap" aria-label="ตัวเลขสรุป">
+        <div class="ggh-kpi-group" id="dashReportKpis">
+          <h3 class="ggh-kpi-group-title"><span>ผลการจัดการเศษวัสดุ รายงานจากอำเภอ</span><span class="ggh-kpi-group-meta" id="dashReportRound"></span></h3>
+          <div class="ggh-kpis ggh-kpis-4">
+            <div class="ggh-kpi ggh-kpi-hero"><span class="ggh-kpi-value" data-rkpi="R31">–</span><span class="ggh-kpi-label">ไร่ ไถกลบตอซัง/ใช้สารย่อยสลาย</span><span class="ggh-kpi-sub" data-rkpi-sub="R31"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-rkpi="R30">–</span><span class="ggh-kpi-label">หมู่บ้าน/ชุมชน แปรรูปวัสดุเพิ่มมูลค่า</span><span class="ggh-kpi-sub" data-rkpi-sub="R30"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-rkpi="R29">–</span><span class="ggh-kpi-label">ครั้ง ส่งเสริมแปรรูปแทนการเผา</span><span class="ggh-kpi-sub" data-rkpi-sub="R29"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-rkpi="reported">–</span><span class="ggh-kpi-label">อำเภอที่ส่งรายงานแล้ว</span><span class="ggh-kpi-sub" data-rkpi-sub="reported"></span></div>
+          </div>
+        </div>
+        <div class="ggh-kpi-group">
+          <h3 class="ggh-kpi-group-title"><span>ตลาดเศษวัสดุ Green Gain Hub</span></h3>
+          <div class="ggh-kpis" id="dashKpis">
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="farmerPlots">–</span><span class="ggh-kpi-label">แปลงพร้อมขาย</span><span class="ggh-kpi-sub" data-kpi-sub="farmers"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="areaRai">–</span><span class="ggh-kpi-label">พื้นที่รวม (ไร่)</span><span class="ggh-kpi-sub" data-kpi-sub="districts"></span></div>
+            <div class="ggh-kpi ggh-kpi-harvest"><span class="ggh-kpi-value" data-kpi="upcoming">–</span><span class="ggh-kpi-label">ไร่ที่จะเก็บเกี่ยวใน 30 วัน</span><span class="ggh-kpi-sub" data-kpi-sub="upcoming"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="buyers">–</span><span class="ggh-kpi-label">จุดรับซื้อ</span><span class="ggh-kpi-sub" data-kpi-sub="capacity"></span></div>
+            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="price">–</span><span class="ggh-kpi-label">ราคารับซื้อเฉลี่ย (บาท/ไร่)</span><span class="ggh-kpi-sub" data-kpi-sub="value"></span></div>
+          </div>
+        </div>
       </section>
 
       <section class="ggh-mapcard" aria-label="แผนที่รายอำเภอ">
         <div class="ggh-mapbar">
           <div class="ggh-metric" role="radiogroup" aria-label="ระบายสีแผนที่ตาม">
-            <button type="button" role="radio" aria-checked="true" data-metric="areaRai">พื้นที่ (ไร่)</button>
-            <button type="button" role="radio" aria-checked="false" data-metric="plots">จำนวนแปลง</button>
+            <button type="button" role="radio" aria-checked="false" data-metric="R31" data-source="reports">ไถกลบ/ย่อยสลาย (ไร่)</button>
+            <button type="button" role="radio" aria-checked="false" data-metric="R30" data-source="reports">แปรรูป (หมู่บ้าน)</button>
+            <button type="button" role="radio" aria-checked="false" data-metric="R29" data-source="reports">ส่งเสริม (ครั้ง)</button>
+            <button type="button" role="radio" aria-checked="true" data-metric="areaRai">แปลงพร้อมขาย (ไร่)</button>
             <button type="button" role="radio" aria-checked="false" data-metric="buyers">จุดรับซื้อ</button>
-            <button type="button" role="radio" aria-checked="false" data-metric="capacityTonPerDay">รับซื้อได้ (ตัน/วัน)</button>
           </div>
           <label class="ggh-search">
             <span class="sr-only">ค้นหาอำเภอ</span>
@@ -116,7 +131,7 @@
         </div>
         <div id="dashMap" class="ggh-map" role="img" aria-label="แผนที่จังหวัดกำแพงเพชร ระบายสีตามข้อมูลรายอำเภอ"></div>
         <div class="ggh-legend" id="dashLegend" aria-hidden="true"></div>
-        <p class="ggh-note">แสดงเป็นภาพรวมรายอำเภอ ไม่แสดงชื่อ เบอร์โทร หรือตำแหน่งแปลง เข้าสู่ระบบเพื่อดูคู่ค้าบนแผนที่</p>
+        <p class="ggh-note" id="dashSourceNote">แสดงเป็นภาพรวมรายอำเภอ ไม่แสดงชื่อ เบอร์โทร หรือตำแหน่งแปลง เข้าสู่ระบบเพื่อดูคู่ค้าบนแผนที่</p>
       </section>
 
       <aside class="ggh-side">
@@ -139,6 +154,12 @@
         </div>
       </aside>
 
+      <section class="ggh-panel ggh-trend" id="dashTrendWrap" aria-labelledby="dashTrendTitle">
+        <h3 id="dashTrendTitle" class="ggh-panel-title">ไถกลบตอซัง/ใช้สารย่อยสลาย สะสมรายครั้ง</h3>
+        <p class="ggh-panel-sub" id="dashTrendSub">ยอดสะสมทั้งจังหวัด (ไร่) จากรายงานที่ส่งแล้วหรือตรวจรับแล้ว</p>
+        <div id="dashTrend" class="ggh-columns ggh-columns-trend"></div>
+      </section>
+
       <section class="ggh-panel ggh-harvest" aria-labelledby="dashHarvestTitle">
         <h3 id="dashHarvestTitle" class="ggh-panel-title">ปฏิทินเก็บเกี่ยว</h3>
         <p class="ggh-panel-sub">พื้นที่ (ไร่) ตามเดือนที่คาดว่าจะเก็บเกี่ยว ย้อนหลัง 6 เดือนถึงล่วงหน้า 6 เดือน</p>
@@ -154,10 +175,11 @@
 
       <section class="ggh-panel ggh-table" aria-labelledby="dashTableTitle">
         <h3 id="dashTableTitle" class="ggh-panel-title">รายอำเภอ</h3>
+        <p class="ggh-panel-sub">ตัวเลขรายงานเป็นยอดสะสมถึงครั้งล่าสุด เลือกแถวเพื่อดูอำเภอนั้นบนแผนที่</p>
         <div class="ggh-table-wrap">
           <table>
             <thead>
-              <tr><th scope="col">อำเภอ</th><th scope="col" class="num">แปลง</th><th scope="col" class="num">พื้นที่ (ไร่)</th><th scope="col" class="ggh-col-share"><span class="sr-only">สัดส่วนพื้นที่</span></th><th scope="col" class="num">จุดรับซื้อ</th><th scope="col" class="num">ตัน/วัน</th></tr>
+              <tr><th scope="col">อำเภอ</th><th scope="col">รายงาน</th><th scope="col" class="num">ไถกลบ/ย่อยสลาย (ไร่)</th><th scope="col" class="ggh-col-share"><span class="sr-only">สัดส่วน</span></th><th scope="col" class="num">แปรรูป (หมู่บ้าน)</th><th scope="col" class="num">ส่งเสริม (ครั้ง)</th><th scope="col" class="num">แปลงพร้อมขาย</th><th scope="col" class="num">พื้นที่ (ไร่)</th><th scope="col" class="num">จุดรับซื้อ</th></tr>
             </thead>
             <tbody id="dashTable"></tbody>
           </table>
