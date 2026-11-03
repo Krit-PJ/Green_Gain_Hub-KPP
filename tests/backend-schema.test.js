@@ -103,9 +103,9 @@ assert(api.farmerMaterialForCrop_('อ้อยโรงงาน', 'ฟาง�
 assert(api.farmerMaterialForCrop_('มันสำปะหลัง', 'ฟางข้าว', '').type === 'เหง้ามันสำปะหลัง', 'cassava mapping failed');
 
 const matches = api.getMatchingDataServer(session);
-assert(matches.apiVersion === '1.5.0', 'matching API version is missing or stale');
-assert(api.getApiInfoServer().apiVersion === '1.5.0', 'public API version check failed');
-assert(api.getApiInfoServer().feature === 'PUBLIC_SUMMARY_DASHBOARD', 'feature flag is missing or stale');
+assert(matches.apiVersion === '1.6.0', 'matching API version is missing or stale');
+assert(api.getApiInfoServer().apiVersion === '1.6.0', 'public API version check failed');
+assert(api.getApiInfoServer().feature === 'CROP_IMPORT_ADMIN', 'feature flag is missing or stale');
 assert(matches.viewerRole === 'farmer' && matches.visibleRole === 'buyer', 'farmer visibility metadata is incorrect');
 assert(matches.farmers.length === 0, 'farmer must not receive other farmer records');
 assert(matches.buyers.length === 1 && matches.buyers[0].material === 'ฟางข้าว', 'buyer download mapping failed');

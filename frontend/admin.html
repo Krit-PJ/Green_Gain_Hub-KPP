@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1a7f37">
+  <meta name="robots" content="noindex">
+  <title>ผู้ดูแลระบบ · Green Gain Hub กำแพงเพชร</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/dashboard.css?v=1.6.0">
+  <link rel="stylesheet" href="assets/admin.css?v=1.6.0">
+</head>
+<body class="adm">
+  <header class="adm-top">
+    <a class="adm-brand" href="./">Green Gain Hub <span>กำแพงเพชร</span></a>
+    <div class="adm-user hidden" id="admUser">
+      <span id="admUserName"></span><span class="adm-role" id="admUserRole"></span>
+      <button type="button" class="adm-link" id="admLogout">ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <main class="adm-main">
+    <!-- Login -->
+    <section class="adm-login" id="viewLogin" aria-labelledby="loginTitle">
+      <h1 id="loginTitle">เข้าสู่ระบบผู้ดูแล</h1>
+      <p class="adm-muted">สำหรับเจ้าหน้าที่ที่ได้รับสิทธิ์นำเข้าข้อมูลและจัดการระบบ</p>
+      <form id="loginForm" novalidate>
+        <label for="loginUsername">ชื่อผู้ใช้</label>
+        <input id="loginUsername" type="text" maxlength="32" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+        <label for="loginPassword">รหัสผ่าน</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" required>
+        <p class="adm-error" id="loginError" role="alert"></p>
+        <button type="submit" class="adm-btn adm-btn-primary" id="loginBtn">เข้าสู่ระบบ</button>
+      </form>
+      <a class="adm-back" href="./">กลับหน้าแรก</a>
+    </section>
+
+    <!-- App -->
+    <div class="adm-app hidden" id="viewApp">
+      <nav class="adm-nav" aria-label="เมนูผู้ดูแล">
+        <button type="button" data-view="import" aria-current="page">นำเข้าข้อมูลเพาะปลูก</button>
+        <button type="button" data-view="history">ข้อมูลที่นำเข้าแล้ว</button>
+        <button type="button" data-view="crops">ชนิดพืช</button>
+        <button type="button" data-view="api" data-role="super">การเชื่อมต่อ API</button>
+        <button type="button" data-view="admins" data-role="super">ผู้ดูแลระบบ</button>
+        <button type="button" data-view="log" data-role="super">บันทึกการใช้งาน</button>
+        <button type="button" data-view="account">บัญชีของฉัน</button>
+      </nav>
+
+      <div class="adm-content">
+        <!-- Import wizard -->
+        <section class="adm-view" data-panel="import" aria-labelledby="impTitle">
+          <h2 id="impTitle">นำเข้าข้อมูลเพาะปลูก</h2>
+          <p class="adm-muted">ใช้รายงานจากระบบฐานข้อมูลทะเบียนเกษตรกรกลาง แยกตามเดือนที่คาดว่าจะเก็บเกี่ยว พืช 1 ชนิดต่อ 1 ไฟล์ นำเข้าพืชและปีการผลิตเดิมซ้ำ ระบบจะแทนที่ข้อมูลชุดเดิมให้</p>
+
+          <ol class="adm-steps">
+            <li class="adm-step" id="step1">
+              <h3>เลือกชนิดพืช</h3>
+              <div class="adm-chips" id="cropChoices" role="radiogroup" aria-label="ชนิดพืช"></div>
+            </li>
+            <li class="adm-step is-locked" id="step2">
+              <h3>เลือกไฟล์ Excel</h3>
+              <label class="adm-drop" id="dropZone">
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" disabled>
+                <span class="adm-drop-main" id="dropText">เลือกชนิดพืชก่อน แล้วลากไฟล์มาวาง หรือคลิกเพื่อเลือกไฟล์</span>
+                <span class="adm-muted">.xlsx, .xls หรือ .csv ที่มีคอลัมน์ NO, จังหวัด/อำเภอ/ตำบล, ปีเดือน, ครัวเรือน, แปลง, เนื้อที่(ไร่)</span>
+              </label>
+            </li>
+            <li class="adm-step is-locked" id="step3">
+              <h3>ตรวจสอบข้อมูล</h3>
+              <div id="previewBox" class="adm-preview"></div>
+            </li>
+            <li class="adm-step is-locked" id="step4">
+              <h3>ยืนยันนำเข้า</h3>
+              <div class="adm-confirm">
+                <button type="button" class="adm-btn adm-btn-primary" id="commitBtn" disabled>นำเข้าข้อมูล</button>
+                <button type="button" class="adm-btn" id="resetBtn">เริ่มใหม่</button>
+              </div>
+              <p class="adm-result" id="commitResult" role="status"></p>
+            </li>
+          </ol>
+        </section>
+
+        <section class="adm-view hidden" data-panel="history" aria-labelledby="histTitle">
+          <div class="adm-head"><h2 id="histTitle">ข้อมูลที่นำเข้าแล้ว</h2><button type="button" class="adm-btn" id="cacheBtn">อัปเดตหน้าแรกทันที</button></div>
+          <p class="adm-muted">หน้าแรกแสดงเฉพาะชุดที่สถานะ "ใช้งาน" ชุดที่ถูกแทนที่หรือลบจะเก็บไว้เป็นประวัติ</p>
+          <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>พืช</th><th>ปีการผลิต</th><th class="num">ไร่</th><th>ช่วงเดือน</th><th>สถานะ</th><th>นำเข้าเมื่อ</th><th>โดย</th><th><span class="sr-only">จัดการ</span></th></tr></thead><tbody id="histBody"></tbody></table></div>
+        </section>
+
+        <section class="adm-view hidden" data-panel="crops" aria-labelledby="cropsTitle">
+          <h2 id="cropsTitle">ชนิดพืช</h2>
+          <p class="adm-muted">ชนิดพืชที่เปิดใช้งานจะให้เลือกตอนนำเข้า ชนิดเศษวัสดุใช้คำนวณปริมาณ (ถ้ามี BioRate ในชีต Research_Refs)</p>
+          <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>พืช</th><th>เศษวัสดุ</th><th class="num">ลำดับ</th><th>สถานะ</th><th><span class="sr-only">จัดการ</span></th></tr></thead><tbody id="cropTypesBody"></tbody></table></div>
+          <form class="adm-form-inline" id="cropTypeForm">
+            <h3>เพิ่มหรือแก้ไขชนิดพืช</h3>
+            <label>ชื่อพืช<input name="crop" required maxlength="60" placeholder="เช่น ข้าวโพดเลี้ยงสัตว์"></label>
+            <label>ชนิดเศษวัสดุ<input name="material" required maxlength="80" placeholder="เช่น ซังและต้นข้าวโพด"></label>
+            <label>ลำดับ<input name="sortOrder" type="number" min="1" max="999" value="10"></label>
+            <label class="adm-check"><input name="active" type="checkbox" checked> เปิดใช้งาน</label>
+            <button type="submit" class="adm-btn adm-btn-primary">บันทึกชนิดพืช</button>
+          </form>
+        </section>
+
+        <section class="adm-view hidden" data-panel="api" aria-labelledby="apiTitle">
+          <h2 id="apiTitle">การเชื่อมต่อ API</h2>
+          <div class="adm-card" id="apiStatus"></div>
+          <form class="adm-form" id="apiForm" autocomplete="off">
+            <h3>KPP Smart Agri-Materials (รายงานอำเภอ)</h3>
+            <label>Web App URL<input name="smartAgriUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec"></label>
+            <label>API Key ใหม่ <span class="adm-muted">(เว้นว่าง = ใช้คีย์เดิม ระบบจะไม่แสดงคีย์ที่บันทึกไว้)</span><input name="smartAgriKey" type="password" autocomplete="new-password" spellcheck="false"></label>
+            <label class="adm-check"><input name="clearSmartAgriKey" type="checkbox"> ลบ API Key ที่บันทึกไว้</label>
+            <div class="adm-confirm">
+              <button type="submit" class="adm-btn adm-btn-primary">บันทึกการเชื่อมต่อ</button>
+              <button type="button" class="adm-btn" id="apiTestBtn">ทดสอบการเชื่อมต่อ</button>
+            </div>
+            <p class="adm-result" id="apiResult" role="status"></p>
+          </form>
+          <div class="adm-card">
+            <h3>API สาธารณะของ Green Gain Hub</h3>
+            <p class="adm-muted">ใช้ดึงข้อมูลสรุปไปแสดงที่อื่นได้ ข้อมูลเป็นตัวเลขรวม ไม่มีข้อมูลส่วนบุคคล</p>
+            <ul class="adm-endpoints" id="apiEndpoints"></ul>
+          </div>
+        </section>
+
+        <section class="adm-view hidden" data-panel="admins" aria-labelledby="adminsTitle">
+          <h2 id="adminsTitle">ผู้ดูแลระบบ</h2>
+          <p class="adm-muted"><strong>Super Admin</strong> จัดการได้ทุกอย่าง <strong>Admin</strong> นำเข้าข้อมูลและจัดการชนิดพืชได้</p>
+          <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>ชื่อ</th><th>ชื่อผู้ใช้</th><th>โทรศัพท์</th><th>บทบาท</th><th>สถานะ</th><th>เข้าใช้ล่าสุด</th><th><span class="sr-only">จัดการ</span></th></tr></thead><tbody id="adminsBody"></tbody></table></div>
+          <form class="adm-form" id="adminForm" autocomplete="off">
+            <h3 id="adminFormTitle">เพิ่มผู้ดูแล</h3>
+            <label>ชื่อ<input name="name" required maxlength="120"></label>
+            <label>ชื่อผู้ใช้ <span class="adm-muted">(3–32 ตัว a–z, 0–9, จุด, ขีดล่าง, ขีดกลาง)</span><input name="username" maxlength="32" autocapitalize="none" spellcheck="false" required></label>
+            <label>หมายเลขโทรศัพท์ <span class="adm-muted">(ไม่บังคับ ใช้ติดต่อ)</span><input name="phone" type="tel" inputmode="numeric" maxlength="10"></label>
+            <label>บทบาท<select name="role"><option value="admin">Admin</option><option value="super">Super Admin</option></select></label>
+            <label>สถานะ<select name="status"><option value="active">ใช้งาน</option><option value="disabled">ระงับ</option></select></label>
+            <label id="adminPwLabel">รหัสผ่านเริ่มต้น <span class="adm-muted">(อย่างน้อย 8 ตัว)</span><input name="password" type="password" autocomplete="new-password"></label>
+            <div class="adm-confirm"><button type="submit" class="adm-btn adm-btn-primary">บันทึกผู้ดูแล</button><button type="button" class="adm-btn" id="adminFormReset">ล้างฟอร์ม</button></div>
+            <p class="adm-result" id="adminResult" role="status"></p>
+          </form>
+        </section>
+
+        <section class="adm-view hidden" data-panel="log" aria-labelledby="logTitle">
+          <h2 id="logTitle">บันทึกการใช้งาน</h2>
+          <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>รายละเอียด</th></tr></thead><tbody id="logBody"></tbody></table></div>
+        </section>
+
+        <section class="adm-view hidden" data-panel="account" aria-labelledby="accTitle">
+          <h2 id="accTitle">บัญชีของฉัน</h2>
+          <form class="adm-form" id="pwForm" autocomplete="off">
+            <h3>เปลี่ยนรหัสผ่าน</h3>
+            <label>รหัสผ่านปัจจุบัน<input name="current" type="password" autocomplete="current-password" required></label>
+            <label>รหัสผ่านใหม่<input name="next" type="password" autocomplete="new-password" required></label>
+            <label>ยืนยันรหัสผ่านใหม่<input name="confirm" type="password" autocomplete="new-password" required></label>
+            <button type="submit" class="adm-btn adm-btn-primary">เปลี่ยนรหัสผ่าน</button>
+            <p class="adm-result" id="pwResult" role="status"></p>
+          </form>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div class="adm-toast" id="toast" role="status" hidden></div>
+
+  <script src="assets/config.js?v=1.6.0"></script>
+  <script src="assets/crop-import.js?v=1.6.0"></script>
+  <script src="assets/admin.js?v=1.6.0"></script>
+</body>
+</html>

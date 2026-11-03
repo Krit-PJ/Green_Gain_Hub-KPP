@@ -29,23 +29,20 @@ body.ggh-landing-on main { max-width: 84rem; }
   display: grid;
   gap: 1rem;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    "intro" "login" "kpis" "map" "district" "trend" "harvest" "materials" "table" "goals";
   color: var(--ggh-ink);
   margin-top: .25rem;
 }
 .ggh-landing.hidden { display: none !important; }
+/* Panels are shown per tab: data-tabs lists the tabs a section belongs to. */
+.ggh-landing[data-tab="overview"] [data-tabs]:not([data-tabs~="overview"]),
+.ggh-landing[data-tab="crops"] [data-tabs]:not([data-tabs~="crops"]),
+.ggh-landing[data-tab="reports"] [data-tabs]:not([data-tabs~="reports"]),
+.ggh-landing[data-tab="market"] [data-tabs]:not([data-tabs~="market"]) { display: none !important; }
+/* Mobile order: login comes before the numbers so returning users find it at once. */
 .ggh-side { display: contents; }
-.ggh-intro { grid-area: intro; }
-.ggh-login { grid-area: login; }
-.ggh-kpis-wrap { grid-area: kpis; display: grid; gap: .75rem; }
-.ggh-trend { grid-area: trend; }
-.ggh-mapcard { grid-area: map; }
-.ggh-district { grid-area: district; }
-.ggh-harvest { grid-area: harvest; }
-.ggh-materials { grid-area: materials; }
-.ggh-table { grid-area: table; }
-.ggh-goals { grid-area: goals; }
+.ggh-intro { order: 1; } .ggh-tabs { order: 2; } .ggh-toolbar { order: 3; } .ggh-login { order: 4; }
+.ggh-kpis-wrap { order: 5; display: grid; gap: .5rem; } .ggh-mapcard { order: 6; } .ggh-district { order: 7; }
+.ggh-panel { order: 8; } .ggh-table { order: 9; } .ggh-goals { order: 10; }
 
 /* Intro */
 .ggh-intro { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: .25rem 1.5rem; padding: .25rem 0 .25rem; }
@@ -169,21 +166,19 @@ body.ggh-landing-on main { max-width: 84rem; }
 }
 
 @media (min-width: 1024px) {
-  .ggh-landing {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    grid-template-areas:
-      "intro intro intro intro intro intro intro intro intro intro intro intro"
-      "kpis kpis kpis kpis kpis kpis kpis kpis kpis kpis kpis kpis"
-      "map map map map map map map map side side side side"
-      "trend trend trend trend trend trend trend harvest harvest harvest harvest harvest"
-      "table table table table table table table table table table table table"
-      "materials materials materials materials materials materials materials materials materials materials materials materials"
-      "goals goals goals goals goals goals goals goals goals goals goals goals";
-    gap: 1.25rem;
-  }
-  .ggh-side { display: flex; flex-direction: column; gap: 1.25rem; grid-area: side; min-width: 0; }
-  .ggh-login, .ggh-district { grid-area: auto; }
+  .ggh-landing { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 1.25rem; grid-auto-flow: row dense; }
+  .ggh-intro, .ggh-tabs, .ggh-toolbar, .ggh-kpis-wrap, .ggh-table, .ggh-goals { grid-column: span 12; }
+  .ggh-mapcard { grid-column: span 8; order: 6; }
+  .ggh-side { display: flex; flex-direction: column; gap: 1.25rem; grid-column: span 4; order: 7; min-width: 0; }
+  .ggh-kpis-wrap { order: 5; }
   .ggh-district { flex: 1; }
+  .ggh-panel { grid-column: span 6; }
+  .ggh-cropmonths { grid-column: span 7; }
+  .ggh-cropstack { grid-column: span 5; }
+  .ggh-landing[data-tab="overview"] .ggh-cropmonths, .ggh-trend { grid-column: span 12; }
+  .ggh-landing .ggh-table, .ggh-landing .ggh-goals { grid-column: span 12; }
+  .ggh-harvest { grid-column: span 7; }
+  .ggh-materials { grid-column: span 5; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -228,3 +223,55 @@ body.ggh-landing-on main { max-width: 84rem; }
 .ggh-trend-empty { max-width: 52ch; }
 /* Mute the busy OSM basemap so the district colours carry the message */
 .ggh-map .ggh-basemap { filter: grayscale(1) contrast(.85) brightness(1.08); opacity: .7; }
+
+/* ---------- 1.6.0: tabs, crop toolbar, crop charts ---------- */
+.ggh-tabs { display: flex; gap: .25rem; overflow-x: auto; border-bottom: 1px solid var(--ggh-line); scrollbar-width: none; }
+.ggh-tabs::-webkit-scrollbar { display: none; }
+.ggh-tabs button { white-space: nowrap; min-height: 46px; padding: 0 1.1rem; font-size: 1rem; font-weight: 600; color: var(--ggh-muted); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.ggh-tabs button[aria-selected="true"] { color: var(--ggh-green-dark); border-bottom-color: var(--ggh-green); }
+.ggh-tabs button:hover { color: var(--ggh-ink); }
+.ggh-tabs button:focus-visible { outline: 2px solid var(--ggh-green-dark); outline-offset: -2px; }
+
+.ggh-toolbar { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: center; justify-content: space-between; }
+.ggh-crop-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.ggh-crop-chips button { min-height: 40px; padding: 0 1rem; border-radius: 999px; border: 1px solid var(--ggh-line); background: var(--ggh-surface); font-weight: 600; }
+.ggh-crop-chips button[aria-checked="true"] { background: var(--ggh-green); border-color: var(--ggh-green); color: #fff; }
+.ggh-crop-chips small { font-weight: 400; opacity: .85; }
+.ggh-asof { display: flex; align-items: center; gap: .5rem; font-size: .9rem; color: var(--ggh-muted); }
+.ggh-asof select { min-height: 40px; border: 1px solid var(--ggh-line); border-radius: 8px; padding: 0 .6rem; background: var(--ggh-surface); color: var(--ggh-ink); font: inherit; font-size: 16px; }
+
+.ggh-kpis-wrap > .ggh-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ggh-kpis-4 .ggh-kpi:last-child, .ggh-kpis-5 .ggh-kpi:last-child { grid-column: auto; }
+.ggh-kpis-5 .ggh-kpi:last-child { grid-column: 1 / -1; border-left: 0; }
+@media (min-width: 640px) {
+  .ggh-kpis-wrap > .ggh-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ggh-kpis-wrap > .ggh-kpis.ggh-kpis-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .ggh-kpis-5 .ggh-kpi:last-child { grid-column: auto; border-left: 1px solid var(--ggh-line); }
+}
+.ggh-kpi-empty { grid-column: 1 / -1; padding: 1rem; color: var(--ggh-muted); }
+.ggh-kpi-sub small, .ggh-district dd small { font-size: .75rem; font-weight: 400; color: var(--ggh-muted); }
+
+.ggh-columns-crop { grid-template-columns: repeat(var(--cols, 8), minmax(0, 1fr)); }
+.ggh-columns-crop .ggh-col-bar { background: var(--ggh-seq-3); }
+.ggh-columns-crop .ggh-col.is-past .ggh-col-bar { background: var(--ggh-seq-2); }
+.ggh-columns-crop .ggh-col.is-current .ggh-col-bar { background: var(--ggh-straw); }
+.ggh-columns-stack { grid-template-columns: repeat(var(--cols, 8), minmax(0, 1fr)); }
+.ggh-stack { flex: 1; display: flex; flex-direction: column; border-radius: 4px 4px 0 0; overflow: hidden; gap: 2px; }
+.ggh-stack i { display: block; min-height: 0; }
+.ggh-stack .done { background: var(--ggh-seq-4); }
+.ggh-stack .rem { background: var(--ggh-seq-1); }
+.ggh-columns-stack .ggh-col.is-asof .ggh-col-label { color: var(--ggh-green-dark); font-weight: 700; }
+.ggh-columns-stack .ggh-col.is-asof .ggh-stack { outline: 2px solid var(--ggh-green-dark); outline-offset: 1px; }
+
+.ggh-progress { display: inline-block; vertical-align: middle; width: calc(100% - 2.6rem); height: 8px; border-radius: 4px; background: var(--ggh-seq-1); overflow: hidden; margin-right: .4rem; }
+.ggh-progress i { display: block; height: 100%; background: var(--ggh-seq-4); }
+.ggh-subtable { margin-top: .75rem; max-height: 18rem; overflow: auto; border-top: 1px solid var(--ggh-line); }
+.ggh-subtable table { width: 100%; border-collapse: collapse; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.ggh-subtable th { position: sticky; top: 0; background: var(--ggh-surface); text-align: left; font-weight: 600; color: var(--ggh-muted); padding: .35rem .25rem; }
+.ggh-subtable td { padding: .3rem .25rem; border-top: 1px dashed var(--ggh-line); }
+.ggh-subtable .num { text-align: right; }
+.ggh-retry { margin-left: .4rem; color: var(--ggh-green); font-weight: 700; text-decoration: underline; min-height: auto; }
+.ggh-staff-link { margin-top: .75rem; text-align: center; font-size: .82rem; }
+.ggh-staff-link a { color: var(--ggh-muted); text-decoration: underline; }
+.ggh-landing[data-tab="overview"] .ggh-district h4:first-of-type { margin-top: .5rem; }
+.ggh-kpis-4 .ggh-kpi:last-child { border-left: 1px solid var(--ggh-line); }

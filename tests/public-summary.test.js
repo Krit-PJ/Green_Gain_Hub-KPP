@@ -59,7 +59,7 @@ global.ContentService = {
 
 const root = path.join(__dirname, '..', 'apps-script');
 const districts = fs.readFileSync(path.join(root, 'Districts.gs'), 'utf8');
-const code = fs.readFileSync(path.join(root, 'Code.gs'), 'utf8');
+const code = ['Code.gs', 'Admin.gs', 'Crops.gs'].map((f) => fs.readFileSync(path.join(root, f), 'utf8')).join('\n');
 let fetched = [];
 let upstream = 'ok';
 const smartBodies = {
@@ -123,11 +123,12 @@ const json = JSON.stringify(s);
 // HTTP routing: JSON, JSONP, health, key gate, and RPC untouched.
 api.doGet({ parameter: { api: 'v1', endpoint: 'summary', key: 'YOUR_KEY' } });
 let out = JSON.parse(lastOutput.body);
-assert(out.ok && out.api === 'v1' && out.apiVersion === '1.5.0' && out.data.totals.farmerPlots === 5 && lastOutput.mime === 'json', 'JSON summary route failed');
+assert(out.ok && out.api === 'v1' && out.apiVersion === '1.6.0' && out.data.totals.farmerPlots === 5 && lastOutput.mime === 'json', 'JSON summary route failed: ' + lastOutput.body.slice(0, 200));
+assert(out.data.crops && out.data.crops.ok && Array.isArray(out.data.crops.crops) && out.data.crops.crops.length === 0, 'summary must include an empty crops block before any import: ' + JSON.stringify(out.data.crops));
 api.doGet({ parameter: { api: 'v1', endpoint: 'summary', callback: 'cb_1' } });
 assert(lastOutput.body.startsWith('cb_1(') && lastOutput.mime === 'js', 'JSONP summary route failed');
 api.doGet({ parameter: { api: 'v1', endpoint: 'health' } });
-assert(JSON.parse(lastOutput.body).feature === 'PUBLIC_SUMMARY_DASHBOARD', 'health route failed');
+assert(JSON.parse(lastOutput.body).feature === 'CROP_IMPORT_ADMIN', 'health route failed');
 api.doGet({ parameter: { api: 'v1', endpoint: 'nope' } });
 assert(JSON.parse(lastOutput.body).ok === false, 'unknown endpoint must fail');
 props = { SUMMARY_API_KEY: 'secret-1' };
@@ -137,7 +138,7 @@ api.doGet({ parameter: { api: 'v1', endpoint: 'summary', key: 'secret-1' } });
 assert(JSON.parse(lastOutput.body).ok === true, 'matching key must be accepted');
 props = {};
 api.doGet({ parameter: { action: 'rpc', method: 'getApiInfoServer', args: '[]' } });
-assert(JSON.parse(lastOutput.body).result.apiVersion === '1.5.0', 'existing RPC route must keep working');
+assert(JSON.parse(lastOutput.body).result.apiVersion === '1.6.0', 'existing RPC route must keep working');
 
 // Without Districts.gs the summary still works (everything falls into OTHER).
 const apiNoDistricts = new Function(code + '; return { buildPublicSummary_ };')();

@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=1.5.1">
+  <link rel="stylesheet" href="assets/dashboard.css?v=1.6.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -82,46 +82,37 @@
 
   <main class="flex-grow pt-20 sm:pt-24 pb-10 sm:pb-12 px-3 sm:px-4 container mx-auto max-w-5xl">
 
-    <div id="loginPage" class="ggh-landing">
+    <div id="loginPage" class="ggh-landing" data-tab="overview">
       <header class="ggh-intro">
         <div>
           <h2 class="ggh-title">วัสดุเหลือใช้ทางการเกษตร จังหวัดกำแพงเพชร</h2>
-          <p class="ggh-lede">ผลการจัดการเศษวัสดุแทนการเผาจากรายงานของอำเภอ กับแปลงที่พร้อมขายฟางข้าว ใบอ้อย เหง้ามันสำปะหลัง และจุดรับซื้อในแต่ละอำเภอ</p>
+          <p class="ggh-lede">พื้นที่เพาะปลูกและเก็บเกี่ยวรายเดือน ผลการจัดการเศษวัสดุแทนการเผา และตลาดซื้อขายเศษวัสดุ ในแต่ละอำเภอ</p>
         </div>
         <p class="ggh-updated" id="dashUpdated" aria-live="polite">กำลังโหลดข้อมูล…</p>
       </header>
 
+      <nav class="ggh-tabs" role="tablist" aria-label="เลือกมุมมองข้อมูล">
+        <button type="button" role="tab" id="tab-overview" aria-controls="loginPage" aria-selected="true" data-tab="overview">ภาพรวม</button>
+        <button type="button" role="tab" id="tab-crops" aria-controls="loginPage" aria-selected="false" data-tab="crops">การเพาะปลูก</button>
+        <button type="button" role="tab" id="tab-reports" aria-controls="loginPage" aria-selected="false" data-tab="reports">รายงานอำเภอ</button>
+        <button type="button" role="tab" id="tab-market" aria-controls="loginPage" aria-selected="false" data-tab="market">ตลาดเศษวัสดุ</button>
+      </nav>
+
+      <section class="ggh-toolbar" data-tabs="crops" aria-label="ตัวเลือกข้อมูลเพาะปลูก">
+        <div class="ggh-crop-chips" id="dashCropChips" role="radiogroup" aria-label="ชนิดพืช"></div>
+        <label class="ggh-asof">ข้อมูล ณ สิ้นเดือน
+          <select id="dashAsOf"></select>
+        </label>
+      </section>
+
       <section class="ggh-kpis-wrap" aria-label="ตัวเลขสรุป">
-        <div class="ggh-kpi-group" id="dashReportKpis">
-          <h3 class="ggh-kpi-group-title"><span>ผลการจัดการเศษวัสดุ รายงานจากอำเภอ</span><span class="ggh-kpi-group-meta" id="dashReportRound"></span></h3>
-          <div class="ggh-kpis ggh-kpis-4">
-            <div class="ggh-kpi ggh-kpi-hero"><span class="ggh-kpi-value" data-rkpi="R31">–</span><span class="ggh-kpi-label">ไร่ ไถกลบตอซัง/ใช้สารย่อยสลาย</span><span class="ggh-kpi-sub" data-rkpi-sub="R31"></span></div>
-            <div class="ggh-kpi"><span class="ggh-kpi-value" data-rkpi="R30">–</span><span class="ggh-kpi-label">หมู่บ้าน/ชุมชน แปรรูปวัสดุเพิ่มมูลค่า</span><span class="ggh-kpi-sub" data-rkpi-sub="R30"></span></div>
-            <div class="ggh-kpi"><span class="ggh-kpi-value" data-rkpi="R29">–</span><span class="ggh-kpi-label">ครั้ง ส่งเสริมแปรรูปแทนการเผา</span><span class="ggh-kpi-sub" data-rkpi-sub="R29"></span></div>
-            <div class="ggh-kpi"><span class="ggh-kpi-value" data-rkpi="reported">–</span><span class="ggh-kpi-label">อำเภอที่ส่งรายงานแล้ว</span><span class="ggh-kpi-sub" data-rkpi-sub="reported"></span></div>
-          </div>
-        </div>
-        <div class="ggh-kpi-group">
-          <h3 class="ggh-kpi-group-title"><span>ตลาดเศษวัสดุ Green Gain Hub</span></h3>
-          <div class="ggh-kpis" id="dashKpis">
-            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="farmerPlots">–</span><span class="ggh-kpi-label">แปลงพร้อมขาย</span><span class="ggh-kpi-sub" data-kpi-sub="farmers"></span></div>
-            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="areaRai">–</span><span class="ggh-kpi-label">พื้นที่รวม (ไร่)</span><span class="ggh-kpi-sub" data-kpi-sub="districts"></span></div>
-            <div class="ggh-kpi ggh-kpi-harvest"><span class="ggh-kpi-value" data-kpi="upcoming">–</span><span class="ggh-kpi-label">ไร่ที่จะเก็บเกี่ยวใน 30 วัน</span><span class="ggh-kpi-sub" data-kpi-sub="upcoming"></span></div>
-            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="buyers">–</span><span class="ggh-kpi-label">จุดรับซื้อ</span><span class="ggh-kpi-sub" data-kpi-sub="capacity"></span></div>
-            <div class="ggh-kpi"><span class="ggh-kpi-value" data-kpi="price">–</span><span class="ggh-kpi-label">ราคารับซื้อเฉลี่ย (บาท/ไร่)</span><span class="ggh-kpi-sub" data-kpi-sub="value"></span></div>
-          </div>
-        </div>
+        <h3 class="ggh-kpi-group-title"><span id="dashKpiTitle"></span><span class="ggh-kpi-group-meta" id="dashKpiMeta"></span></h3>
+        <div class="ggh-kpis ggh-kpis-4" id="dashKpis"></div>
       </section>
 
       <section class="ggh-mapcard" aria-label="แผนที่รายอำเภอ">
         <div class="ggh-mapbar">
-          <div class="ggh-metric" role="radiogroup" aria-label="ระบายสีแผนที่ตาม">
-            <button type="button" role="radio" aria-checked="false" data-metric="R31" data-source="reports">ไถกลบ/ย่อยสลาย (ไร่)</button>
-            <button type="button" role="radio" aria-checked="false" data-metric="R30" data-source="reports">แปรรูป (หมู่บ้าน)</button>
-            <button type="button" role="radio" aria-checked="false" data-metric="R29" data-source="reports">ส่งเสริม (ครั้ง)</button>
-            <button type="button" role="radio" aria-checked="true" data-metric="areaRai">แปลงพร้อมขาย (ไร่)</button>
-            <button type="button" role="radio" aria-checked="false" data-metric="buyers">จุดรับซื้อ</button>
-          </div>
+          <div class="ggh-metric" id="dashMetrics" role="radiogroup" aria-label="ระบายสีแผนที่ตาม"></div>
           <label class="ggh-search">
             <span class="sr-only">ค้นหาอำเภอ</span>
             <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
@@ -131,7 +122,7 @@
         </div>
         <div id="dashMap" class="ggh-map" role="img" aria-label="แผนที่จังหวัดกำแพงเพชร ระบายสีตามข้อมูลรายอำเภอ"></div>
         <div class="ggh-legend" id="dashLegend" aria-hidden="true"></div>
-        <p class="ggh-note" id="dashSourceNote">แสดงเป็นภาพรวมรายอำเภอ ไม่แสดงชื่อ เบอร์โทร หรือตำแหน่งแปลง เข้าสู่ระบบเพื่อดูคู่ค้าบนแผนที่</p>
+        <p class="ggh-note" id="dashSourceNote"></p>
       </section>
 
       <aside class="ggh-side">
@@ -147,6 +138,7 @@
             <span class="text-sm text-gray-500">ยังไม่มีบัญชี?</span>
             <button onclick="toggleAuth('register')" class="text-green-700 font-bold text-sm hover:underline">ลงทะเบียนใหม่ที่นี่</button>
           </div>
+          <p class="ggh-staff-link"><a href="admin.html">สำหรับเจ้าหน้าที่: เข้าสู่ระบบผู้ดูแล</a></p>
         </div>
 
         <div class="ggh-district" id="dashDistrict" aria-live="polite">
@@ -154,39 +146,49 @@
         </div>
       </aside>
 
-      <section class="ggh-panel ggh-trend" id="dashTrendWrap" aria-labelledby="dashTrendTitle">
+      <section class="ggh-panel ggh-cropmonths" data-tabs="overview crops" aria-labelledby="dashCropMonthsTitle">
+        <h3 id="dashCropMonthsTitle" class="ggh-panel-title">พื้นที่เก็บเกี่ยวรายเดือน</h3>
+        <p class="ggh-panel-sub" id="dashCropMonthsSub"></p>
+        <div id="dashCropMonths" class="ggh-columns ggh-columns-crop"></div>
+      </section>
+
+      <section class="ggh-panel ggh-cropstack" data-tabs="crops" aria-labelledby="dashCropStackTitle">
+        <h3 id="dashCropStackTitle" class="ggh-panel-title">เก็บเกี่ยวแล้ว และคงเหลือ</h3>
+        <p class="ggh-panel-sub">แต่ละแท่งคือพื้นที่ปลูกทั้งหมด แบ่งเป็นส่วนที่เก็บเกี่ยวแล้วถึงสิ้นเดือนนั้น กับส่วนที่ยังคงเหลือ</p>
+        <div id="dashCropStack" class="ggh-columns ggh-columns-stack"></div>
+      </section>
+
+      <section class="ggh-panel ggh-trend" id="dashTrendWrap" data-tabs="reports" aria-labelledby="dashTrendTitle">
         <h3 id="dashTrendTitle" class="ggh-panel-title">ไถกลบตอซัง/ใช้สารย่อยสลาย สะสมรายครั้ง</h3>
         <p class="ggh-panel-sub" id="dashTrendSub">ยอดสะสมทั้งจังหวัด (ไร่) จากรายงานที่ส่งแล้วหรือตรวจรับแล้ว</p>
         <div id="dashTrend" class="ggh-columns ggh-columns-trend"></div>
       </section>
 
-      <section class="ggh-panel ggh-harvest" aria-labelledby="dashHarvestTitle">
-        <h3 id="dashHarvestTitle" class="ggh-panel-title">ปฏิทินเก็บเกี่ยว</h3>
-        <p class="ggh-panel-sub">พื้นที่ (ไร่) ตามเดือนที่คาดว่าจะเก็บเกี่ยว ย้อนหลัง 6 เดือนถึงล่วงหน้า 6 เดือน</p>
+      <section class="ggh-panel ggh-harvest" data-tabs="market" aria-labelledby="dashHarvestTitle">
+        <h3 id="dashHarvestTitle" class="ggh-panel-title">ปฏิทินเก็บเกี่ยวของแปลงพร้อมขาย</h3>
+        <p class="ggh-panel-sub">พื้นที่ (ไร่) ของแปลงที่ลงทะเบียนใน Green Gain Hub ตามเดือนที่คาดว่าจะเก็บเกี่ยว</p>
         <div id="dashHarvest" class="ggh-columns"></div>
       </section>
 
-      <section class="ggh-panel ggh-materials" aria-labelledby="dashMaterialTitle">
+      <section class="ggh-panel ggh-materials" data-tabs="market" aria-labelledby="dashMaterialTitle">
         <h3 id="dashMaterialTitle" class="ggh-panel-title">ตามชนิดเศษวัสดุ</h3>
         <p class="ggh-panel-sub">พื้นที่แปลงพร้อมขาย และจำนวนจุดรับซื้อของวัสดุแต่ละชนิด</p>
         <div id="dashMaterials" class="ggh-bars"></div>
         <p class="ggh-footnote" id="dashResidueNote"></p>
       </section>
 
-      <section class="ggh-panel ggh-table" aria-labelledby="dashTableTitle">
+      <section class="ggh-panel ggh-table" data-tabs="crops reports market" aria-labelledby="dashTableTitle">
         <h3 id="dashTableTitle" class="ggh-panel-title">รายอำเภอ</h3>
-        <p class="ggh-panel-sub">ตัวเลขรายงานเป็นยอดสะสมถึงครั้งล่าสุด เลือกแถวเพื่อดูอำเภอนั้นบนแผนที่</p>
+        <p class="ggh-panel-sub" id="dashTableSub">เลือกแถวเพื่อดูอำเภอนั้นบนแผนที่</p>
         <div class="ggh-table-wrap">
           <table>
-            <thead>
-              <tr><th scope="col">อำเภอ</th><th scope="col">รายงาน</th><th scope="col" class="num">ไถกลบ/ย่อยสลาย (ไร่)</th><th scope="col" class="ggh-col-share"><span class="sr-only">สัดส่วน</span></th><th scope="col" class="num">แปรรูป (หมู่บ้าน)</th><th scope="col" class="num">ส่งเสริม (ครั้ง)</th><th scope="col" class="num">แปลงพร้อมขาย</th><th scope="col" class="num">พื้นที่ (ไร่)</th><th scope="col" class="num">จุดรับซื้อ</th></tr>
-            </thead>
+            <thead id="dashTableHead"></thead>
             <tbody id="dashTable"></tbody>
           </table>
         </div>
       </section>
 
-      <section class="ggh-panel ggh-goals hidden" id="dashGoalsWrap" aria-labelledby="dashGoalsTitle">
+      <section class="ggh-panel ggh-goals hidden" id="dashGoalsWrap" data-tabs="overview" aria-labelledby="dashGoalsTitle">
         <h3 id="dashGoalsTitle" class="ggh-panel-title">เป้าหมายโครงการ</h3>
         <ul id="dashGoals" class="ggh-goal-list"></ul>
       </section>
@@ -408,9 +410,9 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=1.5.0"></script>
-  <script src="assets/api-client.js?v=1.5.0"></script>
-  <script src="assets/dashboard.js?v=1.5.1" defer></script>
+  <script src="assets/config.js?v=1.6.0"></script>
+  <script src="assets/api-client.js?v=1.6.0"></script>
+  <script src="assets/dashboard.js?v=1.6.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
