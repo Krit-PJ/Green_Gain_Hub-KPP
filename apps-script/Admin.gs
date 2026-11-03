@@ -149,9 +149,8 @@ function hashPassword_(salt, password) {
 
 function validatePassword_(pw) {
   pw = String(pw || '');
-  if (pw.length < 8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) {
-    throw new Error('รหัสผ่านต้องยาวอย่างน้อย 8 ตัว และมีทั้งตัวอักษรภาษาอังกฤษและตัวเลข');
-  }
+  // Owner's choice: minimum length only (digits-only allowed). Brute force is limited by the 5-try lockout.
+  if (pw.length < 8 || pw.length > 128) throw new Error('รหัสผ่านต้องยาว 8–128 ตัวอักษร');
   return pw;
 }
 

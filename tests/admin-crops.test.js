@@ -78,21 +78,21 @@ const post = (method, args, token) => { api.doPost({ postData: { contents: JSON.
 const ok = (r, msg) => { assert(r.ok, msg + ': ' + r.error); return r.result; };
 
 /* ---------- setup + super bootstrap ---------- */
-props.SUPER_ADMIN_PASSWORD = '123456789';
+props.SUPER_ADMIN_PASSWORD = '1234567';
 assert(/FAIL: SUPER_ADMIN_PASSWORD/.test(api.setupSystem()) && props.SUPER_ADMIN_PASSWORD, 'weak bootstrap password must be reported, not thrown, and kept for correction');
-props.SUPER_ADMIN_PASSWORD = 'Start1234';
+props.SUPER_ADMIN_PASSWORD = '0812345678'; // digits-only is allowed
 const setup = api.setupSystem();
 assert(/PASS: admins and admin_log/.test(setup) && /PASS: crop_types/.test(setup) && /PASS: Super Admin "krit"/.test(setup), 'setupSystem must create admin/crop schema and Super Admin:\n' + setup);
 assert(!('SUPER_ADMIN_PASSWORD' in props), 'plain Super Admin password must be removed from Script Properties');
 assert(sheets.crop_types.rows.length === 6, 'default crop types must be seeded');
 assert(sheets.admins.rows[0][0] === 'Username' && sheets.admins.rows[0][10] === 'Telephone' && sheets.admin_log.rows[0][1] === 'Username', 'empty legacy admin sheets must be migrated to username headers');
 const superRow = sheets.admins.rows[1];
-assert(superRow[0] === 'krit' && superRow[2] === 'super' && superRow[4] && superRow[4] !== 'Start1234' && superRow[4].length === 64, 'password must be stored as a hash only');
+assert(superRow[0] === 'krit' && superRow[2] === 'super' && superRow[4] && superRow[4] !== '0812345678' && superRow[4].length === 64, 'password must be stored as a hash only');
 assert(/PASS: Super Admin exists/.test(api.setupSystem()), 'setupSystem must be idempotent');
 
 /* ---------- login / lockout / roles ---------- */
 assert(post('adminLoginServer', [{ username: 'krit', password: 'wrong123' }]).ok === false, 'wrong password must fail');
-const login = ok(post('adminLoginServer', [{ username: 'KRIT ', password: 'Start1234' }]), 'super login');
+const login = ok(post('adminLoginServer', [{ username: 'KRIT ', password: '0812345678' }]), 'super login');
 const T = login.token;
 assert(login.role === 'super' && /^[0-9a-f]{64}$/.test(T), 'login must return a super session token');
 assert(post('adminMeServer', [], 'f'.repeat(64)).error === 'ADMIN_SESSION_EXPIRED', 'unknown token must be rejected');
@@ -101,7 +101,7 @@ for (let i = 0; i < 5; i++) post('adminLoginServer', [{ username: 'somchai', pas
 assert(/15 นาที/.test(post('adminLoginServer', [{ username: 'somchai', password: 'x' }]).error), 'account must lock after 5 failed attempts');
 
 ok(post('adminSaveServer', [{ username: 'admin.khanu', phone: '0899000003', name: 'Admin อำเภอ', role: 'admin', password: 'Admin1234' }], T), 'create admin');
-assert(/อย่างน้อย 8/.test(post('adminSaveServer', [{ username: 'weakpw', name: 'x', role: 'admin', password: 'short' }], T).error), 'weak password must be rejected');
+assert(/8–128/.test(post('adminSaveServer', [{ username: 'weakpw', name: 'x', role: 'admin', password: 'short' }], T).error), 'weak password must be rejected');
 const A = ok(post('adminLoginServer', [{ username: 'admin.khanu', password: 'Admin1234' }]), 'admin login').token;
 assert(/เฉพาะ Super Admin/.test(post('settingsGetServer', [], A).error), 'admin must not read settings');
 assert(/เฉพาะ Super Admin/.test(post('adminsListServer', [], A).error), 'admin must not manage admins');
