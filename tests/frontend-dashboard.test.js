@@ -14,7 +14,7 @@ new vm.Script(js, { filename: 'frontend/assets/dashboard.js' });
 // Landing keeps the login contract used by the existing app script.
 ['id="loginPage"', 'id="loginPhone"', 'id="loginBtn"', 'onclick="login()"', "toggleAuth('register')", 'id="registerPage"'].forEach(s => assert(html.includes(s), 'login markup missing: ' + s));
 ['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashSearch"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=1.5.0') && html.includes('assets/dashboard.css?v=1.5.0'), 'dashboard assets are not linked');
+assert(html.includes('assets/dashboard.js?v=1.5.1') && html.includes('assets/dashboard.css?v=1.5.1'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
