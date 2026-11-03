@@ -58,3 +58,24 @@ URL เดียวกับ Web App (`/exec`) รองรับทั้ง `f
 ```
 
 กติกา: นับเฉพาะแปลง `Open` และผู้รับซื้อ `Active`; พื้นที่แปลงจาก `ไร่-งาน-ตร.ว.`; อำเภอคำนวณจากพิกัดด้วย `Districts.gs` (ไม่มีพิกัด/อยู่นอกจังหวัด → `OTHER`); `potentialValueBaht` = พื้นที่ × ราคาเฉลี่ยของผู้รับซื้อวัสดุชนิดเดียวกัน
+
+## `data.reports` — KPP Smart Agri-Materials (เพิ่มใน summary)
+
+Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts|timeseries|meta&items=agri&key=…` ฝั่ง Server แล้วจัดรูปใหม่ (cache 5 นาที, ล้มเหลว cache 1 นาที)
+
+```json
+"reports": {
+  "ok": true, "configured": true,
+  "source": { "name": "KPP Smart Agri-Materials", "office": "...", "title": "...", "season": "2569 - 2570" },
+  "round": { "round": 2, "label": "ครั้งที่ 2", "start": "2026-10-29", "end": "2026-11-04", "due": "2026-11-06" },
+  "districtsTotal": 11, "reportedCount": 0, "statusCounts": { "accepted": 0, "submitted": 0, "draft": 0, "returned": 0, "none": 11 },
+  "items": [{ "id": "R31", "label": "ไถกลบตอซัง/การใช้สารย่อยสลาย", "unit": "ไร่", "week": null, "cumulative": null, "districtsYes": 0 }],
+  "byDistrict": [{ "code": "6201", "sourceCode": "D01", "name": "เมืองกำแพงเพชร", "status": "none", "items": { "R31": { "week": null, "cumulative": null } } }],
+  "series": [{ "round": 1, "label": "ครั้งที่ 1", "start": "2026-10-22", "end": "2026-10-28", "reported": 0, "values": { "R31": { "week": null, "cumulative": null } } }]
+}
+```
+
+- `code` = รหัสอำเภอ (amp_code) ตรงกับขอบเขตใน `Districts.gs`
+- `null` = ยังไม่มีรายงาน (ไม่ใช่ 0)
+- ถ้าเรียกไม่สำเร็จ: `{ "ok": false, "configured": true|false, "error": "..." }` ส่วนอื่นของ summary ยังทำงาน
+- คีย์ไม่ถูกส่งไปที่ browser (มีเทสต์ตรวจ)

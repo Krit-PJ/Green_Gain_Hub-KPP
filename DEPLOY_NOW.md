@@ -1,42 +1,32 @@
 # Deploy Green Gain Hub 1.5.0
 
-Frontend ชี้ไปที่ Deployment `AKfycbxoo4VuAomjDPaDPXgEF6y0CFVxBfor-4OmIi3bQVik7FCgAx_7XghYmeav7BHDbpLcaw` แล้ว ต้องอัปเดตโค้ดใน Apps Script โปรเจกต์ที่เป็นเจ้าของ Deployment นี้ ก่อน merge ขึ้น GitHub Pages
+สถานะ 3 พ.ย. 2569: **Deploy แล้ว**
 
-## 1. Apps Script (ประมาณ 5 นาที)
+- Apps Script: **Green Gain Hub KPP API** (`1JfUtXCoOvrb_Nz2N6xgRBSiT72DSWV92pFepA20eNcGb8WUhDNuRLLSg`, บัญชี noonoy.cmu@gmail.com)
+- Deployment เวอร์ชัน 1: `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` (Execute as: Me, Access: Anyone)
+- Script Property: `SMART_AGRI_API_KEY` = คีย์ "Green Gain Hub — Backend proxy" (prefix `kpp_fa4750`) ของระบบ Smart Agri-Materials
 
-1. เปิด https://script.google.com ด้วยบัญชีที่สร้าง Deployment `AKfycbxoo4…`
-   (ตรวจได้ที่ **ทำให้ใช้งานได้ > จัดการการทำให้ใช้งานได้** — Deployment ID ต้องตรง)
-2. แทนที่ `Code.gs` ด้วย `apps-script/Code.gs`
-3. กด **+ > สคริปต์** สร้างไฟล์ชื่อ `Districts` แล้ววางเนื้อหา `apps-script/Districts.gs`
-4. ตรวจ `appsscript.json` ให้ตรงกับ `apps-script/appsscript.json` (Web App: Anyone, Execute as: Me)
-5. **บัญชีที่ Deploy ต้องมีสิทธิ์แก้ไข** Sheet `Green Gain Hub KPP — Database (v1.5.0)`
-   (`1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw`, เจ้าของ noonoy.cmu@gmail.com) — ถ้าคนละบัญชี ให้แชร์สิทธิ์ Editor ก่อน
-6. โค้ดชี้ไปที่ Sheet ใหม่โดยค่าเริ่มต้น ถ้าเคยตั้ง Script Property `SPREADSHEET_ID` ไว้ ให้แก้เป็น ID ข้างบนหรือลบออก
-7. เลือกฟังก์ชัน `setupSystem` > **Run** > อนุญาตสิทธิ์ ทุกบรรทัดต้องขึ้นต้นด้วย `PASS` และบรรทัดสุดท้ายแสดงจำนวนแปลง/อำเภอ
-8. **ทำให้ใช้งานได้ > จัดการการทำให้ใช้งานได้ > ✏️ แก้ไข** Deployment `AKfycbxoo4…` > เวอร์ชัน **เวอร์ชันใหม่** > **ทำให้ใช้งานได้**
-   (แก้ไข Deployment เดิม URL จะไม่เปลี่ยน — อย่ากด "การทำให้ใช้งานได้รายการใหม่")
+> ⚠️ `AKfycbxoo4…` เป็นของระบบ **KPP Smart Agri-Materials v2** ห้ามวางโค้ด GGH หรือ Deploy ทับ
 
-ตรวจในเบราว์เซอร์:
+## อัปเดตโค้ดครั้งถัดไป
 
-- `…/exec?api=v1&endpoint=health` → `"apiVersion":"1.5.0"`
-- `…/exec?api=v1&endpoint=summary&key=YOUR_KEY` → `"ok":true` และ `totals.farmerPlots` ตรงกับจำนวนแปลง Open
+1. เปิดโปรเจกต์ Green Gain Hub KPP API แล้ววาง `apps-script/Code.gs` และ `apps-script/Districts.gs`
+2. Run `setupSystem()` (บรรทัดสุดท้ายแสดงผลการเชื่อมต่อ Smart Agri: `PASS`, `INFO` หรือ `FAIL`)
+3. **ทำให้ใช้งานได้ > จัดการการทำให้ใช้งานได้ > ✏️ แก้ไข** Deployment `AKfycbylUGpPc7g9…` > **เวอร์ชันใหม่** > ทำให้ใช้งานได้ (URL เดิม)
+4. ตรวจ `…/exec?api=v1&endpoint=health` และ `…/exec?api=v1&endpoint=summary&refresh=1`
 
-ไม่บังคับ: ตั้ง Script Property `SUMMARY_API_KEY` แล้วใส่ค่าเดียวกันใน `SUMMARY_API_KEY` ของ `frontend/assets/config.js`
+## Script Properties
 
-## 2. GitHub Pages
+| Property | ค่า | จำเป็น |
+| --- | --- | --- |
+| `SMART_AGRI_API_KEY` | API Key จากระบบ Smart Agri (Super Admin สร้าง/ยกเลิกได้) | ใช่ สำหรับข้อมูลรายงาน |
+| `SMART_AGRI_API_URL` | URL `/exec` ของ Smart Agri ถ้าเปลี่ยน Deployment | ไม่ |
+| `SPREADSHEET_ID` | ใช้ Sheet อื่นแทนค่าเริ่มต้น | ไม่ |
+| `SUMMARY_API_KEY` | บังคับ key สำหรับ summary ของ GGH | ไม่ |
 
-1. Merge Pull Request `feature/public-dashboard-1.5.0` เข้า `main`
-2. รอ Workflow ในแท็บ Actions สำเร็จ (deploy จากโฟลเดอร์ `frontend/`)
-3. เปิดเว็บแบบ Incognito หรือ Hard Refresh
+ถ้าคีย์ Smart Agri ถูกยกเลิกหรือหมดอายุ หน้าแรกยังทำงาน แต่ส่วนรายงานจะแสดง "ยังโหลดข้อมูลรายงานไม่ได้" ให้สร้างคีย์ใหม่แล้วแก้ Script Property
 
-## ข้อควรระวังเรื่องข้อมูล
+## หลังสลับระบบ
 
-- Sheet ใหม่คัดลอกจาก Sheet เดิมเมื่อ 3 พ.ย. 2569 เวลา 00:30 น. ถ้ามีผู้ลงทะเบียน/บันทึกในระบบเดิมหลังเวลานั้นก่อนสลับ Deployment ให้คัดลอกแถวใหม่จาก Sheet เดิมมาเพิ่ม
-- Deployment เดิม `AKfycbwQLS…` ยังเขียนลง Sheet เดิมอยู่ เมื่อสลับเสร็จควร **เก็บถาวร (Archive)** Deployment เดิม เพื่อไม่ให้ข้อมูลแยกสองที่
-
-## ตรวจหลังติดตั้ง
-
-- หน้าแรกแสดงตัวเลขสรุป แผนที่ 11 อำเภอ ปฏิทินเก็บเกี่ยว และตารางรายอำเภอ
-- เลือกอำเภอบนแผนที่/ตาราง/ช่องค้นหาแล้วรายละเอียดด้านขวาเปลี่ยนตาม
-- เข้าสู่ระบบด้วยเบอร์โทรเดิมได้ และหน้าหลังเข้าสู่ระบบทำงานเหมือน 1.4.1 ทุกอย่าง
-- ถ้า API ล่ม หน้าแรกยังเข้าสู่ระบบได้ และแสดงข้อความพร้อมปุ่ม "ลองใหม่"
+- Archive Deployment เดิม `AKfycbwQLS…` (ยังเขียนลง Sheet เดิม) เพื่อไม่ให้ข้อมูลแยกสองที่
+- ตรวจหน้าเว็บแบบ Incognito: หน้าแรกแสดงข้อมูลรายงานและตลาด, เข้าสู่ระบบด้วยเบอร์เดิมได้

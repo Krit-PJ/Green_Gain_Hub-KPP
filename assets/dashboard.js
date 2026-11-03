@@ -210,14 +210,18 @@
       if (meta) meta.textContent = raw && raw.configured === false ? 'กำลังเชื่อมต่อระบบรายงาน' : 'ยังโหลดข้อมูลรายงานไม่ได้';
       return;
     }
+    const none = !r.reportedCount;
     ['R31', 'R30', 'R29'].forEach((id) => {
       const it = reportItem(id);
       set(id, it && it.cumulative !== null ? fmt(it.cumulative, 0) : '–');
-      sub(id, it ? (it.week !== null ? `ครั้งล่าสุด +${fmt(it.week, 0)}` : 'ครั้งล่าสุดยังไม่มีตัวเลข') + `, ${fmt(it.districtsYes)} อำเภอดำเนินการ` : '');
+      if (none) sub(id, 'รอรายงานจากอำเภอ');
+      else sub(id, it ? (it.week !== null ? `ครั้งล่าสุด +${fmt(it.week, 0)}, ` : '') + `${fmt(it.districtsYes)} อำเภอดำเนินการ` : '');
     });
     set('reported', `${fmt(r.reportedCount)}/${fmt(r.districtsTotal)}`);
     const sc = r.statusCounts || {};
-    sub('reported', `ตรวจรับแล้ว ${fmt(sc.accepted || 0)}, รอตรวจ ${fmt(sc.submitted || 0)}`);
+    sub('reported', none
+      ? (r.round && r.round.due ? `ครบกำหนดส่ง ${dateRange(r.round.due)}` : 'ยังไม่มีอำเภอส่งรายงาน')
+      : `ตรวจรับแล้ว ${fmt(sc.accepted || 0)}, รอตรวจ ${fmt(sc.submitted || 0)}`);
     if (meta) meta.textContent = r.round && r.round.round ? `${r.round.label || 'ครั้งที่ ' + r.round.round}${r.round.start ? ` (${dateRange(r.round.start, r.round.end)})` : ''}` : '';
   }
 
@@ -234,6 +238,11 @@
     wrap.classList.toggle('hidden', !series.length);
     if (!series.length) return;
     const vals = series.map((x) => Number(x.values.R31.cumulative) || 0);
+    if (!vals.some(Boolean)) {
+      el.style.removeProperty('--cols');
+      el.innerHTML = `<p class="ggh-district-empty ggh-trend-empty">ยังไม่มีอำเภอส่งรายงานที่มีตัวเลขไถกลบ/ย่อยสลาย กราฟจะแสดงเมื่ออำเภอส่งรายงานครั้งแรก${r.round && r.round.due ? ` (รอบ${esc(r.round.label)} ครบกำหนด ${esc(dateRange(r.round.due))})` : ''}</p>`;
+      return;
+    }
     const max = Math.max(0, ...vals);
     el.style.setProperty('--cols', String(series.length));
     el.innerHTML = series.map((x, i) => {
@@ -499,7 +508,8 @@
   function chooseDefaultMetric() {
     const ok = !!reports();
     document.querySelectorAll('.ggh-metric [data-source="reports"]').forEach((b) => { b.disabled = !ok; b.title = ok ? '' : 'ยังไม่มีข้อมูลรายงานจากอำเภอ'; });
-    if (!state.metricChosen) state.metric = ok ? 'R31' : 'areaRai';
+    // Open on report data only when at least one district has reported; an all-grey map says nothing.
+    if (!state.metricChosen) state.metric = ok && reports().reportedCount > 0 ? 'R31' : 'areaRai';
     if (!ok && METRICS[state.metric].source === 'reports') state.metric = 'areaRai';
     document.querySelectorAll('.ggh-metric [data-metric]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.metric === state.metric)));
   }

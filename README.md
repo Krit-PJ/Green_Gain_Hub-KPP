@@ -10,8 +10,18 @@
 - เพิ่มไฟล์ `apps-script/Districts.gs` (ขอบเขตอำเภอแบบย่อ) สำหรับจัดแปลงเข้าอำเภอจากพิกัด
 - สรุปข้อมูลเก็บ cache 5 นาที และล้าง cache ทันทีเมื่อมีการบันทึก/ลบข้อมูล
 - ถ้ากรอก `BioRate` (ตัน/ไร่) ในชีต `Research_Refs` Dashboard จะประมาณปริมาณเศษวัสดุให้ ถ้ากรอกชีต `Goals` (Active = TRUE) จะแสดงเป้าหมายโครงการ
-- Frontend ชี้ไปที่ Deployment ใหม่ `AKfycbxoo4…` (`frontend/assets/config.js`)
+- Dashboard แสดง **ผลรายงานการจัดการเศษวัสดุรายอำเภอ** จากระบบ KPP Smart Agri-Materials (R29 ส่งเสริม, R30 แปรรูป, R31 ไถกลบ/ย่อยสลาย) คู่กับข้อมูลตลาด Green Gain Hub
+- Backend ดึงข้อมูล Smart Agri ผ่าน Data API v1 ฝั่ง Server ด้วย Script Property `SMART_AGRI_API_KEY` คีย์ไม่อยู่ใน GitHub หรือหน้าเว็บ
+- Frontend ชี้ไปที่ Deployment ใหม่ของ **Green Gain Hub KPP API** `AKfycbylUGpPc7g9…_pVB7WT`
 - ไฟล์ที่ราก Repository (`index.html`, `assets/`) ซิงก์ให้ตรงกับ `frontend/` แล้ว (GitHub Actions deploy จาก `frontend/`)
+
+## ระบบที่เกี่ยวข้อง
+
+| ระบบ | Apps Script | Deployment | บทบาท |
+| --- | --- | --- | --- |
+| Green Gain Hub KPP API | `1JfUtXCoOvrb_Nz2N6xgRBSiT72DSWV92pFepA20eNcGb8WUhDNuRLLSg` | `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` | Backend ของเว็บนี้ |
+| KPP Smart Agri-Materials v2 | `1zC7vLzhONGgwghZgaHxL3CbkNKwhwQ9zA5pu--bRSE2XqVxRhEGyDN1r` | `AKfycbxoo4VuAomjDPaDPXgEF6y0CFVxBfor-4OmIi3bQVik7FCgAx_7XghYmeav7BHDbpLcaw` | ระบบรายงานอำเภอ (อ่านอย่างเดียว ห้าม Deploy โค้ด GGH ทับ) |
+| GGH เดิม 1.4.1 | – | `AKfycbwQLSoTT71Tsgt2IITpkQKE57qBvYrA9MLSt-Yg6r3-1a2X04mJ0xmqMHEK-tcV2iPe` | ใช้ Sheet เดิม ควร Archive หลังสลับ |
 
 ## ฐานข้อมูล
 

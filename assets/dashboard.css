@@ -224,3 +224,5 @@ body.ggh-landing-on main { max-width: 84rem; }
 .ggh-district h4 { font-size: .85rem; font-weight: 700; color: var(--ggh-green-dark); margin-top: 1rem; display: flex; justify-content: space-between; gap: .5rem; }
 .ggh-metric button[data-source="reports"][disabled] { opacity: .45; cursor: not-allowed; }
 .ggh-harvest .ggh-col:nth-child(even):not(.is-current) .ggh-col-label { visibility: hidden; }
+.ggh-columns-trend:has(.ggh-trend-empty) { display: flex; align-items: center; height: auto; min-height: 120px; padding: 1rem 0; }
+.ggh-trend-empty { max-width: 52ch; }
