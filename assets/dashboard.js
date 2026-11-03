@@ -277,9 +277,10 @@
   function ensureMap() {
     if (state.map || !window.L || !$('dashMap')) return state.map;
     state.map = L.map('dashMap', { scrollWheelZoom: false, zoomSnap: 0.25, attributionControl: true });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 18, subdomains: 'abcd',
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO · ขอบเขตอำเภอ: OpenGISData-Thailand (CC BY 4.0)'
+    // Same OpenStreetMap tiles as the logged-in map (CARTO basemaps now require an API key).
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18, className: 'ggh-basemap',
+      attribution: '&copy; OpenStreetMap contributors · ขอบเขตอำเภอ: OpenGISData-Thailand (CC BY 4.0)'
     }).addTo(state.map);
     state.map.setView([16.3, 99.6], 9);
     return state.map;

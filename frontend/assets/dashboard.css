@@ -226,3 +226,5 @@ body.ggh-landing-on main { max-width: 84rem; }
 .ggh-harvest .ggh-col:nth-child(even):not(.is-current) .ggh-col-label { visibility: hidden; }
 .ggh-columns-trend:has(.ggh-trend-empty) { display: flex; align-items: center; height: auto; min-height: 120px; padding: 1rem 0; }
 .ggh-trend-empty { max-width: 52ch; }
+/* Mute the busy OSM basemap so the district colours carry the message */
+.ggh-map .ggh-basemap { filter: grayscale(1) contrast(.85) brightness(1.08); opacity: .7; }
