@@ -45,7 +45,10 @@ const ADMIN_METHODS = {
   adminsListServer: { role: 'super', fn: function () { return adminsList_(); } },
   adminSaveServer: { role: 'super', fn: function (a, s) { return adminSave_(a[0], s); } },
   adminResetPasswordServer: { role: 'super', fn: function (a, s) { return adminResetPassword_(a[0], s); } },
-  adminLogServer: { role: 'super', fn: function () { return adminLogList_(); } }
+  adminLogServer: { role: 'super', fn: function () { return adminLogList_(); } },
+  reportCatalogServer: { role: 'admin', fn: function (a, s) { return reportCatalog_(s); } },
+  reportDataServer: { role: 'admin', fn: function (a, s) { return reportData_(a[0], s); } },
+  reportExportLogServer: { role: 'admin', fn: function (a, s) { return reportExportLog_(a[0], s); } }
 };
 
 /** JSON POST endpoint for the admin page. Body: {"method": "...", "args": [...], "token": "..."} */

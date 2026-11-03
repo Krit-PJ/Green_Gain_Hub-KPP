@@ -1,17 +1,19 @@
 /**
- * Green Gain Hub 1.6.0 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 1.7.0 — API-only bridge from GitHub Pages to Google Sheets.
  * Files: Code.gs (this), Districts.gs (boundaries), Admin.gs (Super Admin/Admin, doPost),
- *        Crops.gs (crop area import + crop summary).
+ *        Crops.gs (crop area import + crop summary), Counter.gs (visit counter),
+ *        Reports.gs (admin reports for print / PDF / Excel / CSV).
  * Database: Google Sheets / file storage: Google Drive.
  *
  * Endpoints (same /exec URL):
  *   ?action=rpc&method=...            JSONP RPC used by the logged-in app (unchanged)
  *   ?api=v1&endpoint=summary[&key=]   Public, aggregate-only dashboard data (JSON or JSONP)
  *   ?api=v1&endpoint=crop&crop=&season=&district=   Public sub-district crop breakdown
+ *   ?api=v1&endpoint=hit | visits     Visit counter (count once per session | read)
  *   ?api=v1&endpoint=health           Public version check
  *   POST {method,args,token}          Admin API (Admin.gs)
  */
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -76,7 +78,7 @@ function getApiInfoServer() {
     status: 'success',
     success: true,
     apiVersion: APP_VERSION,
-    feature: 'CROP_IMPORT_ADMIN'
+    feature: 'REPORTS_COUNTER'
   };
 }
 
@@ -96,6 +98,10 @@ function publicApiResponse_(p, callback) {
       data.reports = getSmartAgriReports_(p.refresh === '1');
       data.crops = getCropSummary_(p.refresh === '1');
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: data };
+    } else if (endpoint === 'hit') {
+      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: recordVisit_() };
+    } else if (endpoint === 'visits') {
+      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: visitCounts_(false) };
     } else if (endpoint === 'crop') {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getCropDetail_(p) };
     } else if (endpoint === 'health') {
@@ -795,8 +801,9 @@ function setupSystem() {
   const adminSchema = ensureAdminSchema_();
   const cropSchema = ensureCropSchema_();
   const superAdmin = ensureSuperAdmin_();
+  const visits = ensureVisitSchema_();
   invalidateCropSummary_();
-  const out = [migration, formats, normalized, schema, restored, trigger, summary, reports, adminSchema, cropSchema, superAdmin].join('\n');
+  const out = [migration, formats, normalized, schema, restored, trigger, summary, reports, adminSchema, cropSchema, superAdmin, visits].join('\n');
   console.log(out);
   return out;
 }
