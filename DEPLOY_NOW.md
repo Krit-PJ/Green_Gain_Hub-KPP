@@ -23,7 +23,7 @@
 | `SMART_AGRI_API_URL` | URL `/exec` ของ Smart Agri ถ้าเปลี่ยน Deployment | ไม่ |
 | `SPREADSHEET_ID` | ใช้ Sheet อื่นแทนค่าเริ่มต้น | ไม่ |
 | `SUMMARY_API_KEY` | บังคับ key สำหรับ summary ของ GGH | ไม่ |
-| `SUPER_ADMIN_PHONE` | เบอร์ Super Admin คนแรก | ครั้งแรกเท่านั้น |
+| `SUPER_ADMIN_USERNAME` | ชื่อผู้ใช้ Super Admin คนแรก (3–32 ตัว a–z 0–9 . _ -) ถ้าไม่มีจะอ่านจาก `SUPER_ADMIN_PHONE` | ครั้งแรกเท่านั้น |
 | `SUPER_ADMIN_PASSWORD` | รหัสผ่านเริ่มต้นของ Super Admin (≥ 8 ตัว ตัวอักษร+ตัวเลข) ระบบลบออกอัตโนมัติหลัง Run `setupSystem()` | ครั้งแรก หรือเมื่อลืมรหัสผ่าน |
 
 ถ้าคีย์ Smart Agri ถูกยกเลิกหรือหมดอายุ หน้าแรกยังทำงาน แต่ส่วนรายงานจะแสดง "ยังโหลดข้อมูลรายงานไม่ได้" ให้สร้างคีย์ใหม่แล้วแก้ Script Property
@@ -35,9 +35,9 @@
 
 ## ผู้ดูแลระบบ (1.6.0)
 
-1. ตั้ง Script Properties `SUPER_ADMIN_PHONE` และ `SUPER_ADMIN_PASSWORD`
+1. ตั้ง Script Properties `SUPER_ADMIN_USERNAME` และ `SUPER_ADMIN_PASSWORD`
 2. Run `setupSystem()` (ระบบจะสร้างชีต admins/crop_* และ Super Admin แล้วลบ `SUPER_ADMIN_PASSWORD` ทิ้ง)
 3. เข้า `admin.html` (ลิงก์ "สำหรับเจ้าหน้าที่" ใต้กล่องเข้าสู่ระบบ) แล้วเปลี่ยนรหัสผ่านที่เมนู "บัญชีของฉัน"
 4. เพิ่ม Admin คนอื่นที่เมนู "ผู้ดูแลระบบ"
 
-ลืมรหัสผ่าน Super Admin: ตั้ง `SUPER_ADMIN_PHONE`/`SUPER_ADMIN_PASSWORD` ใหม่ แล้ว Run `setupSystem()` อีกครั้ง
+ลืมรหัสผ่าน Super Admin: ตั้ง `SUPER_ADMIN_USERNAME`/`SUPER_ADMIN_PASSWORD` ใหม่ แล้ว Run `setupSystem()` อีกครั้ง

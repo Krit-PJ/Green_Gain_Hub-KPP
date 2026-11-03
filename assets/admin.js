@@ -64,11 +64,11 @@
 
   $('loginForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    const phone = $('loginPhone').value.replace(/\D/g, ''), password = $('loginPassword').value;
-    if (phone.length !== 10 || !password) { $('loginError').textContent = 'กรุณากรอกเบอร์โทรศัพท์ 10 หลักและรหัสผ่าน'; return; }
+    const username = $('loginUsername').value.trim().toLowerCase(), password = $('loginPassword').value;
+    if (!username || !password) { $('loginError').textContent = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'; return; }
     busy($('loginBtn'), 'กำลังตรวจสอบ…', async () => {
       try {
-        const r = await call('adminLoginServer', { phone, password });
+        const r = await call('adminLoginServer', { username, password });
         state.token = r.token; sessionStorage.setItem(TOKEN_KEY, r.token);
         $('loginPassword').value = ''; $('loginError').textContent = '';
         await enterApp(r);
@@ -301,28 +301,28 @@
   /* ---------------- admins (super) ---------------- */
   async function loadAdmins() {
     const list = await call('adminsListServer');
-    $('adminsBody').innerHTML = list.map((a) => `<tr><td>${esc(a.name)}</td><td>${esc(a.phone)}</td><td>${a.role === 'super' ? 'Super Admin' : 'Admin'}</td>
+    $('adminsBody').innerHTML = list.map((a) => `<tr><td>${esc(a.name)}</td><td>${esc(a.username)}</td><td>${esc(a.phone || '–')}</td><td>${a.role === 'super' ? 'Super Admin' : 'Admin'}</td>
       <td><span class="adm-badge ${esc(a.status)}">${esc(STATUS_TH[a.status] || a.status)}</span></td><td>${esc(a.lastLogin || '–')}</td>
-      <td><button type="button" data-edit-admin="${esc(a.phone)}">แก้ไข</button><button type="button" data-reset="${esc(a.phone)}">ตั้งรหัสผ่านใหม่</button></td></tr>`).join('');
+      <td><button type="button" data-edit-admin="${esc(a.username)}">แก้ไข</button><button type="button" data-reset="${esc(a.username)}">ตั้งรหัสผ่านใหม่</button></td></tr>`).join('');
     $('adminsBody').querySelectorAll('[data-edit-admin]').forEach((b) => b.addEventListener('click', () => {
-      const a = list.find((x) => x.phone === b.dataset.editAdmin); const f = $('adminForm');
-      f.name.value = a.name; f.phone.value = a.phone; f.phone.readOnly = true; f.role.value = a.role; f.status.value = a.status;
+      const a = list.find((x) => x.username === b.dataset.editAdmin); const f = $('adminForm');
+      f.name.value = a.name; f.username.value = a.username; f.username.readOnly = true; f.phone.value = a.phone || ''; f.role.value = a.role; f.status.value = a.status;
       $('adminPwLabel').classList.add('hidden'); $('adminFormTitle').textContent = 'แก้ไขผู้ดูแล ' + a.name; f.name.focus();
     }));
     $('adminsBody').querySelectorAll('[data-reset]').forEach((b) => b.addEventListener('click', async () => {
       const pw = window.prompt('รหัสผ่านใหม่สำหรับ ' + b.dataset.reset + ' (อย่างน้อย 8 ตัว มีตัวอักษรและตัวเลข)');
       if (!pw) return;
-      try { toast((await call('adminResetPasswordServer', { phone: b.dataset.reset, password: pw })).message); } catch (err) { toast(err.message); }
+      try { toast((await call('adminResetPasswordServer', { username: b.dataset.reset, password: pw })).message); } catch (err) { toast(err.message); }
     }));
   }
   function resetAdminForm() {
-    const f = $('adminForm'); f.reset(); f.phone.readOnly = false; $('adminPwLabel').classList.remove('hidden'); $('adminFormTitle').textContent = 'เพิ่มผู้ดูแล'; setResult('adminResult', '');
+    const f = $('adminForm'); f.reset(); f.username.readOnly = false; $('adminPwLabel').classList.remove('hidden'); $('adminFormTitle').textContent = 'เพิ่มผู้ดูแล'; setResult('adminResult', '');
   }
   $('adminFormReset').addEventListener('click', resetAdminForm);
   $('adminForm').addEventListener('submit', async (e) => {
     e.preventDefault(); const f = e.target;
-    const input = { name: f.name.value, phone: f.phone.value.replace(/\D/g, ''), role: f.role.value, status: f.status.value };
-    if (!f.phone.readOnly) input.password = f.password.value;
+    const input = { name: f.name.value, username: f.username.value.trim().toLowerCase(), phone: f.phone.value.replace(/\D/g, ''), role: f.role.value, status: f.status.value };
+    if (!f.username.readOnly) input.password = f.password.value;
     try { const r = await call('adminSaveServer', input); resetAdminForm(); setResult('adminResult', r.message, true); loadAdmins(); }
     catch (err) { setResult('adminResult', err.message, false); }
   });
@@ -330,7 +330,7 @@
   /* ---------------- log (super) ---------------- */
   async function loadLog() {
     const list = await call('adminLogServer');
-    $('logBody').innerHTML = list.map((l) => `<tr><td>${esc(l.time)}</td><td>${esc(l.name)}<br><span class="adm-muted">${esc(l.phone)}</span></td>
+    $('logBody').innerHTML = list.map((l) => `<tr><td>${esc(l.time)}</td><td>${esc(l.name)}<br><span class="adm-muted">${esc(l.username)}</span></td>
       <td>${esc(ACTION_TH[l.action] || l.action)}</td><td>${esc(l.detail)}</td></tr>`).join('') || '<tr><td colspan="4" class="adm-muted">ยังไม่มีบันทึก</td></tr>';
   }
 

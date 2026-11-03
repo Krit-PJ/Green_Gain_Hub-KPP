@@ -39,10 +39,11 @@ const sheets = {
   farmers: new Sheet('farmers', [['ID', 'Timestamp', 'Name', 'Surname', 'Phone', 'Crop', 'Plant_Date', 'Havest_Date', 'Area (ไร่-งาน-ตร.ว.)', 'Lat', 'Lng', 'Stasus', 'Owner_Telephone', 'Material_Type', 'Material_Other', 'Map_Expire_Date', 'Map_Visible', 'Updated_At']]),
   buyers: new Sheet('buyers', [['ID', 'Timestamp', 'Name', 'Surname', 'Phone', 'Lat', 'Lng', 'Material', 'Quality', 'Price', 'Capacity', 'Status', 'Owner_Telephone', 'Material_Type', 'Material_Other', 'Updated_At', 'Purchase_After_Harvest_Days']]),
   Config: new Sheet('Config', [['Parameter', 'Value', 'Unit', 'Description']]),
+  admins: new Sheet('admins', [['Telephone', 'Name', 'Role', 'Status', 'Pass_Hash', 'Salt', 'Created_At', 'Created_By', 'Last_Login', 'Updated_At']]),
   Research_Refs: new Sheet('Research_Refs', [['ID', 'Type', 'SubType', 'BioRate', 'PriceMin', 'PriceMax', 'PriceAvg', 'Source'], ['r1', 'ฟางข้าว', '', 0.5, '', '', '', 'test']])
 };
 global.SpreadsheetApp = { openById: () => ({ getSheetByName: (n) => sheets[n] || null, insertSheet: (n) => (sheets[n] = new Sheet(n)) }) };
-let props = { SUPER_ADMIN_PHONE: '0899000001', SUPER_ADMIN_PASSWORD: 'Start1234' };
+let props = { SUPER_ADMIN_PHONE: 'Krit', SUPER_ADMIN_PASSWORD: 'Start1234' }; // legacy property name, read as a username
 global.PropertiesService = { getScriptProperties: () => ({
   getProperty: (k) => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = String(v); }, deleteProperty: (k) => { delete props[k]; } }) };
 const cache = new Map();
@@ -78,31 +79,33 @@ const ok = (r, msg) => { assert(r.ok, msg + ': ' + r.error); return r.result; };
 
 /* ---------- setup + super bootstrap ---------- */
 const setup = api.setupSystem();
-assert(/PASS: admins and admin_log/.test(setup) && /PASS: crop_types/.test(setup) && /PASS: Super Admin 0899000001/.test(setup), 'setupSystem must create admin/crop schema and Super Admin:\n' + setup);
+assert(/PASS: admins and admin_log/.test(setup) && /PASS: crop_types/.test(setup) && /PASS: Super Admin "krit"/.test(setup), 'setupSystem must create admin/crop schema and Super Admin:\n' + setup);
 assert(!('SUPER_ADMIN_PASSWORD' in props), 'plain Super Admin password must be removed from Script Properties');
 assert(sheets.crop_types.rows.length === 6, 'default crop types must be seeded');
+assert(sheets.admins.rows[0][0] === 'Username' && sheets.admins.rows[0][10] === 'Telephone' && sheets.admin_log.rows[0][1] === 'Username', 'empty legacy admin sheets must be migrated to username headers');
 const superRow = sheets.admins.rows[1];
-assert(superRow[2] === 'super' && superRow[4] && superRow[4] !== 'Start1234' && superRow[4].length === 64, 'password must be stored as a hash only');
+assert(superRow[0] === 'krit' && superRow[2] === 'super' && superRow[4] && superRow[4] !== 'Start1234' && superRow[4].length === 64, 'password must be stored as a hash only');
 assert(/PASS: Super Admin exists/.test(api.setupSystem()), 'setupSystem must be idempotent');
 
 /* ---------- login / lockout / roles ---------- */
-assert(post('adminLoginServer', [{ phone: '0899000001', password: 'wrong123' }]).ok === false, 'wrong password must fail');
-const login = ok(post('adminLoginServer', [{ phone: '0899000001', password: 'Start1234' }]), 'super login');
+assert(post('adminLoginServer', [{ username: 'krit', password: 'wrong123' }]).ok === false, 'wrong password must fail');
+const login = ok(post('adminLoginServer', [{ username: 'KRIT ', password: 'Start1234' }]), 'super login');
 const T = login.token;
 assert(login.role === 'super' && /^[0-9a-f]{64}$/.test(T), 'login must return a super session token');
 assert(post('adminMeServer', [], 'f'.repeat(64)).error === 'ADMIN_SESSION_EXPIRED', 'unknown token must be rejected');
 assert(post('getUserProfileServer', [], T).error === 'Method not allowed', 'doPost must not expose farmer/buyer RPC');
-for (let i = 0; i < 5; i++) post('adminLoginServer', [{ phone: '0899000002', password: 'bad' + i + 'aaaa' }]);
-assert(/15 นาที/.test(post('adminLoginServer', [{ phone: '0899000002', password: 'x' }]).error), 'account must lock after 5 failed attempts');
+for (let i = 0; i < 5; i++) post('adminLoginServer', [{ username: 'somchai', password: 'bad' + i + 'aaaa' }]);
+assert(/15 นาที/.test(post('adminLoginServer', [{ username: 'somchai', password: 'x' }]).error), 'account must lock after 5 failed attempts');
 
-ok(post('adminSaveServer', [{ phone: '0899000003', name: 'Admin อำเภอ', role: 'admin', password: 'Admin1234' }], T), 'create admin');
-assert(/อย่างน้อย 8/.test(post('adminSaveServer', [{ phone: '0899000004', name: 'x', role: 'admin', password: 'short' }], T).error), 'weak password must be rejected');
-const A = ok(post('adminLoginServer', [{ phone: '0899000003', password: 'Admin1234' }]), 'admin login').token;
+ok(post('adminSaveServer', [{ username: 'admin.khanu', phone: '0899000003', name: 'Admin อำเภอ', role: 'admin', password: 'Admin1234' }], T), 'create admin');
+assert(/อย่างน้อย 8/.test(post('adminSaveServer', [{ username: 'weakpw', name: 'x', role: 'admin', password: 'short' }], T).error), 'weak password must be rejected');
+const A = ok(post('adminLoginServer', [{ username: 'admin.khanu', password: 'Admin1234' }]), 'admin login').token;
 assert(/เฉพาะ Super Admin/.test(post('settingsGetServer', [], A).error), 'admin must not read settings');
 assert(/เฉพาะ Super Admin/.test(post('adminsListServer', [], A).error), 'admin must not manage admins');
-assert(/ไม่สามารถลดสิทธิ์/.test(post('adminSaveServer', [{ phone: '0899000001', name: 'Super', role: 'admin', status: 'active' }], T).error), 'super must not demote self');
+assert(/ไม่สามารถลดสิทธิ์/.test(post('adminSaveServer', [{ username: 'krit', name: 'Super', role: 'admin', status: 'active' }], T).error), 'super must not demote self');
 const admins = ok(post('adminsListServer', [], T), 'list admins');
-assert(admins.length === 2 && !JSON.stringify(admins).includes(superRow[4]), 'admin list must not leak password hashes');
+assert(admins.length === 2 && admins[1].username === 'admin.khanu' && admins[1].phone === '0899000003' && !JSON.stringify(admins).includes(superRow[4]), 'admin list wrong or leaks password hashes');
+assert(/ชื่อผู้ใช้ต้องยาว/.test(post('adminSaveServer', [{ username: 'a b', name: 'x', role: 'admin', password: 'Admin1234' }], T).error), 'invalid usernames must be rejected');
 
 /* ---------- settings: keys are write-only ---------- */
 ok(post('settingsSaveServer', [{ smartAgriKey: 'kpp_secretvalue1234567890' }], T), 'save smart agri key');
@@ -166,7 +169,7 @@ assert(ok(post('cropTypesListServer', [], A), 'types').some((t) => t.crop === '�
 api.doGet({ parameter: { api: 'v1', endpoint: 'summary', refresh: '1' } });
 const pub = JSON.parse(lastOut.body);
 assert(pub.ok && pub.apiVersion === '1.6.0' && pub.data.crops.ok && pub.data.crops.crops[0].crop === 'ข้าวนาปี', 'summary must include crops');
-assert(!lastOut.body.includes(superRow[4]) && !lastOut.body.includes('0899000003'), 'public summary must not leak admin data');
+assert(!lastOut.body.includes(superRow[4]) && !lastOut.body.includes('0899000003') && !lastOut.body.includes('admin.khanu'), 'public summary must not leak admin data');
 api.doGet({ parameter: { api: 'v1', endpoint: 'crop', crop: 'ข้าวนาปี', district: '6204' } });
 const det = JSON.parse(lastOut.body);
 assert(det.ok && det.data.subdistricts.length > 0, 'crop detail endpoint failed');

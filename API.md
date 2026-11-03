@@ -102,7 +102,7 @@ Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts
 ## Admin API (POST)
 
 `POST /exec` body (text/plain): `{"method":"…","args":[…],"token":"…"}` → `{ok, result|error}`
-- `adminLoginServer({phone,password})` คืน `token` (2 ชั่วโมง)
+- `adminLoginServer({username,password})` คืน `token` (2 ชั่วโมง)
 - Admin: `cropTypesListServer`, `cropTypeSaveServer`, `cropImportCheckServer`, `cropImportCommitServer`, `cropImportsListServer`, `cropImportDeleteServer`, `cacheClearServer`, `adminMeServer`, `adminChangePasswordServer`, `adminLogoutServer`
 - Super Admin: `settingsGetServer`, `settingsSaveServer`, `smartAgriTestServer`, `adminsListServer`, `adminSaveServer`, `adminResetPasswordServer`, `adminLogServer`
 - RPC ของเกษตรกร/ผู้รับซื้อเรียกผ่าน POST ไม่ได้

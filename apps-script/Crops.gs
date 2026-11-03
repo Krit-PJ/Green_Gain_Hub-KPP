@@ -202,7 +202,7 @@ function cropImportCommit_(input, s) {
       }
     });
     imports.appendRow([importId, v.crop, v.season, v.monthType, fileName, values.length, v.totalRai,
-      v.byPeriod[0].period + '-' + v.byPeriod[v.byPeriod.length - 1].period, 'active', new Date(), s.name + ' (' + s.phone + ')', '', v.warnings.join(' | ')]);
+      v.byPeriod[0].period + '-' + v.byPeriod[v.byPeriod.length - 1].period, 'active', new Date(), s.name + ' (' + s.username + ')', '', v.warnings.join(' | ')]);
     imports.getRange(imports.getLastRow(), 1).setNumberFormat('@');
     invalidateCropSummary_();
     adminAudit_(s, 'crop_import', v.crop + ' ' + v.season + ': ' + values.length + ' แถว, ' + v.totalRai + ' ไร่' + (replaced ? ' (แทนที่ ' + replaced + ' ชุด)' : '') + (fileName ? ' จาก ' + fileName : ''));

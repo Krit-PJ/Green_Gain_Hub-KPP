@@ -10,14 +10,16 @@
  *   super — everything below + API links, admin accounts, audit log
  *   admin — import crop data, manage import history and crop types
  *
- * First Super Admin: set Script Properties SUPER_ADMIN_PHONE and
- * SUPER_ADMIN_PASSWORD, then run setupSystem(). The password property is
- * deleted as soon as its hash is stored.
+ * Admins sign in with a username (3–32 chars: a–z, 0–9, . _ -) and password.
+ *
+ * First Super Admin: set Script Properties SUPER_ADMIN_USERNAME (or the older
+ * SUPER_ADMIN_PHONE, read as a username) and SUPER_ADMIN_PASSWORD, then run
+ * setupSystem(). The password property is deleted as soon as its hash is stored.
  */
 
 const ADMIN_SHEETS = {
-  admins: ['Telephone', 'Name', 'Role', 'Status', 'Pass_Hash', 'Salt', 'Created_At', 'Created_By', 'Last_Login', 'Updated_At'],
-  admin_log: ['Time', 'Telephone', 'Name', 'Role', 'Action', 'Detail']
+  admins: ['Username', 'Name', 'Role', 'Status', 'Pass_Hash', 'Salt', 'Created_At', 'Created_By', 'Last_Login', 'Updated_At', 'Telephone'],
+  admin_log: ['Time', 'Username', 'Name', 'Role', 'Action', 'Detail']
 };
 const ADMIN_ROLES = ['super', 'admin'];
 const ADMIN_SESSION_SECONDS = 7200; // 2 hours, refreshed on use
@@ -83,8 +85,17 @@ function ensureSheet_(name, headers) {
 }
 
 function ensureAdminSchema_() {
+  // Early 1.6.0 drafts keyed admins by Telephone. Rewrite the header only while a sheet has no data rows.
+  const ss = spreadsheet_();
+  Object.keys(ADMIN_SHEETS).forEach(function (n) {
+    const sh = ss.getSheetByName(n);
+    if (!sh || sh.getLastRow() >= 2 || !sh.getLastColumn()) return;
+    const head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
+    if (head.join('|') !== ADMIN_SHEETS[n].slice(0, head.length).join('|')) sh.getRange(1, 1, 1, ADMIN_SHEETS[n].length).setValues([ADMIN_SHEETS[n]]);
+  });
   Object.keys(ADMIN_SHEETS).forEach(function (n) { ensureSheet_(n, ADMIN_SHEETS[n]); });
   sheetByName_('admins').getRange('A:A').setNumberFormat('@');
+  sheetByName_('admins').getRange('K:K').setNumberFormat('@');
   return 'PASS: admins and admin_log sheets are ready';
 }
 
@@ -94,32 +105,35 @@ function sheetByName_(name) {
   return sh;
 }
 
+function normalizeUsername_(v) { return String(v === null || v === undefined ? '' : v).trim().toLowerCase(); }
+function validUsername_(u) { return /^[a-z0-9._-]{3,32}$/.test(u); }
+
 /** Creates the first Super Admin from Script Properties, then removes the plain password. */
 function ensureSuperAdmin_() {
   const props = PropertiesService.getScriptProperties();
   const rows = dataRows_(sheetByName_('admins'));
   const hasSuper = rows.some(function (r) { return text_(r[2]) === 'super' && text_(r[3]) !== 'disabled'; });
-  const phone = normalizePhone_(props.getProperty('SUPER_ADMIN_PHONE'));
+  const username = normalizeUsername_(props.getProperty('SUPER_ADMIN_USERNAME') || props.getProperty('SUPER_ADMIN_PHONE'));
   const password = props.getProperty('SUPER_ADMIN_PASSWORD');
   if (!password) {
     return hasSuper ? 'PASS: Super Admin exists' :
-      'INFO: no Super Admin yet — set Script Properties SUPER_ADMIN_PHONE and SUPER_ADMIN_PASSWORD, then run setupSystem()';
+      'INFO: no Super Admin yet — set Script Properties SUPER_ADMIN_USERNAME and SUPER_ADMIN_PASSWORD, then run setupSystem()';
   }
-  if (!/^0\d{9}$/.test(phone)) return 'FAIL: SUPER_ADMIN_PHONE must be a 10-digit phone number';
+  if (!validUsername_(username)) return 'FAIL: SUPER_ADMIN_USERNAME must be 3–32 characters (a–z, 0–9, . _ -)';
   validatePassword_(password);
   const sh = sheetByName_('admins');
-  const row = findAdminRow_(phone);
+  const row = findAdminRow_(username);
   const salt = Utilities.getUuid();
   const now = new Date();
   if (row) {
     sh.getRange(row, 3, 1, 4).setValues([['super', 'active', hashPassword_(salt, password), salt]]);
     sh.getRange(row, 10).setValue(now);
   } else {
-    sh.appendRow([phone, 'Super Admin', 'super', 'active', hashPassword_(salt, password), salt, now, 'setupSystem', '', now]);
+    sh.appendRow([username, 'Super Admin', 'super', 'active', hashPassword_(salt, password), salt, now, 'setupSystem', '', now, '']);
   }
   props.deleteProperty('SUPER_ADMIN_PASSWORD');
-  adminAudit_({ phone: phone, name: 'Super Admin', role: 'super' }, 'super_bootstrap', 'สร้าง/ตั้งรหัสผ่าน Super Admin จาก Script Properties');
-  return 'PASS: Super Admin ' + phone + ' is ready (SUPER_ADMIN_PASSWORD was removed from Script Properties)';
+  adminAudit_({ username: username, name: 'Super Admin', role: 'super' }, 'super_bootstrap', 'สร้าง/ตั้งรหัสผ่าน Super Admin จาก Script Properties');
+  return 'PASS: Super Admin "' + username + '" is ready (SUPER_ADMIN_PASSWORD was removed from Script Properties)';
 }
 
 /* ------------------------------ auth ------------------------------ */
@@ -141,41 +155,42 @@ function validatePassword_(pw) {
   return pw;
 }
 
-function findAdminRow_(phone) {
+function findAdminRow_(username) {
   const rows = dataRows_(sheetByName_('admins'));
-  for (let i = 0; i < rows.length; i++) if (normalizePhone_(rows[i][0]) === phone) return i + 2;
+  for (let i = 0; i < rows.length; i++) if (normalizeUsername_(rows[i][0]) === username) return i + 2;
   return 0;
 }
 
-function adminRecord_(phone) {
-  const row = findAdminRow_(phone);
+function adminRecord_(username) {
+  const row = findAdminRow_(username);
   if (!row) return null;
   const r = sheetByName_('admins').getRange(row, 1, 1, ADMIN_SHEETS.admins.length).getValues()[0];
-  return { row: row, phone: normalizePhone_(r[0]), name: text_(r[1]), role: text_(r[2]), status: text_(r[3]) || 'active', hash: String(r[4] || ''), salt: String(r[5] || '') };
+  return { row: row, username: normalizeUsername_(r[0]), name: text_(r[1]), role: text_(r[2]), status: text_(r[3]) || 'active',
+    hash: String(r[4] || ''), salt: String(r[5] || ''), phone: text_(r[10]) };
 }
 
 function adminLoginServer(input) {
   input = input || {};
-  const phone = normalizePhone_(input.phone);
+  const username = normalizeUsername_(input.username);
   const password = String(input.password || '');
-  if (!/^0\d{9}$/.test(phone) || !password) throw new Error('กรุณากรอกเบอร์โทรศัพท์และรหัสผ่าน');
+  if (!validUsername_(username) || !password) throw new Error('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
   const cache = CacheService.getScriptCache();
-  const failKey = 'afail:' + phone;
+  const failKey = 'afail:' + username;
   const fails = Number(cache.get(failKey) || 0);
   if (fails >= ADMIN_MAX_FAILS) throw new Error('ใส่รหัสผ่านผิดหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่');
-  const a = adminRecord_(phone);
+  const a = adminRecord_(username);
   const ok = a && a.status === 'active' && ADMIN_ROLES.indexOf(a.role) >= 0 && a.hash && hashPassword_(a.salt, password) === a.hash;
   if (!ok) {
     cache.put(failKey, String(fails + 1), ADMIN_LOCK_SECONDS);
-    throw new Error('เบอร์โทรศัพท์หรือรหัสผ่านไม่ถูกต้อง');
+    throw new Error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
   }
   cache.remove(failKey);
   const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-  const session = { phone: a.phone, role: a.role, name: a.name };
+  const session = { username: a.username, role: a.role, name: a.name };
   cache.put('admin:' + token, JSON.stringify(session), ADMIN_SESSION_SECONDS);
   sheetByName_('admins').getRange(a.row, 9).setValue(new Date());
   adminAudit_(session, 'login', 'เข้าสู่ระบบผู้ดูแล');
-  return { status: 'success', token: token, phone: a.phone, name: a.name, role: a.role, expiresIn: ADMIN_SESSION_SECONDS };
+  return { status: 'success', token: token, username: a.username, name: a.name, role: a.role, expiresIn: ADMIN_SESSION_SECONDS };
 }
 
 function adminLogoutServer(token) {
@@ -191,24 +206,24 @@ function requireAdmin_(token, minRole) {
   const raw = cache.get('admin:' + token);
   if (!raw) throw new Error('ADMIN_SESSION_EXPIRED');
   const s = JSON.parse(raw);
-  const a = adminRecord_(s.phone);
+  const a = adminRecord_(s.username);
   if (!a || a.status !== 'active' || ADMIN_ROLES.indexOf(a.role) < 0) {
     cache.remove('admin:' + token);
     throw new Error('บัญชีผู้ดูแลถูกระงับหรือถูกลบ');
   }
   if (minRole === 'super' && a.role !== 'super') throw new Error('เฉพาะ Super Admin เท่านั้น');
-  const session = { phone: a.phone, role: a.role, name: a.name };
+  const session = { username: a.username, role: a.role, name: a.name };
   cache.put('admin:' + token, JSON.stringify(session), ADMIN_SESSION_SECONDS);
   return session;
 }
 
 function adminMeServer(s) {
-  return { status: 'success', phone: s.phone, name: s.name, role: s.role, apiVersion: APP_VERSION };
+  return { status: 'success', username: s.username, name: s.name, role: s.role, apiVersion: APP_VERSION };
 }
 
 function adminChangePasswordServer(input, s) {
   input = input || {};
-  const a = adminRecord_(s.phone);
+  const a = adminRecord_(s.username);
   if (!a || hashPassword_(a.salt, String(input.current || '')) !== a.hash) throw new Error('รหัสผ่านปัจจุบันไม่ถูกต้อง');
   const next = validatePassword_(input.next);
   const salt = Utilities.getUuid();
@@ -223,15 +238,17 @@ function adminChangePasswordServer(input, s) {
 
 function adminsList_() {
   return dataRows_(sheetByName_('admins')).map(function (r) {
-    return { phone: normalizePhone_(r[0]), name: text_(r[1]), role: text_(r[2]), status: text_(r[3]) || 'active',
-      createdAt: dateTime_(r[6]), createdBy: text_(r[7]), lastLogin: dateTime_(r[8]) };
+    return { username: normalizeUsername_(r[0]), name: text_(r[1]), role: text_(r[2]), status: text_(r[3]) || 'active',
+      phone: displayPhone_(r[10]), createdAt: dateTime_(r[6]), createdBy: text_(r[7]), lastLogin: dateTime_(r[8]) };
   });
 }
 
 function adminSave_(input, s) {
   input = input || {};
-  const phone = normalizePhone_(input.phone);
-  if (!/^0\d{9}$/.test(phone)) throw new Error('กรุณากรอกเบอร์โทรศัพท์ 10 หลัก');
+  const username = normalizeUsername_(input.username);
+  if (!validUsername_(username)) throw new Error('ชื่อผู้ใช้ต้องยาว 3–32 ตัว ใช้ a–z, 0–9, จุด, ขีดล่าง หรือขีดกลาง');
+  const phone = input.phone ? normalizePhone_(input.phone) : '';
+  if (phone && !/^0\d{9}$/.test(phone)) throw new Error('เบอร์โทรศัพท์ต้องมี 10 หลัก (หรือเว้นว่าง)');
   const name = cleanText_(input.name, 120);
   const role = String(input.role || 'admin');
   const status = String(input.status || 'active');
@@ -242,23 +259,23 @@ function adminSave_(input, s) {
   lock.waitLock(20000);
   try {
     const sh = sheetByName_('admins');
-    const existing = adminRecord_(phone);
+    const existing = adminRecord_(username);
     const now = new Date();
     if (existing) {
-      if (phone === s.phone && (role !== 'super' || status !== 'active')) throw new Error('ไม่สามารถลดสิทธิ์หรือระงับบัญชีของตนเองได้');
+      if (username === s.username && (role !== 'super' || status !== 'active')) throw new Error('ไม่สามารถลดสิทธิ์หรือระงับบัญชีของตนเองได้');
       if (existing.role === 'super' && (role !== 'super' || status !== 'active') && activeSuperCount_() <= 1) {
         throw new Error('ต้องมี Super Admin ที่ใช้งานได้อย่างน้อย 1 คน');
       }
       sh.getRange(existing.row, 2, 1, 3).setValues([[name, role, status]]);
-      sh.getRange(existing.row, 10).setValue(now);
-      adminAudit_(s, 'admin_update', phone + ' → ' + role + '/' + status);
+      sh.getRange(existing.row, 10, 1, 2).setValues([[now, phone]]);
+      adminAudit_(s, 'admin_update', username + ' → ' + role + '/' + status);
       return { status: 'success', message: 'บันทึกผู้ดูแลแล้ว' };
     }
     const password = validatePassword_(input.password);
     const salt = Utilities.getUuid();
-    sh.appendRow([phone, name, role, status, hashPassword_(salt, password), salt, now, s.name + ' (' + s.phone + ')', '', now]);
+    sh.appendRow([username, name, role, status, hashPassword_(salt, password), salt, now, s.name + ' (' + s.username + ')', '', now, phone]);
     sh.getRange(sh.getLastRow(), 1).setNumberFormat('@');
-    adminAudit_(s, 'admin_create', phone + ' (' + role + ')');
+    adminAudit_(s, 'admin_create', username + ' (' + role + ')');
     return { status: 'success', message: 'เพิ่มผู้ดูแลแล้ว ส่งรหัสผ่านเริ่มต้นให้ผู้ใช้ทางช่องทางที่ปลอดภัย' };
   } finally {
     lock.releaseLock();
@@ -271,15 +288,15 @@ function activeSuperCount_() {
 
 function adminResetPassword_(input, s) {
   input = input || {};
-  const a = adminRecord_(normalizePhone_(input.phone));
+  const a = adminRecord_(normalizeUsername_(input.username));
   if (!a) throw new Error('ไม่พบผู้ดูแล');
   const pw = validatePassword_(input.password);
   const salt = Utilities.getUuid();
   const sh = sheetByName_('admins');
   sh.getRange(a.row, 5, 1, 2).setValues([[hashPassword_(salt, pw), salt]]);
   sh.getRange(a.row, 10).setValue(new Date());
-  CacheService.getScriptCache().remove('afail:' + a.phone);
-  adminAudit_(s, 'password_reset', a.phone);
+  CacheService.getScriptCache().remove('afail:' + a.username);
+  adminAudit_(s, 'password_reset', a.username);
   return { status: 'success', message: 'ตั้งรหัสผ่านใหม่แล้ว' };
 }
 
@@ -354,13 +371,13 @@ function adminCacheClear_(s) {
 
 function adminAudit_(s, action, detail) {
   try {
-    sheetByName_('admin_log').appendRow([new Date(), s && s.phone || '', s && s.name || '', s && s.role || '', action, cleanText_(detail, 400)]);
+    sheetByName_('admin_log').appendRow([new Date(), s && s.username || '', s && s.name || '', s && s.role || '', action, cleanText_(detail, 400)]);
   } catch (err) { /* never block the action on logging */ }
 }
 
 function adminLogList_() {
   const rows = dataRows_(sheetByName_('admin_log'));
   return rows.slice(-200).reverse().map(function (r) {
-    return { time: dateTime_(r[0]), phone: displayPhone_(r[1]), name: text_(r[2]), role: text_(r[3]), action: text_(r[4]), detail: text_(r[5]) };
+    return { time: dateTime_(r[0]), username: text_(r[1]), name: text_(r[2]), role: text_(r[3]), action: text_(r[4]), detail: text_(r[5]) };
   });
 }

@@ -25,8 +25,8 @@
       <h1 id="loginTitle">เข้าสู่ระบบผู้ดูแล</h1>
       <p class="adm-muted">สำหรับเจ้าหน้าที่ที่ได้รับสิทธิ์นำเข้าข้อมูลและจัดการระบบ</p>
       <form id="loginForm" novalidate>
-        <label for="loginPhone">หมายเลขโทรศัพท์</label>
-        <input id="loginPhone" type="tel" inputmode="numeric" maxlength="10" autocomplete="username" required>
+        <label for="loginUsername">ชื่อผู้ใช้</label>
+        <input id="loginUsername" type="text" maxlength="32" autocomplete="username" autocapitalize="none" spellcheck="false" required>
         <label for="loginPassword">รหัสผ่าน</label>
         <input id="loginPassword" type="password" autocomplete="current-password" required>
         <p class="adm-error" id="loginError" role="alert"></p>
@@ -125,11 +125,12 @@
         <section class="adm-view hidden" data-panel="admins" aria-labelledby="adminsTitle">
           <h2 id="adminsTitle">ผู้ดูแลระบบ</h2>
           <p class="adm-muted"><strong>Super Admin</strong> จัดการได้ทุกอย่าง <strong>Admin</strong> นำเข้าข้อมูลและจัดการชนิดพืชได้</p>
-          <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>ชื่อ</th><th>โทรศัพท์</th><th>บทบาท</th><th>สถานะ</th><th>เข้าใช้ล่าสุด</th><th><span class="sr-only">จัดการ</span></th></tr></thead><tbody id="adminsBody"></tbody></table></div>
+          <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>ชื่อ</th><th>ชื่อผู้ใช้</th><th>โทรศัพท์</th><th>บทบาท</th><th>สถานะ</th><th>เข้าใช้ล่าสุด</th><th><span class="sr-only">จัดการ</span></th></tr></thead><tbody id="adminsBody"></tbody></table></div>
           <form class="adm-form" id="adminForm" autocomplete="off">
             <h3 id="adminFormTitle">เพิ่มผู้ดูแล</h3>
             <label>ชื่อ<input name="name" required maxlength="120"></label>
-            <label>หมายเลขโทรศัพท์<input name="phone" type="tel" inputmode="numeric" maxlength="10" required></label>
+            <label>ชื่อผู้ใช้ <span class="adm-muted">(3–32 ตัว a–z, 0–9, จุด, ขีดล่าง, ขีดกลาง)</span><input name="username" maxlength="32" autocapitalize="none" spellcheck="false" required></label>
+            <label>หมายเลขโทรศัพท์ <span class="adm-muted">(ไม่บังคับ ใช้ติดต่อ)</span><input name="phone" type="tel" inputmode="numeric" maxlength="10"></label>
             <label>บทบาท<select name="role"><option value="admin">Admin</option><option value="super">Super Admin</option></select></label>
             <label>สถานะ<select name="status"><option value="active">ใช้งาน</option><option value="disabled">ระงับ</option></select></label>
             <label id="adminPwLabel">รหัสผ่านเริ่มต้น <span class="adm-muted">(อย่างน้อย 8 ตัว มีตัวอักษรและตัวเลข)</span><input name="password" type="password" autocomplete="new-password"></label>
