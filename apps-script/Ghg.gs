@@ -1,5 +1,5 @@
 /**
- * Green Gain Hub 2.0.0 — GHG Calculation Engine v1.0 (agricultural residue burning).
+ * Green Gain Hub 2.2.0 — GHG Calculation Engine v1.0 (agricultural residue burning).
  *
  * Reference: IPCC (2006) Vol.4 Ch.2 — Equation 2.27, Table 2.4 (biomass consumed),
  * Table 2.5 (emission factors), Table 2.6 (combustion factors); GWP100 from IPCC AR5
@@ -56,13 +56,32 @@ const GHG_DEFAULT_CROPS = [
 const GHG_SHEETS = {
   ghg_params: ['Key', 'Value', 'Unit', 'Description'],
   ghg_crops: ['Crop_Key', 'Crop_Name', 'Consumed_t_ha', 'Cf', 'Residue_t_rai', 'Residue_Name', 'Residue_Reference', 'IPCC_Reference', 'Active', 'Sort_Order', 'Updated_At', 'Updated_By',
-    'Price_baht_kg', 'Price_Reference']
+    'Price_baht_kg', 'Price_Reference', 'Use_Global_Price', 'Removable_Pct', 'Removable_Reference']
 };
-// 2.1.0: estimated value of the managed residue (baht per kg), owner's default for every crop; editable per crop.
-const RESIDUE_DEFAULT_PRICE = 10;
-const RESIDUE_DEFAULT_PRICE_REF = 'ค่าเริ่มต้นที่กำหนด 10 บาท/กก.';
+// 2.2.0: one province-wide price (ราคากลาง) used by every crop that ticks "ใช้ราคากลาง"; a crop may still
+// carry its own price. Changing the central price changes the value of every such crop at once.
+const RESIDUE_DEFAULT_PRICE = 0.8;
+const RESIDUE_DEFAULT_PRICE_REF = 'ราคากลางเริ่มต้น 0.8 บาท/กก. (ราคาตลาดฟางและใบอ้อยโดยประมาณ)';
+const RESIDUE_PRICE_KEYS = {
+  PRICE_BAHT_KG: ['บาท/กก.', 'ราคากลางเศษวัสดุ ใช้กับทุกพืชที่เลือก "ใช้ราคากลาง"'],
+  PRICE_REF: ['', 'แหล่งที่มาของราคากลาง'],
+  PRICE_VERSION: ['', 'เลขชุดราคา เพิ่มทุกครั้งที่แก้ไข'],
+  PRICE_UPDATED_AT: ['', 'แก้ไขราคากลางล่าสุด'],
+  PRICE_UPDATED_BY: ['', 'แก้ไขราคากลางโดย']
+};
+// 2.2.0: share of the residue that can leave the field without harming the soil (residue balance step 2).
+// key: [percent, reference]; crops without a default stay blank until a value with a source is entered.
+const RESIDUE_REMOVABLE_DEFAULTS = {
+  rice: [45, 'ค่าเริ่มต้น: งานวิเคราะห์อภิมาน (meta-analysis) ในจีน เสนอการนำฟางข้าวออกไม่เกินราว 45%; IRRI เตือนการสูญเสียโพแทสเซียมเมื่อนำฟางออกทั้งหมด'],
+  maize: [42, 'ค่าเริ่มต้น: งานวิเคราะห์อภิมาน (meta-analysis) ในจีน เสนอการนำต้นและซังข้าวโพดออกไม่เกินราว 42%'],
+  sugarcane: [40, 'ค่าเริ่มต้นเชิงอนุรักษ์ ยังไม่มีค่าเฉพาะพื้นที่ ควรปรับเมื่อมีข้อมูลในประเทศ']
+};
+// Thai units shown to users (2.2.0): tCO2e → ตันคาร์บอนไดออกไซด์เทียบเท่า.
+const GHG_UNIT_T = 'ตันคาร์บอนไดออกไซด์เทียบเท่า';
+const GHG_UNIT_KG = 'กิโลกรัมคาร์บอนไดออกไซด์เทียบเท่า';
+const GHG_UNIT_G = 'กรัมคาร์บอนไดออกไซด์เทียบเท่า';
 const GHG_BOUNDARY = [
-  'GHG ที่ลดได้ = CH4 และ N2O ที่จะเกิดหากเผาเศษวัสดุในพื้นที่ที่จัดการ คิดเป็น tCO2e (ประมาณการ, ขั้นต้น/gross)',
+  'ก๊าซเรือนกระจกที่ลดได้ = มีเทน (CH4) และไนตรัสออกไซด์ (N2O) ที่จะเกิดหากเผาเศษวัสดุในพื้นที่ที่จัดการ คิดเป็นตันคาร์บอนไดออกไซด์เทียบเท่า (ประมาณการ, ขั้นต้น/gross)',
   'ไม่นับ CO2 ชีวภาพในบัญชีการปล่อยสุทธิ ตามสมมติฐานสมดุลคาร์บอนของพืชล้มลุกของ IPCC แต่ไม่ได้หมายความว่าการเผาไม่ปล่อย CO2',
   'ไม่รวม CH4 จากนาข้าวระหว่างเพาะปลูก (การไถกลบฟางในนาน้ำขังอาจเพิ่ม CH4) ปุ๋ย การขนส่ง เครื่องจักร หรือการใช้เศษวัสดุนอกแปลง',
   'พื้นที่มาจากการบันทึกของเจ้าหน้าที่ ไม่ได้ใช้จุดความร้อน (Hotspot) หรือคะแนนความเสี่ยงแทนพื้นที่',
@@ -173,7 +192,7 @@ function ghgParamLabel_(p) {
   return { gwpSet: p.GWP_SET, efCh4: Number(p.EF_CH4), efN2o: Number(p.EF_N2O), gwpCh4: Number(p.GWP_CH4), gwpN2o: Number(p.GWP_N2O),
     combinedEf: round_(ghgCombinedEf_(p), 4), mode: p.DEFAULT_MODE, version: Number(p.PARAM_VERSION) || 1, updatedAt: p.UPDATED_AT || '',
     refEf: p.REF_EF || '', refGwp: p.REF_GWP || '',
-    label: 'IPCC 2006 + ' + p.GWP_SET + ' (EF ' + round_(ghgCombinedEf_(p), 2) + ' gCO2e/kg)' };
+    label: 'IPCC 2006 + ' + p.GWP_SET + ' (EF ' + round_(ghgCombinedEf_(p), 2) + ' ' + GHG_UNIT_G + '/กก.)' };
 }
 
 /* ------------------------------ validation suite (prompt §10) ------------------------------ */
@@ -181,7 +200,8 @@ function ghgParamLabel_(p) {
 function ghgDefaultCropObjects_() {
   return GHG_DEFAULT_CROPS.map(function (r) {
     return { key: r[0], name: r[1], consumedTHa: r[2], cf: r[3], residueTRai: r[4], residueName: r[5], residueReference: r[6], reference: r[7], active: r[8], sortOrder: r[9],
-      priceBahtKg: RESIDUE_DEFAULT_PRICE, priceReference: RESIDUE_DEFAULT_PRICE_REF };
+      priceBahtKg: RESIDUE_DEFAULT_PRICE, priceReference: RESIDUE_DEFAULT_PRICE_REF, ownPriceBahtKg: '', useGlobalPrice: true,
+      removablePct: RESIDUE_REMOVABLE_DEFAULTS[r[0]] ? RESIDUE_REMOVABLE_DEFAULTS[r[0]][0] : '', removableReference: RESIDUE_REMOVABLE_DEFAULTS[r[0]] ? RESIDUE_REMOVABLE_DEFAULTS[r[0]][1] : '' };
   });
 }
 
@@ -250,13 +270,81 @@ function ensureGhgSchema_() {
   const cs = sheetByName_('ghg_crops');
   const ck = {};
   dataRows_(cs).forEach(function (r) { ck[text_(r[0])] = true; });
-  GHG_DEFAULT_CROPS.forEach(function (r) { if (!ck[r[0]]) cs.appendRow(r.concat([now, 'setupSystem', RESIDUE_DEFAULT_PRICE, RESIDUE_DEFAULT_PRICE_REF])); });
-  // 2.1.0 migration: crops without a price get the default once.
-  dataRows_(cs).forEach(function (r, i) { if (text_(r[0]) && (r[12] === '' || r[12] === undefined)) cs.getRange(i + 2, 13, 1, 2).setValues([[RESIDUE_DEFAULT_PRICE, RESIDUE_DEFAULT_PRICE_REF]]); });
+  GHG_DEFAULT_CROPS.forEach(function (r) {
+    if (ck[r[0]]) return;
+    const rem = RESIDUE_REMOVABLE_DEFAULTS[r[0]] || ['', ''];
+    cs.appendRow(r.concat([now, 'setupSystem', '', '', true, rem[0], rem[1]]));
+  });
+  const priceNote = ensureResiduePrice_();
+  // 2.2.0 migration (once): every crop follows the central price; known crops get the removable share.
+  const props = PropertiesService.getScriptProperties();
+  let migrated = '';
+  if (!props.getProperty('GGH_MIGRATION_220')) {
+    dataRows_(cs).forEach(function (r, i) {
+      const key = text_(r[0]);
+      if (!key) return;
+      if (r[14] === '' || r[14] === undefined) cs.getRange(i + 2, 15).setValue(true);
+      const rem = RESIDUE_REMOVABLE_DEFAULTS[key];
+      if (rem && (r[15] === '' || r[15] === undefined)) cs.getRange(i + 2, 16, 1, 2).setValues([[rem[0], rem[1]]]);
+    });
+    props.setProperty('GGH_MIGRATION_220', new Date().toISOString());
+    migrated = '; 2.2.0 migration: every crop now uses the central price';
+  }
   const p = ghgParams_();
   const v = ghgValidationSuite_();
-  return 'PASS: ghg_params (' + p.GWP_SET + ', EF ' + round_(ghgCombinedEf_(p), 2) + ' gCO2e/kg) and ghg_crops are ready; validation ' +
+  return 'PASS: ghg_params (' + p.GWP_SET + ', EF ' + round_(ghgCombinedEf_(p), 2) + ' gCO2e/kg) and ghg_crops are ready; ' + priceNote + migrated + '; validation ' +
     v.passed + '/' + v.total + (v.passed === v.total ? ' PASS' : ' FAIL');
+}
+
+/* ------------------------------ central price (ราคากลาง) ------------------------------ */
+
+function ensureResiduePrice_() {
+  const ps = sheetByName_('ghg_params');
+  const have = {};
+  dataRows_(ps).forEach(function (r) { have[text_(r[0])] = true; });
+  const init = { PRICE_BAHT_KG: RESIDUE_DEFAULT_PRICE, PRICE_REF: RESIDUE_DEFAULT_PRICE_REF, PRICE_VERSION: 1, PRICE_UPDATED_AT: new Date(), PRICE_UPDATED_BY: 'setupSystem' };
+  Object.keys(RESIDUE_PRICE_KEYS).forEach(function (k) {
+    if (!have[k]) ps.appendRow([k, init[k], RESIDUE_PRICE_KEYS[k][0], RESIDUE_PRICE_KEYS[k][1]]);
+  });
+  const g = residuePriceGlobal_();
+  return 'central price ' + g.price + ' baht/kg (set ' + g.version + ')';
+}
+
+function residuePriceGlobal_() {
+  const out = { price: RESIDUE_DEFAULT_PRICE, reference: RESIDUE_DEFAULT_PRICE_REF, version: 1, updatedAt: '', updatedBy: '' };
+  const sh = spreadsheet_().getSheetByName('ghg_params');
+  if (sh) dataRows_(sh).forEach(function (r) {
+    const k = text_(r[0]);
+    if (k === 'PRICE_BAHT_KG') { const n = ghgNum_(r[1]); if (n !== null && !isNaN(n)) out.price = n; }
+    else if (k === 'PRICE_REF') out.reference = text_(r[1]) || out.reference;
+    else if (k === 'PRICE_VERSION') out.version = Number(r[1]) || 1;
+    else if (k === 'PRICE_UPDATED_AT') out.updatedAt = dateTime_(r[1]);
+    else if (k === 'PRICE_UPDATED_BY') out.updatedBy = text_(r[1]);
+  });
+  return out;
+}
+
+/** Mini Super Admin / Super Admin: one price for every crop that uses the central price. Versioned and audited. */
+function residuePriceSave_(input, s) {
+  input = input || {};
+  const price = ghgNum_(input.price);
+  if (price === null || isNaN(price) || price <= 0 || price > 100) throw new Error('ราคากลางต้องเป็นตัวเลขมากกว่า 0 และไม่เกิน 100 บาท/กก.');
+  const reference = cleanText_(input.reference, 200);
+  if (!reference) throw new Error('กรุณาระบุแหล่งที่มาของราคากลาง');
+  const cur = residuePriceGlobal_();
+  if (price === cur.price && reference === cur.reference) return { status: 'success', message: 'ไม่มีการเปลี่ยนแปลง', settings: ghgSettingsGet_() };
+  ensureResiduePrice_();
+  const next = { PRICE_BAHT_KG: price, PRICE_REF: reference, PRICE_VERSION: cur.version + 1, PRICE_UPDATED_AT: new Date(), PRICE_UPDATED_BY: s.name + ' (' + s.username + ')' };
+  const sh = sheetByName_('ghg_params');
+  const rows = dataRows_(sh);
+  Object.keys(next).forEach(function (k) {
+    const i = rows.findIndex(function (r) { return text_(r[0]) === k; });
+    sh.getRange(i + 2, 2).setValue(next[k]);
+  });
+  invalidateResidue_();
+  const users = ghgCrops_(true).filter(function (c) { return c.useGlobalPrice; }).map(function (c) { return c.name; });
+  adminAudit_(s, 'residue_price_save', 'ราคากลางชุดที่ ' + next.PRICE_VERSION + ': ' + cur.price + ' → ' + price + ' บาท/กก. (' + reference + ') ใช้กับ ' + users.join(', '));
+  return { status: 'success', message: 'บันทึกราคากลาง ' + price + ' บาท/กก. แล้ว ใช้กับ ' + users.length + ' ชนิดพืช', settings: ghgSettingsGet_() };
 }
 
 function ghgParams_() {
@@ -273,11 +361,17 @@ function ghgParams_() {
 
 function ghgCrops_(includeInactive) {
   const sh = spreadsheet_().getSheetByName('ghg_crops');
+  const global = sh ? residuePriceGlobal_() : null;
   const list = sh ? dataRows_(sh).map(function (r) {
+    // Use_Global_Price blank = follow the central price (2.2.0 default).
+    const useGlobal = r[14] === '' || r[14] === undefined ? true : truthyCell_(r[14]);
+    const own = r[12] === '' || r[12] === undefined ? '' : Number(r[12]);
     return { key: text_(r[0]), name: text_(r[1]), consumedTHa: r[2] === '' ? '' : Number(r[2]), cf: r[3] === '' ? '' : Number(r[3]),
       residueTRai: r[4] === '' ? '' : Number(r[4]), residueName: text_(r[5]), residueReference: text_(r[6]), reference: text_(r[7]),
       active: truthyCell_(r[8]), sortOrder: Number(r[9]) || 99, updatedAt: dateTime_(r[10]), updatedBy: text_(r[11]),
-      priceBahtKg: r[12] === '' || r[12] === undefined ? '' : Number(r[12]), priceReference: text_(r[13]) };
+      useGlobalPrice: useGlobal, ownPriceBahtKg: own, ownPriceReference: text_(r[13]),
+      priceBahtKg: useGlobal ? global.price : own, priceReference: useGlobal ? 'ราคากลาง: ' + global.reference : text_(r[13]),
+      removablePct: r[15] === '' || r[15] === undefined ? '' : Number(r[15]), removableReference: text_(r[16]) };
   }) : ghgDefaultCropObjects_();
   return list.filter(function (c) { return c.key && (includeInactive || c.active); })
     .sort(function (a, b) { return a.sortOrder - b.sortOrder; });
@@ -287,7 +381,8 @@ function ghgCropPublic_(c, p) {
   const consumed = ghgConsumedKgRai_(c, p);
   return { key: c.key, name: c.name, residueName: c.residueName, hasStandard: consumed !== null, consumedKgRai: consumed === null ? null : round_(consumed, 2),
     cf: c.cf === '' ? null : c.cf, residueTRai: c.residueTRai === '' ? null : c.residueTRai, reference: c.reference, residueReference: c.residueReference,
-    priceBahtKg: c.priceBahtKg === '' || c.priceBahtKg === undefined ? null : Number(c.priceBahtKg), priceReference: c.priceReference || '' };
+    priceBahtKg: c.priceBahtKg === '' || c.priceBahtKg === undefined ? null : Number(c.priceBahtKg), priceReference: c.priceReference || '',
+    useGlobalPrice: c.useGlobalPrice !== false, removablePct: c.removablePct === '' || c.removablePct === undefined ? null : Number(c.removablePct) };
 }
 
 /* ------------------------------ admin methods ------------------------------ */
@@ -303,7 +398,7 @@ function ghgSettingsGet_() {
     }
     return out;
   });
-  return { status: 'success', params: p, label: ghgParamLabel_(p), gwpSets: GHG_GWP_SETS, defaults: GHG_DEFAULT_PARAMS,
+  return { status: 'success', params: p, label: ghgParamLabel_(p), gwpSets: GHG_GWP_SETS, defaults: GHG_DEFAULT_PARAMS, price: residuePriceGlobal_(),
     crops: crops.map(function (c) { return Object.assign({}, c, ghgCropPublic_(c, p)); }), sample100: sample, boundary: GHG_BOUNDARY };
 }
 
@@ -360,10 +455,15 @@ function ghgCropSave_(input, s) {
   const residueReference = cleanText_(input.residueReference, 200);
   const sh0 = sheetByName_('ghg_crops');
   const prev = dataRows_(sh0).find(function (r) { return text_(r[0]) === key; });
-  // Price is kept when the caller does not send it (older clients, partial updates).
-  const price = 'priceBahtKg' in input ? num(input.priceBahtKg, 'ราคาเศษวัสดุ (บาท/กก.)') : (prev && prev[12] !== '' && prev[12] !== undefined ? Number(prev[12]) : RESIDUE_DEFAULT_PRICE);
-  const priceReference = 'priceBahtKg' in input ? cleanText_(input.priceReference, 200) : (prev ? text_(prev[13]) : RESIDUE_DEFAULT_PRICE_REF) || RESIDUE_DEFAULT_PRICE_REF;
-  if (price !== '' && !priceReference) throw new Error('ราคาเศษวัสดุต้องระบุแหล่งที่มา');
+  // Own price (used only when the crop does not follow the central price) is kept when not sent.
+  const useGlobal = 'useGlobalPrice' in input ? input.useGlobalPrice !== false : (prev && prev[14] !== '' && prev[14] !== undefined ? truthyCell_(prev[14]) : true);
+  const price = 'priceBahtKg' in input ? num(input.priceBahtKg, 'ราคาเฉพาะพืช (บาท/กก.)') : (prev && prev[12] !== '' && prev[12] !== undefined ? Number(prev[12]) : '');
+  const priceReference = 'priceBahtKg' in input ? cleanText_(input.priceReference, 200) : (prev ? text_(prev[13]) : '');
+  if (!useGlobal && price === '') throw new Error('พืชที่ไม่ใช้ราคากลางต้องกรอกราคาเฉพาะพืช');
+  if (!useGlobal && !priceReference) throw new Error('ราคาเฉพาะพืชต้องระบุแหล่งที่มา');
+  const removable = 'removablePct' in input ? num(input.removablePct, 'สัดส่วนที่นำออกได้ (%)', 100) : (prev && prev[15] !== undefined ? prev[15] : '');
+  const removableReference = 'removablePct' in input ? cleanText_(input.removableReference, 200) : (prev ? text_(prev[16]) : '');
+  if (removable !== '' && !removableReference) throw new Error('สัดส่วนที่นำออกได้ต้องระบุแหล่งอ้างอิง');
   if (consumed !== '' && !reference) throw new Error('ค่า Biomass consumed ต้องระบุแหล่งอ้างอิง');
   if (residue !== '' && !residueReference) throw new Error('ค่าเศษวัสดุต่อไร่ต้องระบุแหล่งอ้างอิง');
   const sh = sheetByName_('ghg_crops');
@@ -371,11 +471,13 @@ function ghgCropSave_(input, s) {
   const idx = rows.findIndex(function (r) { return text_(r[0]) === key; });
   const before = idx >= 0 ? rows[idx] : null;
   const values = [key, name, consumed, cf, residue, cleanText_(input.residueName, 80), residueReference, reference,
-    input.active !== false, Math.max(1, Math.min(99, Number(input.sortOrder) || 50)), new Date(), s.name + ' (' + s.username + ')', price, priceReference];
+    input.active !== false, Math.max(1, Math.min(99, Number(input.sortOrder) || 50)), new Date(), s.name + ' (' + s.username + ')', price, priceReference,
+    useGlobal, removable, removableReference];
   if (idx >= 0) sh.getRange(idx + 2, 1, 1, values.length).setValues([values]); else sh.appendRow(values);
   invalidateResidue_();
   adminAudit_(s, 'ghg_crop_save', key + ' ' + name + ': consumed ' + (before ? before[2] : '–') + ' → ' + consumed + ' t/ha, Cf ' + (before ? before[3] : '–') + ' → ' + cf +
-    ', residue ' + (before ? before[4] : '–') + ' → ' + residue + ' t/rai, price ' + (before ? before[12] : '–') + ' → ' + price + ' baht/kg');
+    ', residue ' + (before ? before[4] : '–') + ' → ' + residue + ' t/rai, ' + (useGlobal ? 'ใช้ราคากลาง' : 'ราคาเฉพาะพืช ' + price + ' baht/kg') +
+    ', removable ' + (before ? before[15] : '–') + ' → ' + removable + '%');
   return { status: 'success', message: 'บันทึกค่าพืช ' + name + ' แล้ว', settings: ghgSettingsGet_() };
 }
 

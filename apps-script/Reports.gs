@@ -1,5 +1,9 @@
 /**
- * Green Gain Hub 2.0.0 — reports (print, PDF, Excel, CSV).
+ * Green Gain Hub 2.2.0 — reports (print, PDF, Excel, CSV).
+ *
+ * 2.2.0: four report types replace the long checkbox list (REPORT_TYPES). Each type has its own
+ * default sections; other sections stay available under "เพิ่มส่วนอื่น". Columns marked printHide
+ * are left out of the printed page but kept in Excel/CSV; sections marked landscape print on landscape A4.
  *
  * The server returns tables only; the admin page renders, prints and exports
  * them. Every request is checked against the role here and written to admin_log.
@@ -10,14 +14,16 @@
  */
 const REPORT_GROUPS = [
   { key: 'residue', title: 'ก. การจัดการเศษวัสดุและก๊าซเรือนกระจก', minRole: 'admin', sections: [
-    { key: 'residue.summary', title: 'สรุปภาพรวม (พื้นที่ เป้าหมาย GHG ที่ลดได้)' },
-    { key: 'residue.map', title: 'แผนที่ GHG ที่ลดได้รายอำเภอ' },
+    { key: 'residue.summary', title: 'สรุปภาพรวม (พื้นที่ เป้าหมาย ก๊าซเรือนกระจกที่ลดได้ มูลค่า)' },
+    { key: 'residue.balance', title: 'สมดุลเศษวัสดุ: เก็บเกี่ยว ประกาศขาย ผู้รับซื้อ จัดการแล้ว คงเหลือ' },
+    { key: 'residue.map', title: 'แผนที่ก๊าซเรือนกระจกที่ลดได้รายอำเภอ' },
     { key: 'residue.methods', title: 'พื้นที่จัดการแยกตามประเภท พร้อมเป้าหมายและร้อยละ' },
-    { key: 'residue.districts', title: 'รายอำเภอ: พื้นที่ เป้าหมาย ร้อยละ GHG' },
-    { key: 'residue.crops', title: 'GHG ที่ลดได้รายชนิดพืช (CH4, N2O, L_fire)' },
+    { key: 'residue.districts', title: 'รายอำเภอ: พื้นที่ เป้าหมาย ร้อยละ มูลค่า ก๊าซเรือนกระจก' },
+    { key: 'residue.crops', title: 'รายชนิดพืช: พื้นที่ ปริมาณ มูลค่า ก๊าซเรือนกระจก' },
     { key: 'residue.subdistricts', title: 'สรุปรายตำบล: ประเภท พื้นที่รวม ปริมาณรวม' },
-    { key: 'residue.admins', title: 'สรุปราย Admin: ร้อยละที่ดำเนินการ' },
-    { key: 'residue.records', title: 'รายการบันทึกข้อมูล' },
+    { key: 'residue.admins', title: 'สรุปรายเจ้าหน้าที่: ร้อยละที่ดำเนินการ' },
+    { key: 'residue.records', title: 'ทะเบียนรายการบันทึก' },
+    { key: 'residue.ghgcrops', title: 'การคำนวณก๊าซเรือนกระจกรายชนิดพืช (มีเทน ไนตรัสออกไซด์)' },
     { key: 'residue.params', title: 'สูตร ค่าพารามิเตอร์ และแหล่งอ้างอิง' }] },
   { key: 'crops', title: 'ข. สถานการณ์การเพาะปลูก', sections: [
     { key: 'crops.summary', title: 'สรุปภาพรวมจังหวัด' },
@@ -41,10 +47,19 @@ const REPORT_GROUPS = [
     { key: 'audit.log', title: 'บันทึกการใช้งานผู้ดูแล (200 รายการล่าสุด)', role: 'mini' }] }
 ];
 const REPORT_MAX_SECTIONS = 20;
-const REPORT_PRESETS = {
-  district: ['residue.summary', 'residue.methods', 'residue.subdistricts', 'residue.admins', 'residue.crops', 'residue.records'],
-  province: ['residue.summary', 'residue.map', 'residue.methods', 'residue.districts', 'residue.crops', 'residue.params']
-};
+// Four report types (2.2.0). scope: 'district' needs a district; 'any' follows the chosen scope.
+const REPORT_TYPES = [
+  { key: 'district', title: 'รายงานอำเภอ', desc: 'ผลการจัดการ เป้าหมาย สมดุลเศษวัสดุ รายตำบล และรายเจ้าหน้าที่ ของอำเภอเดียว', scope: 'district',
+    sections: ['residue.summary', 'residue.balance', 'residue.methods', 'residue.subdistricts', 'residue.admins'] },
+  { key: 'province', title: 'รายงานจังหวัด', desc: 'ภาพรวมทั้งจังหวัด แผนที่ รายอำเภอ สมดุลเศษวัสดุ และรายชนิดพืช', scope: 'province', minRole: 'mini',
+    sections: ['residue.summary', 'residue.map', 'residue.districts', 'residue.balance', 'residue.methods', 'residue.crops'] },
+  { key: 'ghg', title: 'ภาคผนวกการคำนวณก๊าซเรือนกระจก', desc: 'สูตร ค่าพารามิเตอร์ แหล่งอ้างอิง และผลคำนวณรายชนิดพืช สำหรับผู้ตรวจสอบ', scope: 'any',
+    sections: ['residue.ghgcrops', 'residue.params'] },
+  { key: 'register', title: 'ทะเบียนรายการบันทึก', desc: 'รายการบันทึกทุกรายการ พิมพ์แนวนอน (พิกัดและสถานะข้อมูลอยู่ในไฟล์ Excel)', scope: 'any',
+    sections: ['residue.records'] }
+];
+// Kept for older pages: the two presets of 2.1.0.
+const REPORT_PRESETS = { district: REPORT_TYPES[0].sections, province: REPORT_TYPES[1].sections };
 
 function reportAllowed_(group, section, s) {
   const need = section.role || group.minRole || 'mini';
@@ -75,6 +90,9 @@ function reportCatalog_(s) {
       }) };
     }),
     presets: REPORT_PRESETS,
+    types: REPORT_TYPES.filter(function (t) { return adminLevel_(s.role) >= adminLevel_(t.minRole || 'admin'); }).map(function (t) {
+      return { key: t.key, title: t.title, desc: t.desc, scope: t.scope, sections: t.sections };
+    }),
     crops: crops,
     fy: currentFiscalYear_(),
     fiscalYears: residueFiscalYears_(),
@@ -94,7 +112,12 @@ function fullPhone_(v) {
   return /^0\d{9}$/.test(p) ? p.slice(0, 3) + '-' + p.slice(3, 6) + '-' + p.slice(6) : p;
 }
 
-function col_(key, label, type) { return { key: key, label: label, type: type || 'text' }; }
+/** printHide: left out of the printed page (still in Excel/CSV). */
+function col_(key, label, type, printHide) {
+  const c = { key: key, label: label, type: type || 'text' };
+  if (printHide) c.printHide = true;
+  return c;
+}
 
 function reportData_(input, s) {
   input = input || {};
@@ -306,7 +329,7 @@ const REPORT_BUILDERS = {
     }).sort(function (a, b) { return a.district.localeCompare(b.district, 'th') || (a.harvest < b.harvest ? -1 : 1); });
     return {
       columns: [col_('district', 'อำเภอ'), col_('name', 'ชื่อ-สกุล'), col_('phone', 'โทรศัพท์'), col_('crop', 'พืช'), col_('material', 'เศษวัสดุ'),
-        col_('area', 'พื้นที่'), col_('areaRai', 'ไร่', 'number'), col_('harvest', 'วันเก็บเกี่ยว'), col_('lat', 'ละติจูด', 'number'), col_('lng', 'ลองจิจูด', 'number')],
+        col_('area', 'พื้นที่'), col_('areaRai', 'ไร่', 'number'), col_('harvest', 'วันเก็บเกี่ยว'), col_('lat', 'ละติจูด', 'number', true), col_('lng', 'ลองจิจูด', 'number', true)],
       rows: rows,
       notes: ['ข้อมูลส่วนบุคคล ใช้ตามวัตถุประสงค์ที่เกษตรกรให้ความยินยอมเท่านั้น' + (ctx.unmask ? '' : ' (ปิดบังเบอร์โทร)')]
     };
@@ -320,7 +343,7 @@ const REPORT_BUILDERS = {
     }).sort(function (a, b) { return a.district.localeCompare(b.district, 'th'); });
     return {
       columns: [col_('district', 'อำเภอ'), col_('name', 'ชื่อจุดรับซื้อ'), col_('phone', 'โทรศัพท์'), col_('material', 'รับซื้อ'), col_('quality', 'คุณภาพ'),
-        col_('price', 'ราคา (บาท/ไร่)', 'number'), col_('capacity', 'ปริมาณ (ตัน/วัน)'), col_('lat', 'ละติจูด', 'number'), col_('lng', 'ลองจิจูด', 'number')],
+        col_('price', 'ราคา (บาท/ไร่)', 'number'), col_('capacity', 'ปริมาณ (ตัน/วัน)'), col_('lat', 'ละติจูด', 'number', true), col_('lng', 'ลองจิจูด', 'number', true)],
       rows: rows,
       notes: ['ข้อมูลส่วนบุคคล ใช้ตามวัตถุประสงค์ที่ผู้รับซื้อให้ความยินยอมเท่านั้น' + (ctx.unmask ? '' : ' (ปิดบังเบอร์โทร)')]
     };
@@ -342,7 +365,7 @@ const REPORT_BUILDERS = {
     const TH = { active: 'ใช้งาน', replaced: 'ถูกแทนที่', deleted: 'ลบแล้ว' };
     return {
       columns: [col_('importedAt', 'นำเข้าเมื่อ'), col_('crop', 'พืช'), col_('season', 'ปีการผลิต'), col_('totalRai', 'ไร่', 'number'), col_('rows', 'แถว', 'number'),
-        col_('periods', 'ช่วงเดือน'), col_('status', 'สถานะ'), col_('importedBy', 'โดย'), col_('fileName', 'ไฟล์')],
+        col_('periods', 'ช่วงเดือน'), col_('status', 'สถานะ'), col_('importedBy', 'โดย'), col_('fileName', 'ไฟล์', 'text', true)],
       rows: cropImportsList_().map(function (x) { return { importedAt: x.importedAt, crop: x.crop, season: x.season, totalRai: x.totalRai, rows: x.rows, periods: x.periods, status: TH[x.status] || x.status, importedBy: x.importedBy, fileName: x.fileName }; })
     };
   },

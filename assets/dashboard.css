@@ -1,4 +1,4 @@
-/* Green Gain Hub 1.5.0 — public landing dashboard (login page).
+/* Green Gain Hub 2.2.0 (base 1.5.0) — public landing dashboard (login page).
    Palette follows the Nakhon Pathom Smart Map reference (#1a7f37) with a straw
    accent reserved for "harvest soon" — the one thing a buyer acts on. */
 :root {
@@ -293,7 +293,7 @@ body.ggh-landing-on main { max-width: 84rem; }
 .ggh-ci-icon svg { width: 100%; height: 100%; fill: currentColor; }
 .ggh-ci-name { font-weight: 700; font-size: .9rem; line-height: 1.15; }
 .ggh-ci-val { font-size: .75rem; opacity: .8; font-variant-numeric: tabular-nums; }
-.ggh-ci-val::after { content: " tCO₂e"; }
+.ggh-ci-caption { font-size: .8rem; color: var(--ggh-muted); margin-bottom: .3rem; }
 
 .ggh-target { display: grid; gap: .4rem; margin-bottom: 1rem; }
 .ggh-target-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem 1rem; font-size: .95rem; }
@@ -352,3 +352,40 @@ body.ggh-landing-on main { max-width: 84rem; }
 #loginCard .text-green-700 { color: #fde8a6; }
 #loginCard .ggh-staff-link a { color: #e9f6ed; }
 #loginCard :focus-visible { outline: 2px solid #f6d77e; outline-offset: 2px; }
+
+/* ---------- 2.2.0 entry doors: say what you came to do, then the province data ---------- */
+.ggh-topbar-title { font-size: clamp(1rem, .8rem + 1vw, 1.35rem); }
+.ggh-topbar-sub { font-size: clamp(.7rem, .62rem + .35vw, .85rem); color: var(--ggh-muted); text-align: center; line-height: 1.2; }
+.ggh-doors { order: 1; display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+.ggh-door { background: var(--ggh-surface); border: 1px solid var(--ggh-line); border-radius: var(--ggh-radius-lg); padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: .45rem; }
+.ggh-door h3 { font-size: 1.2rem; font-weight: 700; color: var(--ggh-green-dark); display: flex; align-items: center; gap: .5rem; }
+.ggh-door h3 i { font-size: 1rem; width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center; background: #e6f2e9; }
+.ggh-door > p { font-size: .95rem; color: var(--ggh-ink); }
+.ggh-door .ggh-door-fact { font-size: .85rem; color: var(--ggh-straw-ink); font-weight: 600; }
+.ggh-door-actions { margin-top: auto; padding-top: .3rem; display: flex; flex-wrap: wrap; gap: .5rem; }
+.ggh-door-actions > * { min-height: 46px; padding: 0 1.1rem; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid #b9cfc0; color: var(--ggh-green-dark); background: #fff; text-decoration: none; font-size: 1rem; }
+.ggh-door-actions > .is-main { background: var(--ggh-green); border-color: var(--ggh-green); color: #fff; flex: 1 1 auto; }
+.ggh-door-actions > .is-main:hover { background: var(--ggh-green-dark); }
+.ggh-door-sell { border-top: 4px solid var(--ggh-green); }
+.ggh-door-buy { border-top: 4px solid var(--ggh-straw); }
+.ggh-door-buy h3 i { background: #fbf0d4; color: var(--ggh-straw-ink); }
+.ggh-door-staff { border-top: 4px solid #6b7c71; }
+.ggh-door-staff h3 i { background: var(--ggh-zero); color: #44524a; }
+.ggh-data-title { order: 2; font-size: 1.15rem; font-weight: 700; color: var(--ggh-ink); margin-top: .75rem; }
+.ggh-data-title span { margin-left: .3rem; }
+@media (min-width: 1024px) {
+  .ggh-doors, .ggh-data-title { grid-column: span 12; }
+}
+
+/* Residue balance on the residue tab: one stacked bar (managed vs. no record yet) */
+.ggh-bal-bar { display: flex; height: 22px; border-radius: 6px; overflow: hidden; background: var(--ggh-zero); gap: 2px; }
+.ggh-bal-bar i { display: block; height: 100%; }
+.ggh-bal-bar .is-done, .ggh-bal-key.is-done { background: var(--ggh-green); }
+.ggh-bal-bar .is-left, .ggh-bal-key.is-left { background: #d9c48f; }
+.ggh-bal-key { display: inline-block; width: .8rem; height: .8rem; border-radius: 3px; margin-right: .35rem; vertical-align: -1px; }
+.ggh-bal-facts { display: grid; gap: .5rem 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); margin-top: .75rem; }
+.ggh-bal-facts dt { font-size: .82rem; color: var(--ggh-muted); }
+.ggh-bal-facts dd { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ggh-bal-facts small { font-weight: 400; color: var(--ggh-muted); }
+@media (min-width: 1024px) { .ggh-balance { grid-column: span 12; } }

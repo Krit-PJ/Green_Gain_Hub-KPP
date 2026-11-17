@@ -1,10 +1,11 @@
 /**
- * Green Gain Hub 2.1.0 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 2.2.0 — API-only bridge from GitHub Pages to Google Sheets.
  * Files: Code.gs (this), Districts.gs (boundaries), Admin.gs (Super / Mini Super / Admin, doPost),
  *        Crops.gs (crop area import + crop summary), Counter.gs (visit counter),
  *        Reports.gs (admin reports for print / PDF / Excel / CSV),
  *        Ghg.gs (GHG Calculation Engine v1.0), Residue.gs (residue records, targets, GHG avoided, value),
- *        Staff.gs (officer self-registration and phone sign-in).
+ *        Staff.gs (officer self-registration and phone sign-in),
+ *        Balance.gs (residue balance: registry harvest × marketplace × officer records).
  * Database: Google Sheets / file storage: Google Drive.
  *
  * Endpoints (same /exec URL):
@@ -12,11 +13,12 @@
  *   ?api=v1&endpoint=summary[&key=]   Public, aggregate-only dashboard data (JSON or JSONP)
  *   ?api=v1&endpoint=crop&crop=&season=&district=   Public sub-district crop breakdown
  *   ?api=v1&endpoint=residue[&fy=2570] Public residue management + GHG avoided (district × crop × method sums)
+ *   ?api=v1&endpoint=balance[&fy=2570] Public residue balance ①–⑥ per district × crop (aggregate only)
  *   ?api=v1&endpoint=hit | visits     Visit counter (count once per session | read)
  *   ?api=v1&endpoint=health           Public version check
  *   POST {method,args,token}          Admin API (Admin.gs)
  */
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -81,7 +83,7 @@ function getApiInfoServer() {
     status: 'success',
     success: true,
     apiVersion: APP_VERSION,
-    feature: 'RESIDUE_VALUE_STAFF'
+    feature: 'RESIDUE_BALANCE_HUB'
   };
 }
 
@@ -108,6 +110,8 @@ function publicApiResponse_(p, callback) {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: visitCounts_(false) };
     } else if (endpoint === 'residue') {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getResiduePublic_(p) };
+    } else if (endpoint === 'balance') {
+      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getResidueBalancePublic_(p) };
     } else if (endpoint === 'crop') {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getCropDetail_(p) };
     } else if (endpoint === 'health') {
@@ -532,7 +536,13 @@ function loginServer(input) {
   if (!/^0\d{9}$/.test(phone)) throw new Error('กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก');
   const rows = dataRows_(sheet_('users'));
   const found = rows.find(function (r) { return normalizePhone_(r[0]) === phone; });
-  if (!found) throw new Error('ไม่พบหมายเลขโทรศัพท์นี้ในระบบ กรุณาลงทะเบียน');
+  if (!found) {
+    // 2.2.0: an officer who typed the number into the farmer/buyer box is pointed to the officer page.
+    let staff = null;
+    try { staff = staffFindByPhone_(phone); } catch (err) { staff = null; }
+    if (staff) throw new Error('STAFF_ACCOUNT: หมายเลขนี้ลงทะเบียนเป็นบัญชีเจ้าหน้าที่ กรุณาเข้าสู่ระบบที่หน้า "สำหรับเจ้าหน้าที่"');
+    throw new Error('ไม่พบหมายเลขโทรศัพท์นี้ในระบบ กรุณาลงทะเบียน');
+  }
   const role = normalizeRole_(found[2]);
   const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
   const session = { phone: phone, role: role, name: cleanText_(found[3], 150) };

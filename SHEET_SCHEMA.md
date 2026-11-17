@@ -33,5 +33,8 @@
 | `residue_methods` (2.1.0) | + Count_Value | ไถกลบ = FALSE เป็นค่าเริ่มต้น |
 | `admins` (2.1.0) | + Office_Type, Office_Group, Province, Registered_Via | ลงทะเบียนเอง: Username = p+เบอร์, Registered_Via = self, ไม่มีรหัสผ่าน |
 | `Config` (2.1.0) | + staff_groups | กลุ่มของสำนักงานเกษตรจังหวัด คั่นด้วย \| |
+| `ghg_crops` (2.2.0) | + Use_Global_Price, Removable_Pct, Removable_Reference | ว่าง/TRUE = ใช้ราคากลาง; สัดส่วนที่นำออกได้ ข้าว 45 ข้าวโพด 42 อ้อย 40 |
+| `ghg_params` (2.2.0) | + PRICE_BAHT_KG, PRICE_REF, PRICE_VERSION, PRICE_UPDATED_AT, PRICE_UPDATED_BY | ราคากลาง เริ่มต้น 0.8 บาท/กก. |
+| `residue_records` (2.2.0) | + Buyer_ID, Buyer_Name, Sold_Tonnes | ไม่บังคับ; Sold_Tonnes ใช้คิดมูลค่าแทนค่าประมาณ |
 
 ห้ามแก้ไขชีตเหล่านี้ด้วยมือระหว่างใช้งาน ให้จัดการผ่านหน้า `admin.html`

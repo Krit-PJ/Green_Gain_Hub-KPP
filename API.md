@@ -131,3 +131,14 @@ Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts
 - POST ไม่ต้องล็อกอิน: `staffMetaServer` (จังหวัด หน่วยงาน กลุ่ม อำเภอ), `staffRegisterServer({name, phone, officeType, group, district, province})` → session ทันที, `staffLoginServer({phone})`
 - `ghgCropSaveServer` รับ `priceBahtKg`, `priceReference`; `residueMethodSaveServer` รับ `countValue`; `siteSaveServer` รับ `groups`
 
+
+## 2.2.0: สมดุลเศษวัสดุ ราคากลาง รายงาน 4 แบบ
+
+- `GET /exec?api=v1&endpoint=balance[&fy=2570]` (สาธารณะ, cache 5 นาที, ไม่มีชื่อ เบอร์ หรือพิกัด) →
+  `{ fy, fyRange, totals, byDistrict:[{district, name, harvestedRai, potentialTon, removableTon, listedRai, buyers, managedRai, managedPct, atRiskRai, flags}], rows:[อำเภอ × พืช], months:[{month, harvestedRai, managedRai}], sources }`
+  - flags: `need_buyer` (มีแปลงประกาศขายแต่ไม่มีผู้รับซื้อในอำเภอ), `low_managed` (จัดการ < 20% ของพื้นที่เก็บเกี่ยว)
+- POST `residueBalanceServer({fy, district})` (Admin: อำเภอตัวเองเท่านั้น), `residuePriceSaveServer({price, reference})` (Mini/Super)
+- `residueSaveServer` รับ `buyerId`, `soldTonnes` (ไม่บังคับ); `residueMetaServer` คืน `buyers` (id, ชื่อ, ชนิดวัสดุ, อำเภอ ไม่มีเบอร์)
+- `ghgCropSaveServer` รับ `useGlobalPrice`, `priceBahtKg` (ราคาเฉพาะพืช), `removablePct`, `removableReference`; `ghgSettingsServer` คืน `price`
+- `reportCatalogServer` คืน `types` (district, province, ghg, register); ส่วนรายงานใหม่ `residue.balance`, `residue.ghgcrops`; คอลัมน์ `printHide` ไม่พิมพ์แต่อยู่ใน Excel/CSV, ส่วน `landscape` พิมพ์แนวนอน
+- หน่วย: `ตันคาร์บอนไดออกไซด์เทียบเท่า` (เดิม tCO2e); `loginServer` แจ้ง `STAFF_ACCOUNT:` และ `staffLoginServer` แจ้ง `MARKET_ACCOUNT:` เมื่อกรอกเบอร์ผิดช่อง
