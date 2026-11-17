@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.0.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.1.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -73,7 +73,7 @@
     <div class="container mx-auto px-3 sm:px-4 py-2 flex justify-between items-center gap-2 max-w-5xl" style="padding-top: max(.5rem, env(safe-area-inset-top));">
       <img src="https://doaenews.doae.go.th/wp-content/uploads/2021/03/DOAE-2.png" class="h-8 sm:h-10 w-auto shrink-0" alt="กรมส่งเสริมการเกษตร">
       <div class="text-center min-w-0">
-        <h1 class="text-green-800 font-bold text-sm sm:text-lg md:text-xl leading-tight truncate">Green Gain Hub: <span data-province>กำแพงเพชร</span></h1>
+        <h1 class="ggh-topbar-title text-green-800 font-bold leading-tight">ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร</h1>
         <!-- <p class="text-[10px] md:text-xs text-gray-500 font-medium">จังหวัดกำแพงเพชร</p> -->
       </div>
       <img src="https://upload.wikimedia.org/wikipedia/commons/f/fd/Seal_of_Kamphaeng_Phet_Province_%28color_version%2C_Thai_Fine_Art_Department%29.png" class="h-8 sm:h-10 w-auto shrink-0" alt="ตราจังหวัดกำแพงเพชร">
@@ -85,8 +85,7 @@
     <div id="loginPage" class="ggh-landing" data-tab="overview">
       <header class="ggh-intro">
         <div>
-          <h2 class="ggh-title">ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร จังหวัด<span data-province>กำแพงเพชร</span></h2>
-          <p class="ggh-lede">การสร้างมูลค่าจากเศษวัสดุทางการเกษตร การจัดการเศษวัสดุทางการเกษตร และการลดปริมาณก๊าซเรือนกระจกในภาคการเกษตร ในพื้นที่จังหวัด<span data-province>กำแพงเพชร</span></p>
+          <p class="ggh-lede ggh-lede-lead">การสร้างมูลค่าจากเศษวัสดุทางการเกษตร การจัดการเศษวัสดุทางการเกษตร และการลดปริมาณก๊าซเรือนกระจกในภาคการเกษตร ในพื้นที่จังหวัด<span data-province>กำแพงเพชร</span></p>
         </div>
         <p class="ggh-updated" id="dashUpdated" aria-live="polite">กำลังโหลดข้อมูล…</p>
       </header>
@@ -135,6 +134,7 @@
 
       <aside class="ggh-side">
         <div class="ggh-login" id="loginCard">
+          <p class="ggh-login-brand">Green Gain Hub: <span data-province>กำแพงเพชร</span></p>
           <h2 class="ggh-login-title">เข้าสู่ระบบ</h2>
           <p class="ggh-login-help">กรอกหมายเลขโทรศัพท์ที่ลงทะเบียนไว้ เพื่อบันทึกแปลงหรือจุดรับซื้อ และดูคู่ค้าใกล้คุณ</p>
           <div class="input-group">
@@ -146,7 +146,7 @@
             <span class="text-sm text-gray-500">ยังไม่มีบัญชี?</span>
             <button onclick="toggleAuth('register')" class="text-green-700 font-bold text-sm hover:underline">ลงทะเบียนใหม่ที่นี่</button>
           </div>
-          <p class="ggh-staff-link"><a href="admin.html">สำหรับเจ้าหน้าที่: เข้าสู่ระบบผู้ดูแล</a></p>
+          <p class="ggh-staff-link"><a href="admin.html">สำหรับเจ้าหน้าที่: เข้าสู่ระบบ / ลงทะเบียน</a></p>
         </div>
 
         <div class="ggh-district" id="dashDistrict" aria-live="polite">
@@ -435,9 +435,9 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=2.0.0"></script>
-  <script src="assets/api-client.js?v=2.0.0"></script>
-  <script src="assets/dashboard.js?v=2.0.0" defer></script>
+  <script src="assets/config.js?v=2.1.0"></script>
+  <script src="assets/api-client.js?v=2.1.0"></script>
+  <script src="assets/dashboard.js?v=2.1.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({

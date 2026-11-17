@@ -334,3 +334,21 @@ body.ggh-landing-on main { max-width: 84rem; }
 @media (min-width: 1024px) {
   .ggh-resmethods { grid-column: span 12; }
 }
+
+/* ---------- 2.1.0 top bar title, lead text, Green Gain Hub sign-in card ---------- */
+.ggh-topbar-title { font-size: clamp(.8rem, .55rem + 1.4vw, 1.25rem); text-align: center; text-wrap: balance; }
+.ggh-lede.ggh-lede-lead { margin-top: 0; font-size: clamp(1rem, .92rem + .4vw, 1.25rem); line-height: 1.5; color: var(--ggh-green-dark); font-weight: 600; max-width: 62ch; }
+#loginCard.ggh-login { background: linear-gradient(155deg, #0b3d1d 0%, #14612d 48%, #1e8440 100%); color: #fff; border: 0; box-shadow: 0 12px 30px rgba(15, 77, 36, .28); }
+#loginCard .ggh-login-brand { display: inline-flex; align-items: center; gap: .3rem; font-weight: 700; font-size: .88rem; color: #0f4d24; background: #f6d77e; border-radius: 999px; padding: .2rem .75rem; margin-bottom: .55rem; }
+#loginCard .ggh-login-title { color: #fff; }
+#loginCard .ggh-login-help { color: #dcefe2; }
+#loginCard .label-text { color: #eef8f0; }
+#loginCard .input-field { border-color: transparent; }
+#loginCard .input-field:focus { box-shadow: 0 0 0 3px rgba(246, 215, 126, .65); }
+#loginCard #loginBtn { background: #fff; color: #0f4d24; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
+#loginCard #loginBtn:hover { background: #f6d77e; }
+#loginCard .border-t { border-color: rgba(255, 255, 255, .25); }
+#loginCard .text-gray-500 { color: #d3eadb; }
+#loginCard .text-green-700 { color: #fde8a6; }
+#loginCard .ggh-staff-link a { color: #e9f6ed; }
+#loginCard :focus-visible { outline: 2px solid #f6d77e; outline-offset: 2px; }

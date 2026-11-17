@@ -124,3 +124,10 @@ Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts
 - Admin (ทุกระดับ, Admin เห็นเฉพาะอำเภอตัวเอง): `residueMetaServer`, `residueSaveServer`, `residueListServer`, `residueDeleteServer`, `residuePhotoServer`, `ghgValidationServer`
 - Mini Super Admin / Super Admin: `ghgSettingsServer`, `ghgParamsSaveServer`, `ghgCropSaveServer`, `ghgCalculateServer`, `residueSettingsServer`, `residueTargetsSaveServer`, `residueMethodSaveServer`, `siteSaveServer` และเมธอดผู้ดูแลเดิมทั้งหมด (Mini จัดการบัญชี Super Admin ไม่ได้)
 - รายงานกลุ่ม `residue.*` (summary, map, methods, districts, crops, subdistricts, admins, records, params) รับ `fy`, `district`
+
+## 2.1.0: มูลค่าและการลงทะเบียนเจ้าหน้าที่
+
+- `residue` endpoint: `cells[].v` มูลค่า (บาท), `totals.value`, `crops[].priceBahtKg`, `methods[].countValue`
+- POST ไม่ต้องล็อกอิน: `staffMetaServer` (จังหวัด หน่วยงาน กลุ่ม อำเภอ), `staffRegisterServer({name, phone, officeType, group, district, province})` → session ทันที, `staffLoginServer({phone})`
+- `ghgCropSaveServer` รับ `priceBahtKg`, `priceReference`; `residueMethodSaveServer` รับ `countValue`; `siteSaveServer` รับ `groups`
+

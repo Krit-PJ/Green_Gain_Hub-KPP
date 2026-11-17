@@ -1,4 +1,4 @@
-/* Green Gain Hub 2.0.0 — admin page (Super Admin / Mini Super Admin / Admin = district recorder). */
+/* Green Gain Hub 2.1.0 — admin page (Super Admin / Mini Super Admin / Admin = district recorder). */
 (function () {
   'use strict';
 
@@ -15,10 +15,18 @@
   const ACTION_TH = { login: 'เข้าสู่ระบบ', crop_import: 'นำเข้าข้อมูลเพาะปลูก', crop_import_delete: 'ลบชุดข้อมูล', crop_type_save: 'บันทึกชนิดพืช',
     settings_save: 'แก้ไขการเชื่อมต่อ API', report_view: 'ดูรายงาน', report_export: 'ส่งออกรายงาน', admin_create: 'เพิ่มผู้ดูแล', admin_update: 'แก้ไขผู้ดูแล', password_change: 'เปลี่ยนรหัสผ่าน',
     password_reset: 'ตั้งรหัสผ่านใหม่ให้ผู้ดูแล', super_bootstrap: 'สร้าง Super Admin', cache_clear: 'อัปเดตหน้าแรก',
-    residue_create: 'บันทึกการจัดการเศษวัสดุ', residue_update: 'แก้ไขการจัดการเศษวัสดุ', residue_delete: 'ลบการจัดการเศษวัสดุ',
+    staff_register: 'ลงทะเบียนเจ้าหน้าที่', residue_create: 'บันทึกการจัดการเศษวัสดุ', residue_update: 'แก้ไขการจัดการเศษวัสดุ', residue_delete: 'ลบการจัดการเศษวัสดุ',
     ghg_params_save: 'แก้ไขค่าคงที่ GHG', ghg_crop_save: 'แก้ไขค่าพืช GHG', residue_targets_save: 'แก้ไขเป้าหมาย', residue_method_save: 'แก้ไขประเภทการจัดการ', site_save: 'แก้ไขชื่อจังหวัด/หน่วยงาน' };
   const ROLE_TH = { super: 'Super Admin', mini: 'Mini Super Admin', admin: 'Admin' };
   const level = (role) => ({ admin: 1, mini: 2, super: 3 })[role] || 0;
+  // District-office Admin is limited to one district; provincial-office Admin, Mini and Super may choose.
+  const districtScoped = () => !!(state.me && state.me.role === 'admin' && state.me.scope !== 'province');
+  const fmtBaht = (n) => (n === null || n === undefined ? '–' : fmt(n, Math.abs(n) < 100 ? 2 : 0));
+  // Menu order by expected frequency of use.
+  const NAV_ORDER = {
+    admin: ['record', 'records', 'reports', 'account'],
+    mini: ['@daily', 'records', 'reports', 'record', 'admins', '@settings', 'targets', 'ghg', 'import', 'history', 'crops', 'api', 'log', 'account']
+  };
 
   const state = { token: sessionStorage.getItem(TOKEN_KEY) || '', me: null, types: [], crop: '', file: null, parsed: null, check: null };
 
@@ -63,13 +71,82 @@
     $('viewLogin').classList.add('hidden'); $('viewApp').classList.remove('hidden'); $('admUser').classList.remove('hidden');
     $('admUserName').textContent = me.name;
     $('admUserRole').textContent = me.roleLabel || ROLE_TH[me.role] || me.role;
-    $('admUserDistrict').hidden = !me.districtName;
-    $('admUserDistrict').textContent = me.districtName ? 'อ.' + me.districtName : '';
+    const office = me.role === 'admin' ? (me.officeLabel || (me.districtName ? 'อ.' + me.districtName : '')) : '';
+    $('admUserDistrict').hidden = !office;
+    $('admUserDistrict').textContent = office;
     if (me.province) $('admProvince').textContent = 'จังหวัด' + me.province;
+    const nav = $('admNav');
+    const order = NAV_ORDER[level(me.role) >= 2 ? 'mini' : 'admin'];
+    order.forEach((k) => { const el = k[0] === '@' ? nav.querySelector(`[data-group="${k.slice(1)}"]`) : nav.querySelector(`[data-view="${k}"]`); if (el) nav.appendChild(el); });
     document.querySelectorAll('[data-role="mini"]').forEach((b) => b.classList.toggle('hidden', level(me.role) < 2));
-    show('record');
+    show(level(me.role) >= 2 ? 'records' : 'record');
     if (level(me.role) >= 2) await loadCropTypes();
   }
+
+  /* ---------- officer sign-in by phone / self-registration (2.1.0) ---------- */
+  const reg = { meta: null };
+  function loginTab(tab) {
+    document.querySelectorAll('[data-ltab]').forEach((b) => { const on = b.dataset.ltab === tab; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
+    document.querySelectorAll('[data-lpanel]').forEach((f) => f.classList.toggle('hidden', f.dataset.lpanel !== tab));
+    if (tab === 'register') loadRegMeta().catch((err) => { $('regError').textContent = err.message; });
+    const first = document.querySelector(`[data-lpanel="${tab}"] input`); if (first) first.focus();
+  }
+  document.querySelectorAll('[data-ltab]').forEach((b, i, all) => {
+    b.addEventListener('click', () => loginTab(b.dataset.ltab));
+    b.addEventListener('keydown', (e) => { const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!d) return; e.preventDefault(); const n = all[(i + d + all.length) % all.length]; loginTab(n.dataset.ltab); n.focus(); });
+  });
+  document.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => loginTab(b.dataset.goto)));
+  async function loadRegMeta() {
+    if (reg.meta) return;
+    reg.meta = await call('staffMetaServer');
+    const m = reg.meta;
+    $('regOffice').innerHTML = '<option value="">เลือกหน่วยงาน</option>' + Object.entries(m.officeTypes).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join('');
+    $('regGroup').innerHTML = '<option value="">เลือกกลุ่ม</option>' + m.groups.map((g) => `<option>${esc(g)}</option>`).join('');
+    $('regDistrict').innerHTML = '<option value="">เลือกอำเภอ</option>' + m.districts.map((d) => `<option value="${esc(d.code)}">${esc(d.name)}</option>`).join('');
+    $('regProvinces').innerHTML = m.provinces.map((p) => `<option value="${esc(p)}">`).join('');
+    if (!$('regProvince').value) $('regProvince').value = m.province;
+    syncRegOffice();
+  }
+  function syncRegOffice() {
+    const prov = $('regOffice').value === 'province';
+    ['regGroup', 'regGroupLabel'].forEach((id) => $(id).classList.toggle('hidden', !prov));
+    ['regDistrict', 'regDistrictLabel'].forEach((id) => $(id).classList.toggle('hidden', prov));
+  }
+  $('regOffice').addEventListener('change', syncRegOffice);
+  const digits = (v) => String(v || '').replace(/\D/g, '');
+  $('staffLoginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const phone = digits($('staffPhone').value);
+    if (!/^0\d{9}$/.test(phone)) { $('staffLoginError').textContent = 'กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก'; return; }
+    busy($('staffLoginBtn'), 'กำลังตรวจสอบ…', async () => {
+      try {
+        const r = await call('staffLoginServer', { phone });
+        state.token = r.token; sessionStorage.setItem(TOKEN_KEY, r.token); $('staffLoginError').textContent = '';
+        await enterApp(r);
+      } catch (err) { $('staffLoginError').textContent = err.message; }
+    });
+  });
+  $('staffRegForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const input = { name: f.name.value.trim().replace(/\s+/g, ' '), phone: digits(f.phone.value), officeType: f.officeType.value, group: f.group.value, district: f.district.value, province: f.province.value.trim() };
+    const miss = [];
+    if (!/\S+\s+\S+/.test(input.name)) miss.push('ชื่อ-สกุล');
+    if (!/^0\d{9}$/.test(input.phone)) miss.push('หมายเลขโทรศัพท์ 10 หลัก');
+    if (!input.officeType) miss.push('หน่วยงาน');
+    if (input.officeType === 'province' && !input.group) miss.push('กลุ่ม');
+    if (input.officeType === 'district' && !input.district) miss.push('อำเภอ');
+    if (!input.province) miss.push('จังหวัด');
+    if (miss.length) { $('regError').textContent = 'กรุณากรอก: ' + miss.join(', '); return; }
+    busy($('regBtn'), 'กำลังลงทะเบียน…', async () => {
+      try {
+        const r = await call('staffRegisterServer', input);
+        state.token = r.token; sessionStorage.setItem(TOKEN_KEY, r.token); $('regError').textContent = '';
+        await enterApp(r);
+        toast(r.message);
+      } catch (err) { $('regError').textContent = err.message; }
+    });
+  });
 
   $('loginForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -315,17 +392,22 @@
     const canTouch = (a) => a.role !== 'super' || state.me.role === 'super';
     const sel = $('adminDistrict');
     if (!sel.options.length) sel.innerHTML = '<option value="">เลือกอำเภอ</option>' + meta.districts.map((d) => `<option value="${esc(d.code)}">${esc(d.name)}</option>`).join('');
+    if (!$('adminGroup').options.length) {
+      const st = await call('staffMetaServer');
+      $('adminGroup').innerHTML = '<option value="">เลือกกลุ่ม</option>' + st.groups.map((g) => `<option>${esc(g)}</option>`).join('');
+    }
+    const officeOf = (a) => (a.role !== 'admin' ? 'ทุกอำเภอ' : a.officeType === 'province' ? 'สนง.เกษตรจังหวัด' + (a.group ? ' · ' + a.group : '') : 'สนง.เกษตรอำเภอ' + (dname(a.district) || '<ไม่ได้กำหนด>'));
     const superOpt = $('adminRole').querySelector('option[value="super"]');
     if (superOpt) superOpt.hidden = superOpt.disabled = state.me.role !== 'super';
     syncAdminRole();
     $('adminsBody').innerHTML = list.map((a) => `<tr><td>${esc(a.name)}</td><td>${esc(a.username)}</td><td>${esc(a.phone || '–')}</td><td>${esc(ROLE_TH[a.role] || a.role)}</td>
-      <td>${a.role === 'admin' ? esc(dname(a.district) || '<ไม่ได้กำหนด>') : 'ทุกอำเภอ'}</td>
+      <td>${esc(officeOf(a))}${a.registeredVia === 'self' ? '<br><span class="adm-badge">ลงทะเบียนเอง</span>' : ''}</td>
       <td><span class="adm-badge ${esc(a.status)}">${esc(STATUS_TH[a.status] || a.status)}</span></td><td>${esc(a.lastLogin || '–')}</td>
       <td>${canTouch(a) ? `<button type="button" data-edit-admin="${esc(a.username)}">แก้ไข</button><button type="button" data-reset="${esc(a.username)}">ตั้งรหัสผ่านใหม่</button>` : '<span class="adm-muted">เฉพาะ Super Admin</span>'}</td></tr>`).join('');
     $('adminsBody').querySelectorAll('[data-edit-admin]').forEach((b) => b.addEventListener('click', () => {
       const a = list.find((x) => x.username === b.dataset.editAdmin); const f = $('adminForm');
       f.name.value = a.name; f.username.value = a.username; f.username.readOnly = true; f.phone.value = a.phone || ''; f.role.value = a.role; f.status.value = a.status;
-      f.district.value = a.district || ''; syncAdminRole();
+      f.district.value = a.district || ''; f.officeType.value = a.officeType === 'province' ? 'province' : 'district'; f.group.value = a.group || ''; syncAdminRole();
       $('adminPwLabel').classList.add('hidden'); $('adminFormTitle').textContent = 'แก้ไขผู้ดูแล ' + a.name; f.name.focus();
     }));
     $('adminsBody').querySelectorAll('[data-reset]').forEach((b) => b.addEventListener('click', async () => {
@@ -334,15 +416,21 @@
       try { toast((await call('adminResetPasswordServer', { username: b.dataset.reset, password: pw })).message); } catch (err) { toast(err.message); }
     }));
   }
-  function syncAdminRole() { $('adminDistrictWrap').classList.toggle('hidden', $('adminRole').value !== 'admin'); }
+  function syncAdminRole() {
+    const isAdm = $('adminRole').value === 'admin', prov = $('adminOffice').value === 'province';
+    $('adminOfficeWrap').classList.toggle('hidden', !isAdm);
+    $('adminGroupWrap').classList.toggle('hidden', !isAdm || !prov);
+    $('adminDistrictWrap').classList.toggle('hidden', !isAdm || prov);
+  }
   $('adminRole').addEventListener('change', syncAdminRole);
+  $('adminOffice').addEventListener('change', syncAdminRole);
   function resetAdminForm() {
     const f = $('adminForm'); f.reset(); f.username.readOnly = false; syncAdminRole(); $('adminPwLabel').classList.remove('hidden'); $('adminFormTitle').textContent = 'เพิ่มผู้ดูแล'; setResult('adminResult', '');
   }
   $('adminFormReset').addEventListener('click', resetAdminForm);
   $('adminForm').addEventListener('submit', async (e) => {
     e.preventDefault(); const f = e.target;
-    const input = { name: f.name.value, username: f.username.value.trim().toLowerCase(), phone: f.phone.value.replace(/\D/g, ''), role: f.role.value, status: f.status.value, district: f.district.value };
+    const input = { name: f.name.value, username: f.username.value.trim().toLowerCase(), phone: f.phone.value.replace(/\D/g, ''), role: f.role.value, status: f.status.value, district: f.district.value, officeType: f.officeType.value, group: f.group.value };
     if (!f.username.readOnly) input.password = f.password.value;
     try { const r = await call('adminSaveServer', input); resetAdminForm(); setResult('adminResult', r.message, true); loadAdmins(); }
     catch (err) { setResult('adminResult', err.message, false); }
@@ -589,7 +677,7 @@
   async function loadRecordView() {
     const m = await loadResidueMeta();
     const f = $('recForm');
-    const isAdmin = state.me.role === 'admin';
+    const isAdmin = districtScoped();
     f.date.max = m.today;
     if (!f.date.value) f.date.value = m.today;
     $('recDistrictWrap').classList.toggle('hidden', isAdmin);
@@ -597,13 +685,13 @@
       $('recDistrict').innerHTML = '<option value="">เลือกอำเภอ</option>' + m.districts.map((d) => `<option value="${esc(d.code)}">${esc(d.name)}</option>`).join('');
     }
     if (!$('recSubdistrict').options.length) fillRecSubs();
-    $('recScope').textContent = isAdmin ? `อำเภอ${m.districtName} จังหวัด${m.province} · บันทึกได้เฉพาะตำบลในอำเภอที่ลงทะเบียน` : `จังหวัด${m.province} (บันทึกได้ทุกอำเภอ)`;
+    $('recScope').textContent = isAdmin ? `อำเภอ${m.districtName} จังหวัด${m.province} · บันทึกได้เฉพาะตำบลในอำเภอที่ลงทะเบียน` : `จังหวัด${m.province} (บันทึกได้ทุกอำเภอ${state.me.role === 'admin' ? ' แก้ไขได้เฉพาะรายการของตนเอง' : ''})`;
     $('recRecorder').textContent = state.me.name;
     renderRecChips();
     if (!res.gpsTried) { res.gpsTried = true; getGps(); }
   }
   function fillRecSubs(keep) {
-    const district = state.me.role === 'admin' ? state.me.district : $('recDistrict').value;
+    const district = districtScoped() ? state.me.district : $('recDistrict').value;
     const subs = subsOf(district);
     $('recSubdistrict').innerHTML = (district ? '<option value="">เลือกตำบล</option>' : '<option value="">เลือกอำเภอก่อน</option>') +
       subs.map((t) => `<option value="${esc(t.code)}">${esc(t.name)}</option>`).join('');
@@ -650,7 +738,11 @@
     else if (m.params.mode === 'residue' && crop.residueTRai !== null && crop.cf !== null) { burned = crop.residueTRai * 1000 * crop.cf; how = 'เศษวัสดุต่อไร่ × Cf'; }
     else if (crop.hasStandard) { burned = crop.consumedKgRai; how = 'IPCC Standard'; }
     const ghg = burned === null ? null : area * burned * ef / 1e6;
+    const mm = m.methods.find((x) => x.method === res.method);
+    const counted = mm ? mm.countValue !== false : true;
+    const value = tons !== null && crop.priceBahtKg !== null && res.method ? (counted ? tons * 1000 * crop.priceBahtKg : 0) : null;
     el.innerHTML = `ประมาณการ: ${tons !== null ? `เศษวัสดุ ≈ <b>${fmt(tons, 2)}</b> ตัน · ` : ''}` +
+      (value !== null ? (counted ? `มูลค่า ≈ <b>${fmtBaht(value)}</b> บาท <span class="adm-muted">(${fmt(crop.priceBahtKg, 2)} บาท/กก.)</span> · ` : '<span class="adm-muted">ประเภทนี้ไม่นับมูลค่า</span> · ') : '') +
       (ghg !== null ? `GHG ที่ลดได้ ≈ <b>${fmtG(ghg)}</b> tCO<sub>2</sub>e <span class="adm-muted">(${how})</span>`
         : `<span class="adm-muted">${esc(crop.name)}ยังไม่มีค่ามาตรฐาน GHG จะคำนวณเมื่อกรอกชีวมวลจากพื้นที่จริงพร้อมแหล่งอ้างอิง</span>`);
   }
@@ -727,7 +819,7 @@
     const f = e.target, m = res.meta;
     const miss = [];
     if (!f.date.value) miss.push('วันที่');
-    if (state.me.role !== 'admin' && !f.district.value) miss.push('อำเภอ');
+    if (!districtScoped() && !f.district.value) miss.push('อำเภอ');
     if (!f.subdistrict.value) miss.push('ตำบล');
     if (!res.crop) miss.push('ชนิดพืช');
     if (!res.method) miss.push('ประเภทการจัดการ');
@@ -748,7 +840,7 @@
       try {
         const r = await call('residueSaveServer', input);
         const w = r.warnings && r.warnings.length ? `<div class="adm-note"><strong>โปรดตรวจสอบ</strong><ul>${r.warnings.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
-        const g = r.record.ghg !== null ? ` GHG ที่ลดได้ ${fmtG(r.record.ghg)} tCO₂e` : '';
+        const g = (r.record.ghg !== null ? ` GHG ที่ลดได้ ${fmtG(r.record.ghg)} tCO₂e` : '') + (r.record.value ? ` มูลค่า ${fmtBaht(r.record.value)} บาท` : '');
         $('recResult').className = 'adm-result is-ok';
         $('recResult').innerHTML = `${esc(r.message)}${esc(g)}${w}`;
         toast(r.message);
@@ -765,7 +857,7 @@
     const f = $('recForm');
     res.editing = r.id; res.crop = r.crop; res.method = r.method;
     f.date.value = r.date;
-    if (state.me.role !== 'admin') f.district.value = r.district;
+    if (!districtScoped()) f.district.value = r.district;
     fillRecSubs(r.subdistrict);
     f.cropOther.value = r.cropOther || ''; f.methodOther.value = r.methodOther || ''; f.area.value = r.area; f.note.value = r.note || '';
     f.mb.value = r.biomassMode === 'custom' && r.mb !== null ? r.mb : ''; f.fresh.value = r.biomassMode === 'custom' && r.fresh !== null ? r.fresh : '';
@@ -787,7 +879,7 @@
     const fl = $('recsFilter');
     if (!$('recsFy').options.length) {
       $('recsFy').innerHTML = m.fiscalYears.map((y) => `<option value="${y}" ${y === m.fy ? 'selected' : ''}>${y}</option>`).join('');
-      $('recsDistrictWrap').classList.toggle('hidden', state.me.role === 'admin');
+      $('recsDistrictWrap').classList.toggle('hidden', districtScoped());
       $('recsDistrict').innerHTML = '<option value="">ทุกอำเภอ</option>' + m.districts.map((d) => `<option value="${esc(d.code)}">${esc(d.name)}</option>`).join('');
       $('recsCrop').innerHTML = '<option value="">ทุกชนิด</option>' + m.crops.map((c) => `<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');
       $('recsMethod').innerHTML = '<option value="">ทุกประเภท</option>' + m.methods.map((x) => `<option>${esc(x.method)}</option>`).join('');
@@ -798,12 +890,12 @@
     const r = await call('residueListServer', input);
     res.list = r.records;
     const t = r.totals;
-    $('recsSum').innerHTML = `${fmt(t.records)} รายการ · พื้นที่ <b>${fmt(t.area, 2)}</b> ไร่ · เศษวัสดุ ${fmt(t.tonnes, 2)} ตัน · GHG ที่ลดได้ <b>${fmtG(t.ghg)}</b> tCO₂e` +
+    $('recsSum').innerHTML = `${fmt(t.records)} รายการ · พื้นที่ <b>${fmt(t.area, 2)}</b> ไร่ · เศษวัสดุ ${fmt(t.tonnes, 2)} ตัน · มูลค่า <b>${fmtBaht(t.value)}</b> บาท · GHG ที่ลดได้ <b>${fmtG(t.ghg)}</b> tCO₂e` +
       (r.truncated ? ' <span class="adm-muted">(แสดง 500 รายการล่าสุด)</span>' : '');
     $('recsList').innerHTML = r.records.map((x) => `<article class="adm-rec-card">
         <header><b>${fmt(x.area, 2)} ไร่</b><span>${esc(x.method)}${x.methodOther ? ': ' + esc(x.methodOther) : ''}</span><span class="adm-badge">${esc(x.cropName)}</span></header>
         <p>${esc(x.date)} · ต.${esc(x.subdistrictName)} อ.${esc(x.districtName)}</p>
-        <p>${x.ghg !== null ? `GHG ที่ลดได้ <b>${fmtG(x.ghg)}</b> tCO₂e` : `<span class="adm-muted">ยังไม่คำนวณ GHG (ไม่มีค่ามาตรฐาน)</span>`}${x.tonnes !== null ? ` · เศษวัสดุ ${fmt(x.tonnes, 2)} ตัน` : ''}${x.dataStatus === 'Measured' ? ' · <span class="adm-badge active">ค่าจากพื้นที่จริง</span>' : ''}</p>
+        <p>${x.ghg !== null ? `GHG ที่ลดได้ <b>${fmtG(x.ghg)}</b> tCO₂e` : `<span class="adm-muted">ยังไม่คำนวณ GHG (ไม่มีค่ามาตรฐาน)</span>`}${x.tonnes !== null ? ` · เศษวัสดุ ${fmt(x.tonnes, 2)} ตัน` : ''}${x.value ? ` · มูลค่า ${fmtBaht(x.value)} บาท` : ''}${x.dataStatus === 'Measured' ? ' · <span class="adm-badge active">ค่าจากพื้นที่จริง</span>' : ''}</p>
         <p class="adm-muted">บันทึกโดย ${esc(x.recorderName)}${x.lat !== null ? ` · <a href="https://www.google.com/maps?q=${x.lat},${x.lng}" target="_blank" rel="noopener">พิกัด</a>` : ''}${x.note ? ' · ' + esc(x.note) : ''}</p>
         <footer>${x.photoCount ? `<button type="button" data-photo="${esc(x.id)}">ภาพ (${x.photoCount})</button>` : ''}
           ${x.canEdit ? `<button type="button" data-edit="${esc(x.id)}">แก้ไข</button><button type="button" class="danger" data-del="${esc(x.id)}">ลบ</button>` : ''}</footer>
@@ -817,7 +909,7 @@
     }));
   }
   function fillRecsSubs() {
-    const d = state.me.role === 'admin' ? state.me.district : $('recsDistrict').value;
+    const d = districtScoped() ? state.me.district : $('recsDistrict').value;
     $('recsSubdistrict').innerHTML = '<option value="">ทุกตำบล</option>' + subsOf(d).map((t) => `<option value="${esc(t.code)}">${esc(t.name)}</option>`).join('');
   }
   $('recsFilter').addEventListener('change', (e) => { if (e.target.name === 'district') fillRecsSubs(); loadRecords().catch((err) => toast(err.message)); });
@@ -853,13 +945,14 @@
         <td class="num">${c.consumedKgRai === null ? '–' : fmt(c.consumedKgRai, 2)}<br><span class="adm-muted">${c.consumedTHa === '' ? '' : c.consumedTHa + ' t/ha'}</span></td>
         <td class="num">${c.cf === '' || c.cf === null ? '–' : c.cf}</td><td class="num">${c.residueTRai === '' || c.residueTRai === null ? '–' : c.residueTRai}</td>
         <td class="num">${smp.standard === null || smp.standard === undefined ? '–' : fmt(smp.standard, 4)}</td><td class="num">${smp.residue === null || smp.residue === undefined ? '–' : fmt(smp.residue, 4)}</td>
+        <td class="num">${c.priceBahtKg === null || c.priceBahtKg === '' ? '–' : fmt(c.priceBahtKg, 2)}<br><span class="adm-muted">${esc(c.priceReference || '')}</span></td>
         <td>${esc(c.reference || '–')}<br><span class="adm-muted">${esc(c.residueReference || '')}</span></td>
         <td><span class="adm-badge ${c.active ? 'active' : 'disabled'}">${c.active ? 'ใช้งาน' : 'ปิด'}</span></td>
         <td><button type="button" data-edit-crop="${esc(c.key)}">แก้ไข</button></td></tr>`;
     }).join('');
     $('ghgCropsBody').querySelectorAll('[data-edit-crop]').forEach((b) => b.addEventListener('click', () => {
       const c = s.crops.find((x) => x.key === b.dataset.editCrop), cf = $('ghgCropForm');
-      ['key', 'name', 'consumedTHa', 'cf', 'residueName', 'residueTRai', 'sortOrder', 'reference', 'residueReference'].forEach((k) => { cf[k].value = c[k] === null || c[k] === undefined ? '' : c[k]; });
+      ['key', 'name', 'consumedTHa', 'cf', 'residueName', 'residueTRai', 'sortOrder', 'reference', 'residueReference', 'priceBahtKg', 'priceReference'].forEach((k) => { cf[k].value = c[k] === null || c[k] === undefined ? '' : c[k]; });
       cf.active.checked = c.active; cf.key.readOnly = true; $('ghgCropTitle').textContent = 'แก้ไขค่าพืช ' + c.name; cf.name.focus();
     }));
     $('ghgBoundary').innerHTML = s.boundary.map((x) => `<li>${esc(x)}</li>`).join('');
@@ -892,7 +985,8 @@
   $('ghgCropForm').addEventListener('submit', async (e) => {
     e.preventDefault(); const f = e.target;
     const input = { key: f.key.value.trim().toLowerCase(), name: f.name.value, consumedTHa: f.consumedTHa.value, cf: f.cf.value, residueName: f.residueName.value, residueTRai: f.residueTRai.value,
-      sortOrder: Number(f.sortOrder.value), reference: f.reference.value, residueReference: f.residueReference.value, active: f.active.checked };
+      sortOrder: Number(f.sortOrder.value), reference: f.reference.value, residueReference: f.residueReference.value, active: f.active.checked,
+      priceBahtKg: f.priceBahtKg.value, priceReference: f.priceReference.value };
     try { const r = await call('ghgCropSaveServer', input); ghg.s = r.settings; renderGhg(); toast(r.message); resetCropForm(); res.meta = null; } catch (err) { toast(err.message); }
   });
   function resetCropForm() { const f = $('ghgCropForm'); f.reset(); f.key.readOnly = false; f.active.checked = true; $('ghgCropTitle').textContent = 'เพิ่มหรือแก้ไขค่าพืช'; }
@@ -914,13 +1008,13 @@
     sumTargets();
     $('mtCrop').innerHTML = '<option value="">ทุกชนิด</option>' + s.crops.map((c) => `<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');
     $('mtBody').innerHTML = s.methods.map((m) => `<tr><td>${esc(m.method)}</td><td>${esc((s.crops.find((c) => c.key === m.cropKey) || {}).name || 'ทุกชนิด')}</td>
-      <td>${m.needsDetail ? 'ใช่' : '–'}</td><td class="num">${m.sortOrder}</td><td><span class="adm-badge ${m.active ? 'active' : 'disabled'}">${m.active ? 'ใช้งาน' : 'ปิด'}</span></td>
+      <td>${m.needsDetail ? 'ใช่' : '–'}</td><td>${m.countValue ? 'นับ' : '<span class="adm-muted">ไม่นับ</span>'}</td><td class="num">${m.sortOrder}</td><td><span class="adm-badge ${m.active ? 'active' : 'disabled'}">${m.active ? 'ใช้งาน' : 'ปิด'}</span></td>
       <td><button type="button" data-edit-method="${esc(m.method)}">แก้ไข</button></td></tr>`).join('');
     $('mtBody').querySelectorAll('[data-edit-method]').forEach((b) => b.addEventListener('click', () => {
       const m = s.methods.find((x) => x.method === b.dataset.editMethod), f = $('mtForm');
-      f.method.value = m.method; f.cropKey.value = m.cropKey; f.sortOrder.value = m.sortOrder; f.needsDetail.checked = m.needsDetail; f.active.checked = m.active; f.method.focus();
+      f.method.value = m.method; f.cropKey.value = m.cropKey; f.sortOrder.value = m.sortOrder; f.needsDetail.checked = m.needsDetail; f.active.checked = m.active; f.countValue.checked = m.countValue; f.method.focus();
     }));
-    $('siteForm').province.value = s.province; $('siteForm').office.value = s.office;
+    $('siteForm').province.value = s.province; $('siteForm').office.value = s.office; $('siteForm').groups.value = (s.groups || []).join('\n');
   }
   function sumTargets() {
     const cols = [...$('tgBody').querySelectorAll('tr:first-child input')].map((i) => i.name || i.dataset.method);
@@ -943,13 +1037,13 @@
   $('mtForm').addEventListener('submit', async (e) => {
     e.preventDefault(); const f = e.target;
     try {
-      await call('residueMethodSaveServer', { method: f.method.value, cropKey: f.cropKey.value, needsDetail: f.needsDetail.checked, active: f.active.checked, sortOrder: Number(f.sortOrder.value) });
-      toast('บันทึกประเภทแล้ว'); f.reset(); f.active.checked = true; res.meta = null; loadTargets(Number($('tgFy').value));
+      await call('residueMethodSaveServer', { method: f.method.value, cropKey: f.cropKey.value, needsDetail: f.needsDetail.checked, active: f.active.checked, sortOrder: Number(f.sortOrder.value), countValue: f.countValue.checked });
+      toast('บันทึกประเภทแล้ว'); f.reset(); f.active.checked = true; f.countValue.checked = true; res.meta = null; loadTargets(Number($('tgFy').value));
     } catch (err) { toast(err.message); }
   });
   $('siteForm').addEventListener('submit', async (e) => {
     e.preventDefault(); const f = e.target;
-    try { const r = await call('siteSaveServer', { province: f.province.value, office: f.office.value }); setResult('siteResult', r.message, true); $('admProvince').textContent = 'จังหวัด' + f.province.value.replace(/^จังหวัด/, ''); res.meta = null; rep.catalog = null; }
+    try { const r = await call('siteSaveServer', { province: f.province.value, office: f.office.value, groups: f.groups.value.split('\n').map((x) => x.trim()).filter(Boolean) }); reg.meta = null; setResult('siteResult', r.message, true); $('admProvince').textContent = 'จังหวัด' + f.province.value.replace(/^จังหวัด/, ''); res.meta = null; rep.catalog = null; }
     catch (err) { setResult('siteResult', err.message, false); }
   });
 

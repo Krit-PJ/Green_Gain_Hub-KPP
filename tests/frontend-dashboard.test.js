@@ -15,7 +15,7 @@ new vm.Script(js, { filename: 'frontend/assets/dashboard.js' });
 ['id="loginPage"', 'id="loginPhone"', 'id="loginBtn"', 'onclick="login()"', "toggleAuth('register')", 'id="registerPage"'].forEach(s => assert(html.includes(s), 'login markup missing: ' + s));
 ['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashSearch"',
   'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="reports"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=2.0.0') && html.includes('assets/dashboard.css?v=2.0.0'), 'dashboard assets are not linked');
+assert(html.includes('assets/dashboard.js?v=2.1.0') && html.includes('assets/dashboard.css?v=2.1.0'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
@@ -51,3 +51,9 @@ assert(admin.includes('id="recForm"') && admin.includes('capture="environment"')
 assert(admin.includes('value="mini"') && admin.includes('id="adminDistrict"') && admin.includes('data-preset="district"') && admin.includes('data-preset="province"'), 'roles / report presets missing');
 const dash = fs.readFileSync(path.join(__dirname, '..', 'frontend', 'assets', 'dashboard.js'), 'utf8');
 assert(dash.includes("endpoint: 'residue'") && dash.includes('resGhg') && dash.includes('data-province'), 'dashboard must load residue data');
+// 2.1.0: top bar name, no hero title, Green Gain Hub brand in the sign-in card, officer sign-in/registration, value.
+assert(/ggh-topbar-title[^>]*>ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร</.test(html) && !html.includes('class="ggh-title"'), 'top bar title / hero title');
+assert(/ggh-login-brand">Green Gain Hub: <span data-province>/.test(html), 'Green Gain Hub name belongs to the sign-in card');
+assert(admin.includes('id="staffLoginForm"') && admin.includes('id="staffRegForm"') && admin.includes('id="regProvinces"') && admin.includes('id="regGroup"'), 'officer sign-in / registration');
+assert(admin.includes('name="priceBahtKg"') && admin.includes('name="countValue"') && dash.includes('มูลค่าเศษวัสดุ'), 'value settings and display');
+

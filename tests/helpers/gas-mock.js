@@ -93,7 +93,7 @@ function load(options) {
   global.ContentService = { MimeType: { JSON: 'json', JAVASCRIPT: 'js' }, createTextOutput: (b) => (last = { body: b, setMimeType(m) { this.mime = m; return this; } }) };
   global.UrlFetchApp = options.urlFetch || { fetchAll: () => { throw new Error('no network in tests'); } };
   const dir = path.join(__dirname, '..', '..', 'apps-script');
-  const files = options.files || ['Districts.gs', 'Code.gs', 'Admin.gs', 'Crops.gs', 'Counter.gs', 'Reports.gs', 'Ghg.gs', 'Residue.gs'];
+  const files = options.files || ['Districts.gs', 'Code.gs', 'Admin.gs', 'Crops.gs', 'Counter.gs', 'Reports.gs', 'Ghg.gs', 'Residue.gs', 'Staff.gs'];
   const src = files.map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
   const names = options.expose || [];
   const api = new Function(src + '; return { doGet, doPost, setupSystem' + names.map((n) => ', ' + n).join('') + ' };')();
