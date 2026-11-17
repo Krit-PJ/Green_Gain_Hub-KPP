@@ -1,5 +1,5 @@
 /**
- * Green Gain Hub 2.2.1 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 2.2.2 — API-only bridge from GitHub Pages to Google Sheets.
  * Files: Code.gs (this), Districts.gs (boundaries), Admin.gs (Super / Mini Super / Admin, doPost),
  *        Crops.gs (crop area import + crop summary), Counter.gs (visit counter),
  *        Reports.gs (admin reports for print / PDF / Excel / CSV),
@@ -18,13 +18,13 @@
  *   ?api=v1&endpoint=health           Public version check
  *   POST {method,args,token}          Admin API (Admin.gs)
  */
-const APP_VERSION = '2.2.1';
+const APP_VERSION = '2.2.2';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
 const SUMMARY_CACHE_SECONDS = 300;
 const SUMMARY_CACHE_KEY = 'summary:v1:' + APP_VERSION;
-// KPP Smart Agri-Materials (รายงานการจัดการเศษวัสดุรายอำเภอ) — อ่านผ่าน Data API v1 ฝั่ง Server
+// KPP Smart Agri-Materials (รายงานการจัดการวัสดุเหลือใช้ทางการเกษตรรายอำเภอ) — อ่านผ่าน Data API v1 ฝั่ง Server
 // API Key เก็บใน Script Property SMART_AGRI_API_KEY เท่านั้น (ไม่อยู่ใน GitHub/หน้าเว็บ)
 const SMART_AGRI_DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbxoo4VuAomjDPaDPXgEF6y0CFVxBfor-4OmIi3bQVik7FCgAx_7XghYmeav7BHDbpLcaw/exec';
 const SMART_AGRI_CACHE_KEY = 'smartagri:v1:' + APP_VERSION;
@@ -280,8 +280,8 @@ function buildPublicSummary_(now) {
     notes: {
       area: 'พื้นที่แปลง (ไร่) แปลงจากรูปแบบ ไร่-งาน-ตร.ว. ของแบบฟอร์ม',
       price: 'ราคารับซื้อเป็นค่าเฉลี่ยที่ผู้รับซื้อสถานะ Active ระบุ (บาท/ไร่)',
-      residue: residueKnown.length ? 'ปริมาณเศษวัสดุประมาณจาก BioRate (ตัน/ไร่) ในชีต Research_Refs'
-        : 'ยังไม่ได้กำหนด BioRate (ตัน/ไร่) ในชีต Research_Refs จึงยังไม่ประมาณปริมาณเศษวัสดุ',
+      residue: residueKnown.length ? 'ปริมาณวัสดุเหลือใช้ทางการเกษตรประมาณจาก BioRate (ตัน/ไร่) ในชีต Research_Refs'
+        : 'ยังไม่ได้กำหนด BioRate (ตัน/ไร่) ในชีต Research_Refs จึงยังไม่ประมาณปริมาณวัสดุเหลือใช้ทางการเกษตร',
       privacy: 'ข้อมูลสรุปเชิงสถิติเท่านั้น ไม่มีชื่อ เบอร์โทร หรือพิกัดรายแปลง'
     }
   };
@@ -310,7 +310,7 @@ function materialStat_(map, material) {
   return map[material] || (map[material] = { plots: 0, areaRai: 0, buyers: 0, capacityTonPerDay: 0, priceSum: 0, priceCount: 0 });
 }
 
-/** Research_Refs: Type = ชนิดเศษวัสดุ, BioRate = ตัน/ไร่ (optional). */
+/** Research_Refs: Type = ชนิดวัสดุเหลือใช้ทางการเกษตร, BioRate = ตัน/ไร่ (optional). */
 function researchRefs_() {
   const out = {};
   try {
@@ -1032,8 +1032,8 @@ function validateMaterial_(type, other) {
   other = cleanText_(other, 150);
   // Backward-compatible: an old free-text material becomes “อื่นๆ”.
   if (MATERIAL_TYPES.indexOf(type) < 0 && type) { other = type; type = 'อื่นๆ'; }
-  if (MATERIAL_TYPES.indexOf(type) < 0) throw new Error('กรุณาเลือกชนิดเศษวัสดุ');
-  if (type === 'อื่นๆ' && !other) throw new Error('กรุณาระบุชนิดเศษวัสดุอื่นๆ');
+  if (MATERIAL_TYPES.indexOf(type) < 0) throw new Error('กรุณาเลือกชนิดวัสดุเหลือใช้ทางการเกษตร');
+  if (type === 'อื่นๆ' && !other) throw new Error('กรุณาระบุชนิดวัสดุเหลือใช้ทางการเกษตรอื่นๆ');
   if (type !== 'อื่นๆ') other = '';
   return { type: type, other: other, resolved: type === 'อื่นๆ' ? other : type };
 }

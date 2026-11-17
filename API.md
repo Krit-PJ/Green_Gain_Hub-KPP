@@ -93,7 +93,7 @@ Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts
 ```
 
 - `asOfMonth` = เดือนที่ผ่านมา (คงเหลือ = total − ผลรวมเดือน ≤ asOfMonth) หน้าเว็บเลือกเดือนอื่นได้ โดยคำนวณจาก `months`
-- `residue` มีค่าเมื่อกำหนด BioRate (ตัน/ไร่) ของชนิดเศษวัสดุใน `Research_Refs`
+- `residue` มีค่าเมื่อกำหนด BioRate (ตัน/ไร่) ของชนิดวัสดุเหลือใช้ทางการเกษตรใน `Research_Refs`
 
 ### รายตำบล
 
@@ -115,11 +115,11 @@ Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts
 - Admin: `reportDataServer({sections:[…], crop, season, asOf, title, unmaskPhones})` → `{ title, generatedAt, generatedBy, phonesMasked, sections:[{ key, title, columns, rows, totals, notes }] }` (สูงสุด 20 ส่วน; ส่วน `market.plots`, `market.buyers`, `audit.log` เฉพาะ Super Admin; `unmaskPhones` มีผลเฉพาะ Super Admin)
 - Admin: `reportExportLogServer({format:'print'|'xlsx'|'csv', sections})` บันทึกการส่งออก
 
-## 2.0.0: การจัดการเศษวัสดุและ GHG
+## 2.0.0: การจัดการวัสดุเหลือใช้ทางการเกษตรและ GHG
 
 - `GET /exec?api=v1&endpoint=residue[&fy=2570]` (สาธารณะ, cache 5 นาที, ไม่มีชื่อ พิกัด ภาพ หรือรหัสรายการ) →
   `{ fy, fyRange, fiscalYears, province, params:{label, gwpSet, combinedEf, mode, version}, crops, methods, cells:[{d, c, m, n, a, t, g, ch4, n2o, ch4e, n2oe, b, x}], totals, targets:{total, officers, byMethod, byDistrict}, boundary }`
-  - `cells` = ผลรวม อำเภอ × พืช × ประเภท: `a` ไร่, `t` ตันเศษวัสดุ, `g` tCO2e ที่ลดได้, `x` ไร่ที่ยังไม่คำนวณ GHG
+  - `cells` = ผลรวม อำเภอ × พืช × ประเภท: `a` ไร่, `t` ตันวัสดุเหลือใช้ทางการเกษตร, `g` tCO2e ที่ลดได้, `x` ไร่ที่ยังไม่คำนวณ GHG
 - `summary` มี `province` เพิ่ม
 - Admin (ทุกระดับ, Admin เห็นเฉพาะอำเภอตัวเอง): `residueMetaServer`, `residueSaveServer`, `residueListServer`, `residueDeleteServer`, `residuePhotoServer`, `ghgValidationServer`
 - Mini Super Admin / Super Admin: `ghgSettingsServer`, `ghgParamsSaveServer`, `ghgCropSaveServer`, `ghgCalculateServer`, `residueSettingsServer`, `residueTargetsSaveServer`, `residueMethodSaveServer`, `siteSaveServer` และเมธอดผู้ดูแลเดิมทั้งหมด (Mini จัดการบัญชี Super Admin ไม่ได้)
@@ -132,7 +132,7 @@ Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts
 - `ghgCropSaveServer` รับ `priceBahtKg`, `priceReference`; `residueMethodSaveServer` รับ `countValue`; `siteSaveServer` รับ `groups`
 
 
-## 2.2.0: สมดุลเศษวัสดุ ราคากลาง รายงาน 4 แบบ
+## 2.2.0: สมดุลวัสดุเหลือใช้ทางการเกษตร ราคากลาง รายงาน 4 แบบ
 
 - `GET /exec?api=v1&endpoint=balance[&fy=2570]` (สาธารณะ, cache 5 นาที, ไม่มีชื่อ เบอร์ หรือพิกัด) →
   `{ fy, fyRange, totals, byDistrict:[{district, name, harvestedRai, potentialTon, removableTon, listedRai, buyers, managedRai, managedPct, atRiskRai, flags}], rows:[อำเภอ × พืช], months:[{month, harvestedRai, managedRai}], sources }`

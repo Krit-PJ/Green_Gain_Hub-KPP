@@ -1,4 +1,4 @@
-# Deploy Green Gain Hub 2.2.1
+# Deploy Green Gain Hub 2.2.2
 
 สถานะ 17 พ.ย. 2569: **Deploy แล้ว**
 

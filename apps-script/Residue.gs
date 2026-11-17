@@ -333,14 +333,14 @@ function residueValidate_(input, s, existing) {
   v.crop = crop.key; v.cropName = crop.name; v.cropOther = cleanText_(input.cropOther, 60);
   if (crop.key === 'other' && !v.cropOther) throw new Error('กรุณาระบุชื่อพืช');
   const method = residueMethods_(false).find(function (m) { return m.method === String(input.method || ''); });
-  if (!method) throw new Error('กรุณาเลือกประเภทการจัดการเศษวัสดุ');
+  if (!method) throw new Error('กรุณาเลือกประเภทการจัดการวัสดุเหลือใช้ทางการเกษตร');
   if (method.cropKey && method.cropKey !== crop.key) {
     throw new Error('"' + method.method + '" ใช้กับ' + ((crops[method.cropKey] || {}).name || method.cropKey) + 'เท่านั้น');
   }
   v.method = method.method; v.methodOther = cleanText_(input.methodOther, 100);
-  if (method.needsDetail && !v.methodOther) throw new Error('กรุณาระบุวิธีจัดการเศษวัสดุ');
+  if (method.needsDetail && !v.methodOther) throw new Error('กรุณาระบุวิธีจัดการวัสดุเหลือใช้ทางการเกษตร');
   v.area = Number(input.area);
-  if (!isFinite(v.area) || v.area <= 0) throw new Error('พื้นที่ที่จัดการเศษวัสดุต้องมากกว่า 0 ไร่');
+  if (!isFinite(v.area) || v.area <= 0) throw new Error('พื้นที่ที่จัดการวัสดุเหลือใช้ทางการเกษตรต้องมากกว่า 0 ไร่');
   if (v.area > 50000) throw new Error('พื้นที่ต่อรายการต้องไม่เกิน 50,000 ไร่ กรุณาตรวจสอบตัวเลข');
   v.area = round_(v.area, 2);
   v.warnings = [];
@@ -459,7 +459,7 @@ function residueSave_(input, s) {
     .filter(function (i, k, arr) { return existing && i >= 0 && i < existing.photos.length && Math.floor(i) === i && arr.indexOf(i) === k; })
     .map(function (i) { return existing.photos[i]; });
   const newPhotos = Array.isArray(input.photos) ? input.photos : [];
-  if (keep.length + newPhotos.length < 1) throw new Error('กรุณาแนบภาพถ่ายการจัดการเศษวัสดุอย่างน้อย 1 ภาพ');
+  if (keep.length + newPhotos.length < 1) throw new Error('กรุณาแนบภาพถ่ายการจัดการวัสดุเหลือใช้ทางการเกษตรอย่างน้อย 1 ภาพ');
   if (keep.length + newPhotos.length > RESIDUE_MAX_PHOTOS) throw new Error('แนบภาพได้ไม่เกิน ' + RESIDUE_MAX_PHOTOS + ' ภาพ');
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -729,7 +729,7 @@ function residueGroupBy_(R, keyFn) {
 function residueValueNote_(R) {
   const off = Object.keys(R.ctx.methods).filter(function (m) { return !R.ctx.methods[m].countValue; });
   const g = residuePriceGlobal_();
-  return 'มูลค่า (ประมาณการ) = ปริมาณเศษวัสดุ (ตัน) × 1,000 × ราคา (บาท/กก.) ราคากลาง ' + g.price + ' บาท/กก. (' + g.reference + ')' +
+  return 'มูลค่า (ประมาณการ) = ปริมาณวัสดุเหลือใช้ทางการเกษตร (ตัน) × 1,000 × ราคา (บาท/กก.) ราคากลาง ' + g.price + ' บาท/กก. (' + g.reference + ')' +
     ' ถ้าเจ้าหน้าที่กรอกปริมาณที่ขายหรือนำออกจริง ใช้ปริมาณนั้นแทนค่าประมาณ' + (off.length ? ' ไม่นับมูลค่าประเภท: ' + off.join(', ') : '');
 }
 
@@ -745,18 +745,18 @@ function residueReportSection_(key, R, s) {
       subtitle: scope,
       columns: [col_('item', 'รายการ'), col_('value', 'ค่า', 'number'), col_('unit', 'หน่วย')],
       rows: [
-        { item: 'พื้นที่จัดการเศษวัสดุรวม', value: round_(g.area, 2), unit: 'ไร่' },
+        { item: 'พื้นที่จัดการวัสดุเหลือใช้ทางการเกษตรรวม', value: round_(g.area, 2), unit: 'ไร่' },
         { item: 'เป้าหมาย', value: target === null ? '' : target, unit: target === null ? 'ยังไม่กำหนด' : 'ไร่' },
         { item: 'ร้อยละที่ดำเนินการได้', value: target ? pct_(g.area, target) : '', unit: '%' },
         { item: 'ก๊าซเรือนกระจกที่ลดได้ (ประมาณการ)', value: round_(g.ghg, 4), unit: GHG_UNIT_T },
         { item: 'CH4', value: round_(g.ch4, 6), unit: 'ตัน CH4 (' + round_(g.ch4e, 4) + ' ' + GHG_UNIT_T + ')' },
         { item: 'N2O', value: round_(g.n2o, 6), unit: 'ตัน N2O (' + round_(g.n2oe, 4) + ' ' + GHG_UNIT_T + ')' },
-        { item: 'ปริมาณเศษวัสดุที่จัดการ (ประมาณ)', value: round_(g.tonnes, 2), unit: 'ตัน' },
-        { item: 'มูลค่าเศษวัสดุ (ประมาณการ)', value: round_(g.value, 2), unit: 'บาท' },
+        { item: 'ปริมาณวัสดุเหลือใช้ทางการเกษตรที่จัดการ (ประมาณ)', value: round_(g.tonnes, 2), unit: 'ตัน' },
+        { item: 'มูลค่าวัสดุเหลือใช้ทางการเกษตร (ประมาณการ)', value: round_(g.value, 2), unit: 'บาท' },
         { item: 'จำนวนรายการบันทึก', value: g.n, unit: 'รายการ' },
         { item: 'พื้นที่ที่ยังไม่คำนวณก๊าซเรือนกระจก (ไม่มีค่ามาตรฐาน)', value: round_(g.excluded, 2), unit: 'ไร่' }
       ],
-      notes: ['ชุดค่าที่ใช้: ' + label + ' ชุดที่ ' + R.ctx.label.version + ' โหมด ' + (p.DEFAULT_MODE === 'standard' ? 'Standard (IPCC Table 2.4)' : 'Residue (เศษวัสดุต่อไร่ × Cf)'),
+      notes: ['ชุดค่าที่ใช้: ' + label + ' ชุดที่ ' + R.ctx.label.version + ' โหมด ' + (p.DEFAULT_MODE === 'standard' ? 'Standard (IPCC Table 2.4)' : 'Residue (วัสดุเหลือใช้ทางการเกษตรต่อไร่ × Cf)'),
         residueValueNote_(R)].concat(GHG_BOUNDARY.slice(0, 1))
     };
   }
@@ -774,7 +774,7 @@ function residueReportSection_(key, R, s) {
     return {
       subtitle: scope,
       columns: [col_('method', 'ประเภทการจัดการ'), col_('n', 'รายการ', 'number'), col_('area', 'พื้นที่ (ไร่)', 'number'), col_('share', 'สัดส่วน (%)', 'number'),
-        col_('tonnes', 'ปริมาณเศษวัสดุ (ตัน)', 'number'), col_('value', 'มูลค่า (บาท)', 'number'), col_('ghg', 'ก๊าซเรือนกระจกที่ลดได้ (' + GHG_UNIT_T + ')', 'number'), col_('target', 'เป้าหมายรายประเภท (ไร่)', 'number'), col_('pct', 'ร้อยละ', 'number')],
+        col_('tonnes', 'ปริมาณวัสดุเหลือใช้ทางการเกษตร (ตัน)', 'number'), col_('value', 'มูลค่า (บาท)', 'number'), col_('ghg', 'ก๊าซเรือนกระจกที่ลดได้ (' + GHG_UNIT_T + ')', 'number'), col_('target', 'เป้าหมายรายประเภท (ไร่)', 'number'), col_('pct', 'ร้อยละ', 'number')],
       rows: rows,
       totals: { method: 'รวม', n: R.computed.length, area: round_(total, 2), share: total ? 100 : 0, tonnes: round_(rows.reduce(function (a, r) { return a + r.tonnes; }, 0), 2),
         value: round_(rows.reduce(function (a, r) { return a + r.value; }, 0), 2),
@@ -797,7 +797,7 @@ function residueReportSection_(key, R, s) {
       columns: key === 'residue.map'
         ? [col_('name', 'อำเภอ'), col_('ghg', 'ก๊าซเรือนกระจกที่ลดได้ (' + GHG_UNIT_T + ')', 'number'), col_('area', 'พื้นที่จัดการ (ไร่)', 'number'), col_('pct', 'ร้อยละของเป้าหมาย', 'number')]
         : [col_('name', 'อำเภอ'), col_('officers', 'นวส. (คน)', 'number'), col_('n', 'รายการ', 'number'), col_('area', 'พื้นที่จัดการ (ไร่)', 'number'), col_('target', 'เป้าหมาย (ไร่)', 'number'),
-          col_('pct', 'ร้อยละ', 'number'), col_('tonnes', 'เศษวัสดุ (ตัน)', 'number'), col_('value', 'มูลค่า (บาท)', 'number'), col_('ghg', 'ก๊าซเรือนกระจกที่ลดได้ (' + GHG_UNIT_T + ')', 'number')],
+          col_('pct', 'ร้อยละ', 'number'), col_('tonnes', 'วัสดุเหลือใช้ทางการเกษตร (ตัน)', 'number'), col_('value', 'มูลค่า (บาท)', 'number'), col_('ghg', 'ก๊าซเรือนกระจกที่ลดได้ (' + GHG_UNIT_T + ')', 'number')],
       rows: rows,
       totals: { name: R.district ? 'รวม' : 'รวมทั้งจังหวัด', officers: sum('officers'), n: sum('n'), area: round_(sum('area'), 2), target: target === null ? '' : target,
         pct: target ? pct_(sum('area'), target) : '', tonnes: round_(sum('tonnes'), 2), value: round_(sum('value'), 2), ghg: round_(sum('ghg'), 4) }
@@ -821,7 +821,7 @@ function residueReportSection_(key, R, s) {
     if (key === 'residue.crops') {
       return {
         subtitle: scope,
-        columns: [col_('crop', 'ชนิดพืช'), col_('area', 'พื้นที่จัดการ (ไร่)', 'number'), col_('tonnes', 'เศษวัสดุ (ตัน)', 'number'), col_('price', 'ราคา (บาท/กก.)', 'number'),
+        columns: [col_('crop', 'ชนิดพืช'), col_('area', 'พื้นที่จัดการ (ไร่)', 'number'), col_('tonnes', 'วัสดุเหลือใช้ทางการเกษตร (ตัน)', 'number'), col_('price', 'ราคา (บาท/กก.)', 'number'),
           col_('value', 'มูลค่า (บาท)', 'number'), col_('lfire', 'ก๊าซเรือนกระจกที่ลดได้ (' + GHG_UNIT_T + ')', 'number')],
         rows: rows,
         totals: { crop: 'รวม', area: sum('area', 2), tonnes: sum('tonnes', 2), value: sum('value', 2), lfire: sum('lfire', 4) },
@@ -852,12 +852,12 @@ function residueReportSection_(key, R, s) {
     });
     return {
       subtitle: scope,
-      columns: [col_('district', 'อำเภอ'), col_('name', 'ตำบล'), col_('method', 'ประเภทเศษวัสดุ/การจัดการ'), col_('n', 'รายการ', 'number'), col_('area', 'พื้นที่รวม (ไร่)', 'number'),
+      columns: [col_('district', 'อำเภอ'), col_('name', 'ตำบล'), col_('method', 'ประเภทวัสดุเหลือใช้ทางการเกษตร/การจัดการ'), col_('n', 'รายการ', 'number'), col_('area', 'พื้นที่รวม (ไร่)', 'number'),
         col_('tonnes', 'ปริมาณรวม (ตัน)', 'number'), col_('value', 'มูลค่า (บาท)', 'number'), col_('ghg', 'ก๊าซเรือนกระจกที่ลดได้ (' + GHG_UNIT_T + ')', 'number')],
       rows: rows,
       totals: { district: 'รวม', n: R.computed.length, area: round_(total, 2), tonnes: round_(rows.reduce(function (a, r) { return a + r.tonnes; }, 0), 2),
         value: round_(rows.reduce(function (a, r) { return a + r.value; }, 0), 2), ghg: round_(rows.reduce(function (a, r) { return a + r.ghg; }, 0), 4) },
-      notes: ['ปริมาณ (ตัน) = พื้นที่ × อัตราชีวมวลเศษวัสดุต่อไร่ของพืช (หรือค่าที่วัดจริงในรายการนั้น)', residueValueNote_(R)]
+      notes: ['ปริมาณ (ตัน) = พื้นที่ × อัตราชีวมวลวัสดุเหลือใช้ทางการเกษตรต่อไร่ของพืช (หรือค่าที่วัดจริงในรายการนั้น)', residueValueNote_(R)]
     };
   }
   if (key === 'residue.balance') return residueBalanceSection_(R);
@@ -901,7 +901,7 @@ function residueReportSection_(key, R, s) {
       subtitle: scope,
       landscape: true,
       columns: [col_('date', 'วันที่'), col_('district', 'อำเภอ'), col_('name', 'ตำบล'), col_('crop', 'พืช'), col_('method', 'การจัดการ'), col_('area', 'ไร่', 'number'),
-        col_('tonnes', 'เศษวัสดุ (ตัน)', 'number'), col_('sold', 'ขาย/นำออกจริง (ตัน)', 'number'), col_('value', 'มูลค่า (บาท)', 'number'),
+        col_('tonnes', 'วัสดุเหลือใช้ทางการเกษตร (ตัน)', 'number'), col_('sold', 'ขาย/นำออกจริง (ตัน)', 'number'), col_('value', 'มูลค่า (บาท)', 'number'),
         col_('ghg', 'ก๊าซเรือนกระจกที่ลดได้ (' + GHG_UNIT_T + ')', 'number'), col_('buyer', 'ผู้รับซื้อ'), col_('recorder', 'ผู้บันทึก'),
         col_('status', 'สถานะข้อมูล', 'text', true), col_('lat', 'ละติจูด', 'number', true), col_('lng', 'ลองจิจูด', 'number', true), col_('photos', 'ภาพ', 'number', true)],
       rows: rows,
@@ -918,14 +918,14 @@ function residueReportSection_(key, R, s) {
       { item: 'GWP_N2O (' + p.GWP_SET + ')', value: p.GWP_N2O, unit: 'กก.คาร์บอนไดออกไซด์เทียบเท่า/กก.ก๊าซ', ref: p.REF_GWP },
       { item: 'EF_CO2e = EF_CH4×GWP_CH4 + EF_N2O×GWP_N2O', value: round_(ghgCombinedEf_(p), 4), unit: GHG_UNIT_G + '/กก.ชีวมวลแห้งที่เผาไหม้', ref: 'คำนวณ' },
       { item: 'Hectare to Rai', value: p.HA_TO_RAI, unit: 'ไร่/เฮกตาร์', ref: '' },
-      { item: 'โหมดคำนวณเริ่มต้น', value: '', unit: p.DEFAULT_MODE === 'standard' ? 'Standard: Bburned = Biomass consumed (Table 2.4)' : 'Residue: Bburned = เศษวัสดุต่อไร่ × Cf', ref: 'ชุดค่าที่ ' + R.ctx.label.version + ' แก้ไข ' + (p.UPDATED_AT || '–') }
+      { item: 'โหมดคำนวณเริ่มต้น', value: '', unit: p.DEFAULT_MODE === 'standard' ? 'Standard: Bburned = Biomass consumed (Table 2.4)' : 'Residue: Bburned = วัสดุเหลือใช้ทางการเกษตรต่อไร่ × Cf', ref: 'ชุดค่าที่ ' + R.ctx.label.version + ' แก้ไข ' + (p.UPDATED_AT || '–') }
     ];
     crops.forEach(function (c) {
       const pub = ghgCropPublic_(c, p);
       rows.push({ item: c.name + ': Biomass consumed', value: pub.consumedKgRai === null ? '' : pub.consumedKgRai, unit: pub.consumedKgRai === null ? 'ไม่มีค่าเริ่มต้น' : 'kg/ไร่ (' + c.consumedTHa + ' t/ha)', ref: c.reference });
       rows.push({ item: c.name + ': Combustion Factor', value: c.cf === '' ? '' : c.cf, unit: 'ratio', ref: c.reference });
-      rows.push({ item: c.name + ': เศษวัสดุต่อไร่ (' + (c.residueName || '') + ')', value: c.residueTRai === '' ? '' : c.residueTRai, unit: 'ตัน/ไร่', ref: c.residueReference });
-      rows.push({ item: c.name + ': ราคาเศษวัสดุ' + (c.useGlobalPrice ? ' (ราคากลาง)' : ' (ราคาเฉพาะพืช)'), value: c.priceBahtKg === '' ? '' : c.priceBahtKg, unit: 'บาท/กก.', ref: c.priceReference });
+      rows.push({ item: c.name + ': วัสดุเหลือใช้ทางการเกษตรต่อไร่ (' + (c.residueName || '') + ')', value: c.residueTRai === '' ? '' : c.residueTRai, unit: 'ตัน/ไร่', ref: c.residueReference });
+      rows.push({ item: c.name + ': ราคาวัสดุเหลือใช้ทางการเกษตร' + (c.useGlobalPrice ? ' (ราคากลาง)' : ' (ราคาเฉพาะพืช)'), value: c.priceBahtKg === '' ? '' : c.priceBahtKg, unit: 'บาท/กก.', ref: c.priceReference });
       rows.push({ item: c.name + ': สัดส่วนที่นำออกจากแปลงได้', value: c.removablePct === '' ? '' : c.removablePct, unit: '%', ref: c.removableReference });
     });
     return {

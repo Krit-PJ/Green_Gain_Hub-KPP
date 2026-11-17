@@ -61,7 +61,7 @@ function cropTypeSave_(input, s) {
   const crop = cleanText_(input.crop, 60);
   const material = cleanText_(input.material, 80);
   if (!crop) throw new Error('กรุณากรอกชื่อพืช');
-  if (!material) throw new Error('กรุณากรอกชนิดเศษวัสดุ');
+  if (!material) throw new Error('กรุณากรอกชนิดวัสดุเหลือใช้ทางการเกษตร');
   const active = input.active !== false;
   const sortOrder = Math.max(1, Math.min(999, Number(input.sortOrder) || 99));
   const sh = sheetByName_('crop_types');

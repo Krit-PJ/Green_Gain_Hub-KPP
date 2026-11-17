@@ -37,7 +37,7 @@ const GHG_PARAM_META = {
   GWP_N2O: ['kgCO2e/kg gas', 'Global Warming Potential ของ N2O'],
   GWP_SET: ['', 'ชุดค่า GWP (AR4 / AR5 / AR6 / CUSTOM)'],
   HA_TO_RAI: ['ไร่/เฮกตาร์', 'ตัวแปลงหน่วยพื้นที่'],
-  DEFAULT_MODE: ['', 'standard = ชีวมวลที่เผาไหม้ IPCC Table 2.4, residue = เศษวัสดุต่อไร่ (ข้อมูลในประเทศ) × Cf'],
+  DEFAULT_MODE: ['', 'standard = ชีวมวลที่เผาไหม้ IPCC Table 2.4, residue = วัสดุเหลือใช้ทางการเกษตรต่อไร่ (ข้อมูลในประเทศ) × Cf'],
   REF_EF: ['', 'แหล่งอ้างอิง EF'],
   REF_GWP: ['', 'แหล่งอ้างอิง GWP'],
   PARAM_VERSION: ['', 'เลขชุดค่า เพิ่มทุกครั้งที่แก้ไข'],
@@ -51,7 +51,7 @@ const GHG_DEFAULT_CROPS = [
   ['maize', 'ข้าวโพด', 10.0, 0.80, 0.83, 'ต้นและซังข้าวโพด', 'สกว. (อัตราชีวมวลต้นข้าวโพด 0.83 ตัน/ไร่)', 'IPCC 2006 Table 2.4 (maize) / Table 2.6 Cf 0.80', true, 3],
   ['cassava', 'มันสำปะหลัง', '', '', '', 'เหง้ามันสำปะหลัง', '', 'IPCC ไม่มีค่าเริ่มต้น ต้องกรอกค่าพร้อมแหล่งอ้างอิง', true, 4],
   ['wheat', 'ข้าวสาลี', 4.0, 0.90, '', 'ฟางข้าวสาลี', '', 'IPCC 2006 Table 2.4 (wheat) / Table 2.6 Cf 0.90', false, 5],
-  ['other', 'พืชอื่น', '', '', '', 'เศษวัสดุอื่น', '', 'ไม่มีค่าเริ่มต้น ต้องกรอกค่าพร้อมแหล่งอ้างอิง', true, 9]
+  ['other', 'พืชอื่น', '', '', '', 'วัสดุเหลือใช้ทางการเกษตรอื่น', '', 'ไม่มีค่าเริ่มต้น ต้องกรอกค่าพร้อมแหล่งอ้างอิง', true, 9]
 ];
 const GHG_SHEETS = {
   ghg_params: ['Key', 'Value', 'Unit', 'Description'],
@@ -63,7 +63,7 @@ const GHG_SHEETS = {
 const RESIDUE_DEFAULT_PRICE = 0.8;
 const RESIDUE_DEFAULT_PRICE_REF = 'ราคากลางเริ่มต้น 0.8 บาท/กก. (ราคาตลาดฟางและใบอ้อยโดยประมาณ)';
 const RESIDUE_PRICE_KEYS = {
-  PRICE_BAHT_KG: ['บาท/กก.', 'ราคากลางเศษวัสดุ ใช้กับทุกพืชที่เลือก "ใช้ราคากลาง"'],
+  PRICE_BAHT_KG: ['บาท/กก.', 'ราคากลางวัสดุเหลือใช้ทางการเกษตร ใช้กับทุกพืชที่เลือก "ใช้ราคากลาง"'],
   PRICE_REF: ['', 'แหล่งที่มาของราคากลาง'],
   PRICE_VERSION: ['', 'เลขชุดราคา เพิ่มทุกครั้งที่แก้ไข'],
   PRICE_UPDATED_AT: ['', 'แก้ไขราคากลางล่าสุด'],
@@ -81,9 +81,9 @@ const GHG_UNIT_T = 'ตันคาร์บอนไดออกไซด์เ
 const GHG_UNIT_KG = 'กิโลกรัมคาร์บอนไดออกไซด์เทียบเท่า';
 const GHG_UNIT_G = 'กรัมคาร์บอนไดออกไซด์เทียบเท่า';
 const GHG_BOUNDARY = [
-  'ก๊าซเรือนกระจกที่ลดได้ = มีเทน (CH4) และไนตรัสออกไซด์ (N2O) ที่จะเกิดหากเผาเศษวัสดุในพื้นที่ที่จัดการ คิดเป็นตันคาร์บอนไดออกไซด์เทียบเท่า (ประมาณการ, ขั้นต้น/gross)',
+  'ก๊าซเรือนกระจกที่ลดได้ = มีเทน (CH4) และไนตรัสออกไซด์ (N2O) ที่จะเกิดหากเผาวัสดุเหลือใช้ทางการเกษตรในพื้นที่ที่จัดการ คิดเป็นตันคาร์บอนไดออกไซด์เทียบเท่า (ประมาณการ, ขั้นต้น/gross)',
   'ไม่นับ CO2 ชีวภาพในบัญชีการปล่อยสุทธิ ตามสมมติฐานสมดุลคาร์บอนของพืชล้มลุกของ IPCC แต่ไม่ได้หมายความว่าการเผาไม่ปล่อย CO2',
-  'ไม่รวม CH4 จากนาข้าวระหว่างเพาะปลูก (การไถกลบฟางในนาน้ำขังอาจเพิ่ม CH4) ปุ๋ย การขนส่ง เครื่องจักร หรือการใช้เศษวัสดุนอกแปลง',
+  'ไม่รวม CH4 จากนาข้าวระหว่างเพาะปลูก (การไถกลบฟางในนาน้ำขังอาจเพิ่ม CH4) ปุ๋ย การขนส่ง เครื่องจักร หรือการใช้วัสดุเหลือใช้ทางการเกษตรนอกแปลง',
   'พื้นที่มาจากการบันทึกของเจ้าหน้าที่ ไม่ได้ใช้จุดความร้อน (Hotspot) หรือคะแนนความเสี่ยงแทนพื้นที่',
   'ไม่ใช่ปริมาณคาร์บอนเครดิตที่ได้รับการรับรอง'
 ];
@@ -142,7 +142,7 @@ function ghgCalcItem_(item, crop, p) {
       if (dmf === null || isNaN(dmf) || dmf <= 0 || dmf > 1) throw GhgError_('DMF', crop.name + ': ต้องระบุสัดส่วนน้ำหนักแห้ง (0–1) เพื่อแปลงน้ำหนักสดเป็นน้ำหนักแห้ง');
       mb = fresh * dmf;
     }
-    if (mb === null) throw GhgError_('MISSING', crop.name + ': ไม่มีข้อมูลปริมาณเศษวัสดุแห้งก่อนเผา');
+    if (mb === null) throw GhgError_('MISSING', crop.name + ': ไม่มีข้อมูลปริมาณวัสดุเหลือใช้ทางการเกษตรแห้งก่อนเผา');
     if (isNaN(mb) || mb < 0) throw GhgError_('BIOMASS', crop.name + ': ปริมาณชีวมวลต้องไม่ติดลบ');
     cf = ghgNum_(item.cf);
     if (cf === null) cf = ghgNum_(crop.cf);
@@ -450,7 +450,7 @@ function ghgCropSave_(input, s) {
   };
   const consumed = num(input.consumedTHa, 'Biomass consumed (t/ha)');
   const cf = num(input.cf, 'Combustion Factor', 1);
-  const residue = num(input.residueTRai, 'เศษวัสดุ (ตัน/ไร่)');
+  const residue = num(input.residueTRai, 'วัสดุเหลือใช้ทางการเกษตร (ตัน/ไร่)');
   const reference = cleanText_(input.reference, 200);
   const residueReference = cleanText_(input.residueReference, 200);
   const sh0 = sheetByName_('ghg_crops');
@@ -465,7 +465,7 @@ function ghgCropSave_(input, s) {
   const removableReference = 'removablePct' in input ? cleanText_(input.removableReference, 200) : (prev ? text_(prev[16]) : '');
   if (removable !== '' && !removableReference) throw new Error('สัดส่วนที่นำออกได้ต้องระบุแหล่งอ้างอิง');
   if (consumed !== '' && !reference) throw new Error('ค่า Biomass consumed ต้องระบุแหล่งอ้างอิง');
-  if (residue !== '' && !residueReference) throw new Error('ค่าเศษวัสดุต่อไร่ต้องระบุแหล่งอ้างอิง');
+  if (residue !== '' && !residueReference) throw new Error('ค่าวัสดุเหลือใช้ทางการเกษตรต่อไร่ต้องระบุแหล่งอ้างอิง');
   const sh = sheetByName_('ghg_crops');
   const rows = dataRows_(sh);
   const idx = rows.findIndex(function (r) { return text_(r[0]) === key; });

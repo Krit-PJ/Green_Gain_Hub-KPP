@@ -85,8 +85,8 @@ assert(pub.data.crops.find((c) => c.key === 'sugarcane').priceBahtKg === 1.5 && 
 const rep = ok(post('reportDataServer', [{ sections: ['residue.summary', 'residue.crops', 'residue.methods', 'residue.params'], fy: 2570 }], M), 'report');
 assert(rep.sections.find((x) => x.key === 'residue.summary').rows.some((r) => /มูลค่า/.test(r.item) && near(r.value, pub.data.totals.value, 0.01)), 'summary has value');
 assert(near(rep.sections.find((x) => x.key === 'residue.crops').totals.value, pub.data.totals.value, 0.01), 'crop table value reconciles');
-assert(rep.sections.find((x) => x.key === 'residue.params').rows.some((r) => /ข้าว: ราคาเศษวัสดุ \(ราคาเฉพาะพืช\)/.test(r.item) && r.value === 2), 'params lists prices with sources');
-assert(rep.sections.find((x) => x.key === 'residue.params').rows.some((r) => /อ้อย: ราคาเศษวัสดุ \(ราคากลาง\)/.test(r.item) && r.value === 1.5), 'params marks the central price');
+assert(rep.sections.find((x) => x.key === 'residue.params').rows.some((r) => /ข้าว: ราคาวัสดุเหลือใช้ทางการเกษตร \(ราคาเฉพาะพืช\)/.test(r.item) && r.value === 2), 'params lists prices with sources');
+assert(rep.sections.find((x) => x.key === 'residue.params').rows.some((r) => /อ้อย: ราคาวัสดุเหลือใช้ทางการเกษตร \(ราคากลาง\)/.test(r.item) && r.value === 1.5), 'params marks the central price');
 assert(post('adminLogServer', [], T).result.some((l) => l.action === 'residue_price_save' && /0.8 → 1.5/.test(l.detail)), 'central price change is audited');
 
 /* ---------- 2.2.0: buyer link and tonnes actually sold (value only; GHG unchanged) ---------- */

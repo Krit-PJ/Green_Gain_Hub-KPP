@@ -15,7 +15,7 @@
   const ACTION_TH = { login: 'เข้าสู่ระบบ', crop_import: 'นำเข้าข้อมูลเพาะปลูก', crop_import_delete: 'ลบชุดข้อมูล', crop_type_save: 'บันทึกชนิดพืช',
     settings_save: 'แก้ไขการเชื่อมต่อ API', report_view: 'ดูรายงาน', report_export: 'ส่งออกรายงาน', admin_create: 'เพิ่มผู้ดูแล', admin_update: 'แก้ไขผู้ดูแล', password_change: 'เปลี่ยนรหัสผ่าน',
     password_reset: 'ตั้งรหัสผ่านใหม่ให้ผู้ดูแล', super_bootstrap: 'สร้าง Super Admin', cache_clear: 'อัปเดตหน้าแรก',
-    staff_register: 'ลงทะเบียนเจ้าหน้าที่', residue_create: 'บันทึกการจัดการเศษวัสดุ', residue_update: 'แก้ไขการจัดการเศษวัสดุ', residue_delete: 'ลบการจัดการเศษวัสดุ',
+    staff_register: 'ลงทะเบียนเจ้าหน้าที่', residue_create: 'บันทึกการจัดการวัสดุเหลือใช้ทางการเกษตร', residue_update: 'แก้ไขการจัดการวัสดุเหลือใช้ทางการเกษตร', residue_delete: 'ลบการจัดการวัสดุเหลือใช้ทางการเกษตร',
     ghg_params_save: 'แก้ไขค่าคำนวณก๊าซเรือนกระจก', ghg_crop_save: 'แก้ไขค่าตามชนิดพืช', residue_price_save: 'แก้ไขราคากลาง', residue_targets_save: 'แก้ไขเป้าหมาย', residue_method_save: 'แก้ไขประเภทการจัดการ', site_save: 'แก้ไขชื่อจังหวัด/หน่วยงาน' };
   const ROLE_TH = { super: 'Super Admin', mini: 'Mini Super Admin', admin: 'Admin' };
   const level = (role) => ({ admin: 1, mini: 2, super: 3 })[role] || 0;
@@ -528,7 +528,7 @@
     const c = rep.catalog; if (!c) return;
     const sel = $('reportDistrict'), d = c.districts.find((x) => x.code === sel.value);
     const t = (c.types || []).find((x) => x.key === rep.type);
-    const what = t && t.key === 'ghg' ? 'ภาคผนวกการคำนวณก๊าซเรือนกระจกจากการจัดการเศษวัสดุทางการเกษตร' : t && t.key === 'register' ? 'ทะเบียนรายการบันทึกการจัดการเศษวัสดุทางการเกษตร' : 'รายงานการจัดการเศษวัสดุทางการเกษตร';
+    const what = t && t.key === 'ghg' ? 'ภาคผนวกการคำนวณก๊าซเรือนกระจกจากการจัดการวัสดุเหลือใช้ทางการเกษตร' : t && t.key === 'register' ? 'ทะเบียนรายการบันทึกการจัดการวัสดุเหลือใช้ทางการเกษตร' : 'รายงานการจัดการวัสดุเหลือใช้ทางการเกษตร';
     $('reportTitle').value = `${what}${d ? ' อำเภอ' + d.name : ''} จังหวัด${c.province}`;
   }
   $('reportDistrict').addEventListener('change', syncReportTitle);
@@ -782,7 +782,7 @@
     const cf = f.cf.value !== '' ? Number(f.cf.value) : crop.cf;
     let burned = null, tons = crop.residueTRai !== null ? area * crop.residueTRai : null, how = '';
     if (mb) { burned = cf !== null ? mb * cf : null; tons = area * mb / 1000; how = 'ค่าจากพื้นที่จริง'; }
-    else if (m.params.mode === 'residue' && crop.residueTRai !== null && crop.cf !== null) { burned = crop.residueTRai * 1000 * crop.cf; how = 'เศษวัสดุต่อไร่ × Cf'; }
+    else if (m.params.mode === 'residue' && crop.residueTRai !== null && crop.cf !== null) { burned = crop.residueTRai * 1000 * crop.cf; how = 'วัสดุเหลือใช้ทางการเกษตรต่อไร่ × Cf'; }
     else if (crop.hasStandard) { burned = crop.consumedKgRai; how = 'IPCC Standard'; }
     const ghg = burned === null ? null : area * burned * ef / 1e6;
     const mm = m.methods.find((x) => x.method === res.method);
@@ -790,7 +790,7 @@
     const sold = f.soldTonnes.value !== '' ? Number(f.soldTonnes.value) : null;
     const basis = sold !== null ? sold : tons;
     const value = basis !== null && crop.priceBahtKg !== null && res.method ? (counted ? basis * 1000 * crop.priceBahtKg : 0) : null;
-    el.innerHTML = `ประมาณการ: ${tons !== null ? `เศษวัสดุ ≈ <b>${fmt(tons, 2)}</b> ตัน · ` : ''}` +
+    el.innerHTML = `ประมาณการ: ${tons !== null ? `วัสดุเหลือใช้ทางการเกษตร ≈ <b>${fmt(tons, 2)}</b> ตัน · ` : ''}` +
       (value !== null ? (counted ? `มูลค่า ≈ <b>${fmtBaht(value)}</b> บาท <span class="adm-muted">(${sold !== null ? 'จากปริมาณที่ขายจริง ' : ''}${fmt(crop.priceBahtKg, 2)} บาท/กก.${crop.useGlobalPrice ? ' ราคากลาง' : ''})</span> · ` : '<span class="adm-muted">ประเภทนี้ไม่นับมูลค่า</span> · ') : '') +
       (ghg !== null ? `ก๊าซเรือนกระจกที่ลดได้ ≈ <b>${fmtG(ghg)}</b> ${UNIT} <span class="adm-muted">(${how})</span>`
         : `<span class="adm-muted">${esc(crop.name)}ยังไม่มีค่ามาตรฐาน จะคำนวณก๊าซเรือนกระจกเมื่อกรอกชีวมวลจากพื้นที่จริงพร้อมแหล่งอ้างอิง</span>`);
@@ -857,7 +857,7 @@
     const keep = { date: f.date.value, district: f.district.value, sub: f.subdistrict.value };
     f.reset(); res.photos = []; res.method = ''; res.editing = null;
     if (keepPlace) { f.date.value = keep.date; f.district.value = keep.district; fillRecSubs(keep.sub); } else { res.crop = ''; f.date.value = res.meta ? res.meta.today : ''; fillRecSubs(); }
-    $('recCustomWrap').open = false; $('recSaleWrap').open = false; fillBuyers(''); $('recCancelEdit').classList.add('hidden'); $('recTitle').textContent = 'บันทึกการจัดการเศษวัสดุ';
+    $('recCustomWrap').open = false; $('recSaleWrap').open = false; fillBuyers(''); $('recCancelEdit').classList.add('hidden'); $('recTitle').textContent = 'บันทึกการจัดการวัสดุเหลือใช้ทางการเกษตร';
     $('recSave').textContent = 'บันทึกข้อมูล';
     renderPhotos(); renderRecChips();
   }
@@ -943,12 +943,12 @@
     const r = await call('residueListServer', input);
     res.list = r.records;
     const t = r.totals;
-    $('recsSum').innerHTML = `${fmt(t.records)} รายการ · พื้นที่ <b>${fmt(t.area, 2)}</b> ไร่ · เศษวัสดุ ${fmt(t.tonnes, 2)} ตัน · มูลค่า <b>${fmtBaht(t.value)}</b> บาท · ก๊าซเรือนกระจกที่ลดได้ <b>${fmtG(t.ghg)}</b> ${UNIT}` +
+    $('recsSum').innerHTML = `${fmt(t.records)} รายการ · พื้นที่ <b>${fmt(t.area, 2)}</b> ไร่ · วัสดุเหลือใช้ทางการเกษตร ${fmt(t.tonnes, 2)} ตัน · มูลค่า <b>${fmtBaht(t.value)}</b> บาท · ก๊าซเรือนกระจกที่ลดได้ <b>${fmtG(t.ghg)}</b> ${UNIT}` +
       (r.truncated ? ' <span class="adm-muted">(แสดง 500 รายการล่าสุด)</span>' : '');
     $('recsList').innerHTML = r.records.map((x) => `<article class="adm-rec-card">
         <header><b>${fmt(x.area, 2)} ไร่</b><span>${esc(x.method)}${x.methodOther ? ': ' + esc(x.methodOther) : ''}</span><span class="adm-badge">${esc(x.cropName)}</span></header>
         <p>${esc(x.date)} · ต.${esc(x.subdistrictName)} อ.${esc(x.districtName)}</p>
-        <p>${x.ghg !== null ? `ก๊าซเรือนกระจกที่ลดได้ <b>${fmtG(x.ghg)}</b> ${UNIT}` : `<span class="adm-muted">ยังไม่คำนวณก๊าซเรือนกระจก (ไม่มีค่ามาตรฐาน)</span>`}${x.tonnes !== null ? ` · เศษวัสดุ ${fmt(x.tonnes, 2)} ตัน` : ''}${x.value ? ` · มูลค่า ${fmtBaht(x.value)} บาท${x.valueBasis === 'sold' ? ' (จากปริมาณขายจริง)' : ''}` : ''}${x.dataStatus === 'Measured' ? ' · <span class="adm-badge active">ค่าจากพื้นที่จริง</span>' : ''}</p>
+        <p>${x.ghg !== null ? `ก๊าซเรือนกระจกที่ลดได้ <b>${fmtG(x.ghg)}</b> ${UNIT}` : `<span class="adm-muted">ยังไม่คำนวณก๊าซเรือนกระจก (ไม่มีค่ามาตรฐาน)</span>`}${x.tonnes !== null ? ` · วัสดุเหลือใช้ทางการเกษตร ${fmt(x.tonnes, 2)} ตัน` : ''}${x.value ? ` · มูลค่า ${fmtBaht(x.value)} บาท${x.valueBasis === 'sold' ? ' (จากปริมาณขายจริง)' : ''}` : ''}${x.dataStatus === 'Measured' ? ' · <span class="adm-badge active">ค่าจากพื้นที่จริง</span>' : ''}</p>
         ${x.buyerName || x.soldTonnes !== null ? `<p>ขายให้ ${esc(x.buyerName || 'ผู้รับซื้อนอกระบบ')}${x.soldTonnes !== null ? ` · ${fmt(x.soldTonnes, 2)} ตัน` : ''}</p>` : ''}
         <p class="adm-muted">บันทึกโดย ${esc(x.recorderName)}${x.lat !== null ? ` · <a href="https://www.google.com/maps?q=${x.lat},${x.lng}" target="_blank" rel="noopener">พิกัด</a>` : ''}${x.note ? ' · ' + esc(x.note) : ''}</p>
         <footer>${x.photoCount ? `<button type="button" data-photo="${esc(x.id)}">ภาพ (${x.photoCount})</button>` : ''}
@@ -995,7 +995,7 @@
     const step = (n, label, main, unit, note, tone) => `<div class="adm-ov-step${tone ? ' is-' + tone : ''}"><span class="adm-ov-n" aria-hidden="true">${n}</span>
       <p>${esc(label)}</p><b>${main}</b><span>${esc(unit)}</span>${note ? `<small>${note}</small>` : ''}</div>`;
     $('ovFlow').innerHTML =
-      step('①', 'เก็บเกี่ยวในปีงบประมาณ', fmt(t.harvestedRai, 0), 'ไร่', t.potentialTon ? `เศษวัสดุ ≈ ${fmt(t.potentialTon, 0)} ตัน` : 'ยังไม่มีข้อมูลทะเบียน') +
+      step('①', 'เก็บเกี่ยวในปีงบประมาณ', fmt(t.harvestedRai, 0), 'ไร่', t.potentialTon ? `วัสดุเหลือใช้ทางการเกษตร ≈ ${fmt(t.potentialTon, 0)} ตัน` : 'ยังไม่มีข้อมูลทะเบียน') +
       step('②', 'นำออกจากแปลงได้', t.removableTon ? fmt(t.removableTon, 0) : '–', 'ตัน', 'ส่วนที่เหลือควรไถกลบหรือคลุมดิน') +
       step('③', 'ประกาศขายในตลาด', fmt(t.listedRai, 0), 'ไร่', `${fmt(t.listedPlots)} แปลง`) +
       step('④', 'ผู้รับซื้อที่เปิดรับซื้อ', fmt(t.buyers), 'ราย', t.capacityTonPerDay ? `รวม ${fmt(t.capacityTonPerDay, 1)} ตัน/วัน` : '') +
@@ -1004,7 +1004,7 @@
     // Buyer gaps first (each one is a concrete task), then the five largest areas without a record.
     const needBuyer = b.byDistrict.filter((d) => d.flags.includes('need_buyer')).sort((x, y) => y.listedRai - x.listedRai);
     const low = b.byDistrict.filter((d) => d.flags.includes('low_managed')).sort((x, y) => y.atRiskRai - x.atRiskRai);
-    const todo = needBuyer.map((d) => `<li><b>อ.${esc(d.name)}</b> มีแปลงประกาศขาย ${fmt(d.listedRai, 0)} ไร่ แต่ยังไม่มีผู้รับซื้อเศษวัสดุชนิดนั้นในอำเภอ: ช่วยหาผู้รับซื้อหรือจุดรวบรวม</li>`)
+    const todo = needBuyer.map((d) => `<li><b>อ.${esc(d.name)}</b> มีแปลงประกาศขาย ${fmt(d.listedRai, 0)} ไร่ แต่ยังไม่มีผู้รับซื้อวัสดุเหลือใช้ทางการเกษตรชนิดนั้นในอำเภอ: ช่วยหาผู้รับซื้อหรือจุดรวบรวม</li>`)
       .concat(low.slice(0, 5).map((d) => `<li><b>อ.${esc(d.name)}</b> ยังไม่มีบันทึก ${fmt(d.atRiskRai, 0)} ไร่ (จัดการแล้ว ${pctText(d.managedPct)} ของพื้นที่เก็บเกี่ยว): ติดตามพื้นที่ที่เก็บเกี่ยวแล้ว</li>`));
     const more = low.length > 5 ? `<p class="adm-muted">และอีก ${low.length - 5} อำเภอที่จัดการได้ต่ำกว่า ${b.lowShare}% ดูในตารางรายอำเภอ</p>` : '';
     $('ovTodo').innerHTML = `<h3>สิ่งที่ควรติดตาม</h3>` + (todo.length ? `<ul class="adm-bullets">${todo.join('')}</ul>${more}` : '<p class="adm-muted">ยังไม่พบจุดที่ต้องติดตามจากข้อมูลปัจจุบัน</p>');
@@ -1019,10 +1019,10 @@
     $('ovFoot').innerHTML = rows.length > 1 ? `<tr><td>รวม</td><td class="num">${fmt(t.harvestedRai, 0)}</td><td class="num">${fmt(t.managedRai, 2)}</td><td class="num">${pctText(t.managedPct)}</td>
       <td class="num">${fmt(t.atRiskRai, 0)}</td><td class="num">${fmt(t.listedRai, 0)}</td><td class="num">${fmt(t.buyers)}</td><td></td></tr>` : '';
     $('ovHow').innerHTML = [
-      `① พื้นที่เก็บเกี่ยวจากข้อมูลทะเบียนเกษตรกรที่นำเข้า (เดือนที่คาดว่าจะเก็บเกี่ยวใน ${esc(b.fyRange)}) × อัตราเศษวัสดุต่อไร่ของพืช${b.sources.registry.length ? ': ' + esc(b.sources.registry.join(', ')) : ' (ยังไม่มีข้อมูลนำเข้า)'}`,
+      `① พื้นที่เก็บเกี่ยวจากข้อมูลทะเบียนเกษตรกรที่นำเข้า (เดือนที่คาดว่าจะเก็บเกี่ยวใน ${esc(b.fyRange)}) × อัตราวัสดุเหลือใช้ทางการเกษตรต่อไร่ของพืช${b.sources.registry.length ? ': ' + esc(b.sources.registry.join(', ')) : ' (ยังไม่มีข้อมูลนำเข้า)'}`,
       '② = ① × สัดส่วนที่นำออกจากแปลงได้โดยไม่กระทบดิน (ตั้งค่าได้ในเมนูตั้งค่า > ราคาและค่าคำนวณ) การไถกลบนับเป็นการจัดการด้วย',
-      '③ แปลงสถานะพร้อมขายในตลาดเศษวัสดุ ที่คาดว่าจะเก็บเกี่ยวในปีงบประมาณนี้',
-      '④ ผู้รับซื้อที่เปิดรับซื้อเศษวัสดุชนิดนั้นในอำเภอ (กำลังรับซื้อตามที่ผู้รับซื้อกรอก)',
+      '③ แปลงสถานะพร้อมขายในตลาดวัสดุเหลือใช้ทางการเกษตร ที่คาดว่าจะเก็บเกี่ยวในปีงบประมาณนี้',
+      '④ ผู้รับซื้อที่เปิดรับซื้อวัสดุเหลือใช้ทางการเกษตรชนิดนั้นในอำเภอ (กำลังรับซื้อตามที่ผู้รับซื้อกรอก)',
       '⑤ จากการบันทึกของเจ้าหน้าที่เท่านั้น ไม่นำยอดจากตลาดมาบวกซ้ำ',
       '⑥ = ① − ⑤ (ไร่) ไม่ต่ำกว่า 0 เป็นพื้นที่ที่ยังไม่มีบันทึกการจัดการ ไม่ได้แปลว่าถูกเผาแล้ว'
     ].map((x) => `<li>${x}</li>`).join('');
@@ -1052,7 +1052,7 @@
     $('ghgStatus').innerHTML = `<h3>ชุดค่าที่ใช้อยู่</h3><dl class="adm-kv"><dt>ชุดค่า</dt><dd>${esc(s.label.label)}</dd>
       <dt>เลขชุดค่า</dt><dd>${esc(p.PARAM_VERSION)} แก้ไขเมื่อ ${esc(p.UPDATED_AT || '–')} โดย ${esc(p.UPDATED_BY || '–')}</dd>
       <dt>EF รวม</dt><dd>(${p.EF_CH4} × ${p.GWP_CH4}) + (${p.EF_N2O} × ${p.GWP_N2O}) = <b>${fmt(s.label.combinedEf, 4)}</b> กรัมคาร์บอนไดออกไซด์เทียบเท่า ต่อ กก. ชีวมวลแห้งที่เผาไหม้</dd>
-      <dt>โหมดเริ่มต้น</dt><dd>${p.DEFAULT_MODE === 'standard' ? 'Standard (IPCC Table 2.4)' : 'Residue (เศษวัสดุต่อไร่ × Cf)'}</dd></dl>`;
+      <dt>โหมดเริ่มต้น</dt><dd>${p.DEFAULT_MODE === 'standard' ? 'Standard (IPCC Table 2.4)' : 'Residue (วัสดุเหลือใช้ทางการเกษตรต่อไร่ × Cf)'}</dd></dl>`;
     ['GWP_SET', 'GWP_CH4', 'GWP_N2O', 'EF_CH4', 'EF_N2O', 'HA_TO_RAI', 'REF_EF', 'REF_GWP'].forEach((k) => { f[k].value = p[k]; });
     f.querySelectorAll('[name="DEFAULT_MODE"]').forEach((r) => { r.checked = r.value === p.DEFAULT_MODE; });
     syncGwp();
