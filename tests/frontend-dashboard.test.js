@@ -12,10 +12,15 @@ const geo = JSON.parse(fs.readFileSync(path.join(front, 'assets', 'kpp-districts
 new vm.Script(js, { filename: 'frontend/assets/dashboard.js' });
 
 // Landing keeps the login contract used by the existing app script.
-['id="loginPage"', 'id="loginPhone"', 'id="loginBtn"', 'onclick="login()"', "toggleAuth('register')", 'id="registerPage"'].forEach(s => assert(html.includes(s), 'login markup missing: ' + s));
+['id="loginPage"', 'id="loginPhone"', 'id="loginBtn"', 'login();', 'id="hubAuth"', 'id="staffAuth"', 'id="pdpaCheck"'].forEach(s => assert(html.includes(s), 'login markup missing: ' + s));
+// 2.2.1: sign-in lives in two popups; no side card, no separate register page, no stacked consent modal.
+assert(!html.includes('id="loginCard"') && !html.includes('id="registerPage"') && !html.includes('id="pdpaModal"'), 'old sign-in card / register page / consent modal must be gone');
+assert((html.match(/<dialog class="ggh-dialog"/g) || []).length === 2 && (html.match(/data-close aria-label="ปิดหน้าต่าง"/g) || []).length === 2, 'two dialogs, each with a close button');
+assert(html.includes('assets/staff-auth.js') && !/name="password"[^>]*type="password"|type="password"/.test(html), 'officer popup uses the shared module and has no password field');
+assert(html.includes('admin.html#admin') && /sell: \['register', 'farmer'\]/.test(html), 'admin link and shareable #sell/#buy links');
 ['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashSearch"',
-  'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="reports"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=2.2.0') && html.includes('assets/dashboard.css?v=2.2.0'), 'dashboard assets are not linked');
+  'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="reports"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html#admin"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
+assert(html.includes('assets/dashboard.js?v=2.2.1') && html.includes('assets/dashboard.css?v=2.2.1'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
@@ -55,8 +60,9 @@ assert(dash.includes("endpoint: 'residue'") && dash.includes('resGhg') && dash.i
 // 2.2.0: short name on top, full official name in the footer; entry doors; sign-in card for farmers and buyers.
 assert(/ggh-topbar-title[^>]*>Green Gain Hub <span data-province>/.test(html) && html.includes('ggh-topbar-sub') && !html.includes('class="ggh-title"'), 'top bar title / hero title');
 assert(/<footer[\s\S]*ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร/.test(html), 'full official name in the footer');
-assert(/ggh-login-brand">สำหรับเกษตรกรและผู้รับซื้อ</.test(html) && html.includes('STAFF_ACCOUNT'), 'sign-in card names its users and points officers away');
-assert(['data-role="farmer"', 'data-role="buyer"', 'href="admin.html" class="is-main"'].every((x) => html.includes(x)) && html.indexOf('ggh-doors') < html.indexOf('ggh-tabs"'), 'entry doors before the province data');
+assert(/ggh-dialog-kicker">สำหรับเกษตรกรและผู้รับซื้อ</.test(html) && html.includes('STAFF_ACCOUNT') && html.includes('MARKET_ACCOUNT') && html.includes('data-to-staff') && html.includes('data-to-hub'), 'wrong-box numbers switch to the other popup');
+assert(js.includes('renderDistrictRanking'), 'side panel ranks districts when nothing is selected');
+assert(['data-role="farmer"', 'data-role="buyer"', 'data-door="staff"'].every((x) => html.includes(x)) && html.indexOf('ggh-doors') < html.indexOf('ggh-tabs"'), 'entry doors before the province data');
 assert(!/tCO₂e|tCO2e/.test(html + dash) && dash.includes('ตันคาร์บอนไดออกไซด์เทียบเท่า'), 'Thai GHG unit on the homepage');
 assert(dash.includes("endpoint: 'balance'") && html.includes('id="resBalance"'), 'residue balance on the homepage');
 assert(admin.includes('id="staffLoginForm"') && admin.includes('id="staffRegForm"') && admin.includes('id="regProvinces"') && admin.includes('id="regGroup"'), 'officer sign-in / registration');

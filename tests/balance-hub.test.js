@@ -95,4 +95,11 @@ assert(!lr.ok && /STAFF_ACCOUNT/.test(lr.error), 'officer number in the farmer b
 sheets.users.rows.push(['0899998888', '', 'farmer', 'ชาวนา ทดสอบ', false, true, new Date(), new Date(), new Date()]);
 bad(post('staffLoginServer', [{ phone: '0899998888' }]), /MARKET_ACCOUNT/, 'farmer number in the officer box');
 
-process.stdout.write('PASS: residue balance ①–⑥ (fiscal months, removable share, listings, buyers, officer records only, flags, scope, cache), public balance privacy, four report types, Thai units, wrong-login hints\n');
+/* 2.2.1: farmers and buyers are signed in right after registering */
+api.doGet({ parameter: { action: 'rpc', method: 'registerServer', args: JSON.stringify([{ role: 'buyer', name: 'โรงงาน ทดสอบ', phone: '0877776666' }]) } });
+const rg = JSON.parse(env.out().body);
+assert(rg.ok && rg.result.token && rg.result.role === 'buyer', 'register returns a session: ' + JSON.stringify(rg));
+api.doGet({ parameter: { action: 'rpc', method: 'getUserProfileServer', args: '[]', token: rg.result.token } });
+assert(JSON.parse(env.out().body).ok, 'the new session works at once');
+
+process.stdout.write('PASS: residue balance ①–⑥ (fiscal months, removable share, listings, buyers, officer records only, flags, scope, cache), public balance privacy, four report types, Thai units, wrong-login hints, sign-in after registration\n');

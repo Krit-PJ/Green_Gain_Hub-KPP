@@ -1,5 +1,5 @@
 /**
- * Green Gain Hub 2.2.0 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 2.2.1 — API-only bridge from GitHub Pages to Google Sheets.
  * Files: Code.gs (this), Districts.gs (boundaries), Admin.gs (Super / Mini Super / Admin, doPost),
  *        Crops.gs (crop area import + crop summary), Counter.gs (visit counter),
  *        Reports.gs (admin reports for print / PDF / Excel / CSV),
@@ -18,7 +18,7 @@
  *   ?api=v1&endpoint=health           Public version check
  *   POST {method,args,token}          Admin API (Admin.gs)
  */
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.2.1';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -572,7 +572,10 @@ function registerServer(input) {
   } finally {
     lock.releaseLock();
   }
-  return { status: 'success', success: true, message: 'ลงทะเบียนสำเร็จ กรุณาเข้าสู่ระบบ' };
+  // 2.2.1: signed in at once (same session as loginServer), so a new farmer or buyer goes straight to the form.
+  const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  CacheService.getScriptCache().put('session:' + token, JSON.stringify({ phone: phone, role: role, name: name }), sessionTtlSeconds_());
+  return { status: 'success', success: true, token: token, phone: phone, role: role, name: name, message: 'ลงทะเบียนสำเร็จ เข้าใช้งานได้ทันที' };
 }
 
 function getUserProfileServer(session) {

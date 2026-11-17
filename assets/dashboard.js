@@ -475,7 +475,7 @@
     }).join('');
     const btns = [...box.querySelectorAll('[data-metric]')];
     btns.forEach((b) => {
-      b.addEventListener('click', () => { if (b.disabled) return; state.metricByTab[state.tab] = b.dataset.metric; renderMetrics(); renderMap(); });
+      b.addEventListener('click', () => { if (b.disabled) return; state.metricByTab[state.tab] = b.dataset.metric; renderMetrics(); renderMap(); renderDistrictPanel(); });
       b.addEventListener('keydown', (e) => {
         if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
         const live = btns.filter((x) => !x.disabled);
@@ -500,7 +500,7 @@
     restyleSelection();
     renderDistrictPanel();
     document.querySelectorAll('#dashTable tr').forEach((tr) => tr.classList.toggle('is-selected', tr.dataset.code === state.selected));
-    if (state.tab === 'overview') { renderKpis(); renderResToolbar(); renderResMethods(); }
+    if (state.tab === 'overview') { renderKpis(); renderResToolbar(); renderResMethods(); renderBalance(); }
     if (zoom && state.selected && state.layers[code] && state.map) state.map.fitBounds(state.layers[code].getBounds(), { padding: [30, 30], maxZoom: 11 });
   }
   const dl = (pairs) => `<dl>${pairs.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
@@ -557,10 +557,30 @@
     const mats = full ? (d.materials || []).map((m) => `<li><span>${esc(m.material)}</span><span>${fmt(m.areaRai, 1)} ไร่</span></li>`).join('') : '';
     return `<h4><span>ตลาด Green Gain Hub</span></h4>` + dl(pairs) + (mats ? `<ul>${mats}</ul>` : '');
   }
+  /* 2.2.1: with nothing selected, the side panel ranks the districts by the measure the map is coloured by,
+     so the space beside the map always answers "which districts stand out" (one click opens a district). */
+  function renderDistrictRanking(el) {
+    const id = metric(), m = METRICS[id];
+    const codes = state.geo ? state.geo.features.map((f) => f.properties.code) : [];
+    if (!codes.length || !metricAvailable(id)) { el.innerHTML = '<p class="ggh-district-empty">เลือกอำเภอบนแผนที่ หรือค้นหาชื่ออำเภอ เพื่อดูรายละเอียด</p>'; return; }
+    const all = codes.map((c) => ({ c, v: Number(m.value(c)) || 0 }));
+    // Only districts with a value are ranked; the rest are counted, so an early-season map does not show a wall of dashes.
+    const rows = all.filter((r) => r.v > 0).sort((a, b) => b.v - a.v);
+    const rest = all.filter((r) => !(r.v > 0)).map((r) => districtName(r.c)).sort((a, b) => a.localeCompare(b, 'th'));
+    const max = Math.max(0, ...rows.map((r) => r.v));
+    el.innerHTML = `<h3 class="ggh-rank-title">อำเภอเรียงตามค่าบนแผนที่</h3><p class="ggh-rank-sub">${esc(m.label)}</p>
+      <ol class="ggh-rank">${rows.map((r, i) => `<li><button type="button" data-code="${esc(r.c)}">
+        <span class="ggh-rank-n">${i + 1}</span><span class="ggh-rank-name">${esc(districtName(r.c))}</span><span class="ggh-rank-val">${r.v ? fmt(r.v, r.v < 10 ? Math.min(2, m.digits + 1) : m.digits) : '–'}</span>
+        <span class="ggh-rank-bar" aria-hidden="true"><i style="width:${max ? (r.v / max * 100).toFixed(1) : 0}%"></i></span></button></li>`).join('')}</ol>
+      ${rows.length ? '' : `<p class="ggh-district-empty">ยังไม่มีอำเภอที่มีข้อมูลนี้</p>`}
+      ${rest.length && rows.length ? `<p class="ggh-rank-rest">ยังไม่มีข้อมูล ${rest.length} อำเภอ: ${esc(rest.join(', '))}</p>` : ''}
+      <p class="ggh-rank-hint">กดชื่ออำเภอ หรือเลือกบนแผนที่ เพื่อดูรายละเอียด</p>`;
+    el.querySelectorAll('[data-code]').forEach((b) => b.addEventListener('click', () => selectDistrict(b.dataset.code, true)));
+  }
   function renderDistrictPanel() {
     const el = $('dashDistrict'); if (!el) return;
     const code = state.selected;
-    if (!code) { el.innerHTML = '<p class="ggh-district-empty">เลือกอำเภอบนแผนที่ หรือค้นหาชื่ออำเภอ เพื่อดูรายละเอียด</p>'; return; }
+    if (!code) { renderDistrictRanking(el); return; }
     let body = '';
     if (code === 'OTHER') body = marketSection(code, true);
     else if (state.tab === 'crops') body = cropSection(code, true);
