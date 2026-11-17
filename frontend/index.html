@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.2.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.2.1">
 
   <style>
     * { box-sizing: border-box; }
@@ -37,13 +37,6 @@
     .leaflet-control-zoom a { width: 42px !important; height: 42px !important; line-height: 42px !important; font-size: 22px !important; }
     .leaflet-popup-content { margin: 12px 14px; min-width: 190px; font-family: 'Sarabun', sans-serif; line-height: 1.45; }
     
-    /* PDPA Modal Style */
-    .pdpa-modal { position: fixed; inset: 0; width: 100%; height: 100%; height: 100dvh; background: rgba(0,0,0,0.6); z-index: 60; display: flex; justify-content: center; align-items: flex-end; padding: 0; }
-    .pdpa-content { background: white; border-radius: 1rem 1rem 0 0; max-width: 600px; width: 100%; max-height: 92dvh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); padding-bottom: env(safe-area-inset-bottom); }
-    .pdpa-header { background-color: #15803d; color: white; padding: 1rem; font-weight: bold; text-align: center; font-size: 1.1rem; }
-    .pdpa-body { overflow-y: auto; padding: 1rem; font-size: 0.9rem; line-height: 1.6; color: #374151; text-align: left; -webkit-overflow-scrolling: touch; }
-    .pdpa-footer { padding: 0.75rem; background: #f9fafb; border-top: 1px solid #e5e7eb; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-    .consent-check { display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 1rem; background: #f0fdf4; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #bbf7d0; }
     
     .match-card { transition: all 0.2s; border-left: 4px solid transparent; cursor: pointer; }
     @media (hover: hover) { .match-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); } }
@@ -51,10 +44,6 @@
 
     @media (min-width: 640px) {
       .section-tabs { position: static; padding: 0; background: transparent; backdrop-filter: none; }
-      .pdpa-modal { align-items: center; padding: 1rem; }
-      .pdpa-content { border-radius: 1rem; max-height: 85vh; padding-bottom: 0; }
-      .pdpa-body { padding: 1.5rem; text-align: justify; }
-      .pdpa-footer { padding: 1rem; gap: 1rem; }
       #miniMap, [id^="miniMap-"] { height: 330px; }
     }
 
@@ -100,7 +89,7 @@
           <p class="ggh-door-fact" id="doorFactSell" hidden></p>
           <div class="ggh-door-actions">
             <button type="button" data-door="register" data-role="farmer" class="is-main">ลงทะเบียนขาย</button>
-            <button type="button" data-door="login">เข้าสู่ระบบ</button>
+            <button type="button" data-door="login" data-role="farmer">เข้าสู่ระบบ</button>
           </div>
         </article>
         <article class="ggh-door ggh-door-buy">
@@ -109,7 +98,7 @@
           <p class="ggh-door-fact" id="doorFactBuy" hidden></p>
           <div class="ggh-door-actions">
             <button type="button" data-door="register" data-role="buyer" class="is-main">ลงทะเบียนรับซื้อ</button>
-            <button type="button" data-door="login">เข้าสู่ระบบ</button>
+            <button type="button" data-door="login" data-role="buyer">เข้าสู่ระบบ</button>
           </div>
         </article>
         <article class="ggh-door ggh-door-staff">
@@ -117,7 +106,7 @@
           <p>บันทึกการจัดการเศษวัสดุ ดูภาพรวมรายอำเภอ และออกรายงาน</p>
           <p class="ggh-door-fact" id="doorFactStaff" hidden></p>
           <div class="ggh-door-actions">
-            <a href="admin.html" class="is-main">เข้าสู่ระบบเจ้าหน้าที่</a>
+            <button type="button" data-door="staff" class="is-main">เข้าสู่ระบบ / ลงทะเบียนเจ้าหน้าที่</button>
           </div>
         </article>
       </section>
@@ -167,22 +156,6 @@
       </section>
 
       <aside class="ggh-side">
-        <div class="ggh-login" id="loginCard">
-          <p class="ggh-login-brand">สำหรับเกษตรกรและผู้รับซื้อ</p>
-          <h2 class="ggh-login-title">เข้าสู่ระบบ</h2>
-          <p class="ggh-login-help">กรอกหมายเลขโทรศัพท์ที่ลงทะเบียนไว้ เพื่อบันทึกแปลงหรือจุดรับซื้อ และดูคู่ค้าใกล้คุณ</p>
-          <div class="input-group">
-            <label class="label-text" for="loginPhone">หมายเลขโทรศัพท์ 10 หลัก</label>
-            <input type="tel" id="loginPhone" class="input-field text-lg tracking-widest text-center font-bold" placeholder="08XXXXXXXX" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')" onkeydown="if(event.key==='Enter'){login();}">
-          </div>
-          <button id="loginBtn" onclick="login()" class="w-full bg-green-700 text-white font-bold py-3 rounded-xl shadow-lg mt-1 hover:bg-green-800 transition">เข้าสู่ระบบ</button>
-          <div class="mt-5 text-center border-t pt-4">
-            <span class="text-sm text-gray-500">ยังไม่มีบัญชี?</span>
-            <button onclick="toggleAuth('register')" class="text-green-700 font-bold text-sm hover:underline">ลงทะเบียนใหม่ที่นี่</button>
-          </div>
-          <p class="ggh-staff-link"><a href="admin.html">สำหรับเจ้าหน้าที่: เข้าสู่ระบบ / ลงทะเบียน</a></p>
-        </div>
-
         <div class="ggh-district" id="dashDistrict" aria-live="polite">
           <p class="ggh-district-empty">เลือกอำเภอบนแผนที่ หรือค้นหาชื่ออำเภอ เพื่อดูรายละเอียด</p>
         </div>
@@ -255,61 +228,6 @@
       <div class="ggh-tooltip" id="dashTooltip" role="tooltip" hidden></div>
     </div>
 
-    <div id="pdpaModal" class="hidden pdpa-modal">
-        <div class="pdpa-content">
-            <div class="pdpa-header">
-                เอกสารแสดงความยินยอม (Consent Form)<br>
-                <span class="text-sm font-normal opacity-90">สำหรับใช้ประกอบในการประเมินสถานการณ์ของกลุ่มเป้าหมาย</span>
-            </div>
-            <div class="pdpa-body">
-                <p class="mb-3 font-bold text-green-800">ข้าพเจ้าให้กรมส่งเสริมการเกษตรนำข้อมูลส่วนบุคคลของข้าพเจ้าไปเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูล ดังนี้:</p>
-                
-                <div class="pl-4 mb-4 space-y-3">
-                    <p><strong>๑.</strong> ใช้ในงานส่งเสริมการเกษตร หรือใช้ประกอบในการเข้าร่วมโครงการหรือมาตรการต่างๆ ของภาครัฐ หรือยอมรับให้เปิดเผยข้อมูลส่วนบุคคลของข้าพเจ้าได้ตามกฎหมาย</p>
-                    <p><strong>๒.</strong> จัดทำฐานข้อมูล ประมวลผล วิเคราะห์ข้อมูลสถิติเพื่อใช้ในการจัดตั้งศูนย์กลางการสร้างมูลค่าเพิ่มวัสดุเหลือใช้ทางการเกษตร <strong>(Green Gain Hub)</strong> ขึ้นในพื้นที่โดย Hub เหล่านี้จะทำหน้าที่เป็น ศูนย์กลางการรวบรวม การแปรรูปเบื้องต้น และการรับซื้อ วัสดุเหลือใช้จากเกษตรกรเพื่อป้อนเข้าสู่ระบบตลาดหมุนเวียนอย่างมีประสิทธิภาพและนำไปเผยแพร่บนแพลตฟอร์มระบบของกรมส่งเสริมการเกษตรหรือแพลตฟอร์มอื่นๆ ที่เกี่ยวข้อง สำหรับให้เกษตรกรหรือประชาชนทั่วไปได้เข้าถึงข้อมูลของท่าน</p>
-                </div>
-                <hr class="my-4 border-gray-200">
-                <p class="mb-2 text-sm">
-                    ทั้งนี้ ก่อนการแสดงเจตนา ข้าพเจ้าได้อ่านรายละเอียดจากเอกสารชี้แจงข้อมูล หรือได้รับคำอธิบายจากกรมส่งเสริมการเกษตร ถึงวัตถุประสงค์ในการเก็บรวบรวม ใช้หรือเปิดเผย (“ประมวลผล”) ข้อมูลส่วนบุคคล และมีความเข้าใจดีแล้ว
-                </p>
-                <p class="mb-2 text-sm">
-                    ข้าพเจ้าให้ความยินยอมหรือปฏิเสธไม่ให้ความยินยอมในเอกสารนี้ด้วยความสมัครใจ ปราศจาก การบังคับ หรือชักจูง และข้าพเจ้าทราบว่าข้าพเจ้าสามารถถอนความยินยอมนี้เสียเมื่อใดก็ได้ เว้นแต่ในกรณี มีข้อจำกัดสิทธิ ตามกฎหมายหรือยังมีสัญญาระหว่างข้าพเจ้ากับกรมส่งเสริมการเกษตร ที่ให้ประโยชน์ แก่ข้าพเจ้าอยู่
-                </p>
-                <div class="consent-check">
-                   <input type="checkbox" id="pdpaCheck" class="mt-1 w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500">
-                   <label for="pdpaCheck" class="text-sm font-bold text-green-800 cursor-pointer">
-                       ข้าพเจ้ายินยอมให้ข้อมูลส่วนบุคคลตามรายละเอียดข้างต้น
-                   </label>
-                </div>
-            </div>
-            <div class="pdpa-footer">
-                <button onclick="handlePDPA(false)" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-300 transition">ไม่ยินยอม</button>
-                <button onclick="handlePDPA(true)" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 shadow transition">ยืนยันการลงทะเบียน</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="registerPage" class="hidden mt-2 sm:mt-8">
-      <div class="max-w-md mx-auto bg-white p-5 sm:p-8 rounded-2xl shadow-xl border-t-4 border-blue-600">
-        <h2 class="text-xl font-bold text-center mb-6">ลงทะเบียนสมาชิกใหม่</h2>
-        <form id="regForm" onsubmit="event.preventDefault(); showPDPA();">
-          <div class="input-group">
-            <label class="label-text">ประเภทสมาชิก</label>
-            <select name="role" class="input-field bg-blue-50 text-blue-900 font-bold">
-              <option value="farmer">🌾 เกษตรกร (ผู้ขาย)</option>
-              <option value="buyer">🏭 ผู้ประกอบการ (ผู้รับซื้อ)</option>
-            </select>
-          </div>
-          <div class="input-group"><label class="label-text">ชื่อ-นามสกุล / บริษัท <span class="required-mark">*</span></label><input type="text" name="name" class="input-field" required></div>
-          <div class="input-group">
-             <label class="label-text">เบอร์โทรศัพท์ (10 หลัก) ใช้เพื่อเข้าสู่ระบบ <span class="required-mark">*</span></label>
-             <input type="tel" name="phone" class="input-field font-bold tracking-wider" placeholder="08xxxxxxxx" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
-          </div>
-          <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg mt-4 hover:bg-blue-700">ตรวจสอบข้อมูล</button>
-        </form>
-        <button onclick="toggleAuth('login')" class="w-full text-gray-500 text-sm mt-4 hover:underline">กลับไปเข้าสู่ระบบ</button>
-      </div>
-    </div>
 
     <div id="mainApp" class="hidden">
       
@@ -457,6 +375,94 @@
       </div>
 
     </div>
+    <!-- 2.2.1 sign-in popups (native <dialog>: Esc closes, focus stays inside, returns to the button that opened it) -->
+    <dialog class="ggh-dialog" id="hubAuth" aria-labelledby="hubAuthTitle">
+      <div class="ggh-dialog-box">
+        <header class="ggh-dialog-head">
+          <div>
+            <p class="ggh-dialog-kicker">สำหรับเกษตรกรและผู้รับซื้อ</p>
+            <h2 id="hubAuthTitle">Green Gain Hub <span data-province>กำแพงเพชร</span></h2>
+          </div>
+          <button type="button" class="ggh-dialog-close" data-close aria-label="ปิดหน้าต่าง">✕</button>
+        </header>
+        <div class="ggh-dtabs" role="tablist" aria-label="เข้าสู่ระบบหรือลงทะเบียน">
+          <button type="button" role="tab" id="hubTabLogin" data-hubtab="login" aria-selected="true" aria-controls="hubPanelLogin">เข้าสู่ระบบ</button>
+          <button type="button" role="tab" id="hubTabRegister" data-hubtab="register" aria-selected="false" aria-controls="hubPanelRegister">ลงทะเบียนใหม่</button>
+        </div>
+        <form class="ggh-dpanel" id="hubPanelLogin" data-hubpanel="login" role="tabpanel" aria-labelledby="hubTabLogin" novalidate onsubmit="event.preventDefault(); login();">
+          <p class="ggh-dhelp">กรอกหมายเลขโทรศัพท์ที่ลงทะเบียนไว้ เพื่อประกาศแปลงหรือจุดรับซื้อ และดูคู่ค้าใกล้คุณ</p>
+          <label class="label-text" for="loginPhone">หมายเลขโทรศัพท์ 10 หลัก</label>
+          <input type="tel" id="loginPhone" class="input-field text-lg tracking-widest text-center font-bold" placeholder="08XXXXXXXX" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <div class="ggh-dmsg" id="hubLoginMsg" role="alert"></div>
+          <button type="submit" id="loginBtn" class="ggh-dbtn">เข้าสู่ระบบ</button>
+          <p class="ggh-dswitch">ยังไม่มีบัญชี? <button type="button" data-hubtab="register">ลงทะเบียนใหม่</button></p>
+        </form>
+        <form class="ggh-dpanel hidden" id="hubPanelRegister" data-hubpanel="register" role="tabpanel" aria-labelledby="hubTabRegister" novalidate>
+          <fieldset class="ggh-roles">
+            <legend class="label-text">ลงทะเบียนเป็น</legend>
+            <label><input type="radio" name="role" value="farmer" checked><span><b>เกษตรกร</b> ขายเศษวัสดุ</span></label>
+            <label><input type="radio" name="role" value="buyer"><span><b>ผู้รับซื้อ</b> ผู้ประกอบการ</span></label>
+          </fieldset>
+          <label class="label-text" for="regName">ชื่อ-นามสกุล / ชื่อบริษัท</label>
+          <input type="text" id="regName" name="name" class="input-field" maxlength="150" autocomplete="name">
+          <label class="label-text" for="regPhone">หมายเลขโทรศัพท์ 10 หลัก (ใช้เข้าสู่ระบบ)</label>
+          <input type="tel" id="regPhone" name="phone" class="input-field font-bold tracking-wider" placeholder="08XXXXXXXX" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <details class="ggh-consent">
+            <summary>อ่านเอกสารแสดงความยินยอม (Consent Form)</summary>
+            <p class="ggh-consent-sub">สำหรับใช้ประกอบในการประเมินสถานการณ์ของกลุ่มเป้าหมาย</p>
+            <p><b>ข้าพเจ้าให้กรมส่งเสริมการเกษตรนำข้อมูลส่วนบุคคลของข้าพเจ้าไปเก็บรวบรวม ใช้ หรือเปิดเผยข้อมูล ดังนี้:</b></p>
+            <p><strong>๑.</strong> ใช้ในงานส่งเสริมการเกษตร หรือใช้ประกอบในการเข้าร่วมโครงการหรือมาตรการต่างๆ ของภาครัฐ หรือยอมรับให้เปิดเผยข้อมูลส่วนบุคคลของข้าพเจ้าได้ตามกฎหมาย</p>
+            <p><strong>๒.</strong> จัดทำฐานข้อมูล ประมวลผล วิเคราะห์ข้อมูลสถิติเพื่อใช้ในการจัดตั้งศูนย์กลางการสร้างมูลค่าเพิ่มวัสดุเหลือใช้ทางการเกษตร <strong>(Green Gain Hub)</strong> ขึ้นในพื้นที่โดย Hub เหล่านี้จะทำหน้าที่เป็น ศูนย์กลางการรวบรวม การแปรรูปเบื้องต้น และการรับซื้อ วัสดุเหลือใช้จากเกษตรกรเพื่อป้อนเข้าสู่ระบบตลาดหมุนเวียนอย่างมีประสิทธิภาพและนำไปเผยแพร่บนแพลตฟอร์มระบบของกรมส่งเสริมการเกษตรหรือแพลตฟอร์มอื่นๆ ที่เกี่ยวข้อง สำหรับให้เกษตรกรหรือประชาชนทั่วไปได้เข้าถึงข้อมูลของท่าน</p>
+            <p>ทั้งนี้ ก่อนการแสดงเจตนา ข้าพเจ้าได้อ่านรายละเอียดจากเอกสารชี้แจงข้อมูล หรือได้รับคำอธิบายจากกรมส่งเสริมการเกษตร ถึงวัตถุประสงค์ในการเก็บรวบรวม ใช้หรือเปิดเผย (“ประมวลผล”) ข้อมูลส่วนบุคคล และมีความเข้าใจดีแล้ว</p>
+            <p>ข้าพเจ้าให้ความยินยอมหรือปฏิเสธไม่ให้ความยินยอมในเอกสารนี้ด้วยความสมัครใจ ปราศจาก การบังคับ หรือชักจูง และข้าพเจ้าทราบว่าข้าพเจ้าสามารถถอนความยินยอมนี้เสียเมื่อใดก็ได้ เว้นแต่ในกรณี มีข้อจำกัดสิทธิ ตามกฎหมายหรือยังมีสัญญาระหว่างข้าพเจ้ากับกรมส่งเสริมการเกษตร ที่ให้ประโยชน์ แก่ข้าพเจ้าอยู่</p>
+          </details>
+          <label class="ggh-consent-check"><input type="checkbox" id="pdpaCheck" name="consent"> ข้าพเจ้ายินยอมให้ข้อมูลส่วนบุคคลตามเอกสารแสดงความยินยอมข้างต้น</label>
+          <div class="ggh-dmsg" id="hubRegMsg" role="alert"></div>
+          <button type="submit" id="regBtn" class="ggh-dbtn">ลงทะเบียนและเข้าใช้งาน</button>
+          <p class="ggh-dswitch">มีบัญชีแล้ว? <button type="button" data-hubtab="login">เข้าสู่ระบบ</button></p>
+        </form>
+      </div>
+    </dialog>
+
+    <dialog class="ggh-dialog" id="staffAuth" aria-labelledby="staffAuthTitle">
+      <div class="ggh-dialog-box">
+        <header class="ggh-dialog-head is-staff">
+          <div>
+            <p class="ggh-dialog-kicker">สำหรับเจ้าหน้าที่</p>
+            <h2 id="staffAuthTitle">บันทึกการจัดการ ภาพรวม และรายงาน</h2>
+          </div>
+          <button type="button" class="ggh-dialog-close" data-close aria-label="ปิดหน้าต่าง">✕</button>
+        </header>
+        <div class="ggh-dtabs" role="tablist" aria-label="เข้าสู่ระบบหรือลงทะเบียนเจ้าหน้าที่">
+          <button type="button" role="tab" id="staffTabLogin" data-stafftab="login" aria-selected="true" aria-controls="staffPanelLogin">เข้าสู่ระบบ</button>
+          <button type="button" role="tab" id="staffTabRegister" data-stafftab="register" aria-selected="false" aria-controls="staffPanelRegister">ลงทะเบียนเจ้าหน้าที่</button>
+        </div>
+        <form class="ggh-dpanel" id="staffPanelLogin" data-staffpanel="login" role="tabpanel" aria-labelledby="staffTabLogin" novalidate>
+          <label class="label-text" for="staffPhone">หมายเลขโทรศัพท์ที่ลงทะเบียนไว้</label>
+          <input type="tel" id="staffPhone" name="phone" class="input-field text-lg tracking-widest text-center font-bold" placeholder="08XXXXXXXX" maxlength="12" inputmode="numeric" autocomplete="tel">
+          <div class="ggh-dmsg" id="staffLoginMsg" role="alert"></div>
+          <button type="submit" class="ggh-dbtn" id="staffLoginBtn">เข้าสู่ระบบ</button>
+          <p class="ggh-dswitch">ยังไม่มีบัญชี? <button type="button" data-stafftab="register">ลงทะเบียนเจ้าหน้าที่</button></p>
+        </form>
+        <form class="ggh-dpanel hidden" id="staffPanelRegister" data-staffpanel="register" role="tabpanel" aria-labelledby="staffTabRegister" novalidate>
+          <label class="label-text" for="sregName">ชื่อ-สกุล</label>
+          <input id="sregName" name="name" class="input-field" maxlength="120" autocomplete="name">
+          <label class="label-text" for="sregPhone">หมายเลขโทรศัพท์</label>
+          <input id="sregPhone" name="phone" type="tel" class="input-field" inputmode="numeric" maxlength="12" autocomplete="tel" placeholder="08XXXXXXXX">
+          <label class="label-text" for="sregOffice">หน่วยงาน</label>
+          <select id="sregOffice" name="officeType" class="input-field"><option value="">กำลังโหลด…</option></select>
+          <label class="ggh-reg-field hidden" data-reg="group"><span class="label-text">กลุ่ม</span><select name="group" class="input-field"></select></label>
+          <label class="ggh-reg-field" data-reg="district"><span class="label-text">อำเภอ</span><select name="district" class="input-field"></select></label>
+          <label class="label-text" for="sregProvince">จังหวัด <span class="ggh-dmuted">(พิมพ์เพื่อค้นหา)</span></label>
+          <input id="sregProvince" name="province" list="sregProvinces" class="input-field" autocomplete="off">
+          <datalist id="sregProvinces"></datalist>
+          <p class="ggh-dmuted">ข้อมูลนี้ใช้ระบุตัวผู้บันทึกข้อมูลในระบบและรายงานของหน่วยงานเท่านั้น</p>
+          <div class="ggh-dmsg" id="staffRegMsg" role="alert"></div>
+          <button type="submit" class="ggh-dbtn" id="staffRegBtn">ลงทะเบียนและเข้าใช้งาน</button>
+        </form>
+        <p class="ggh-dfoot">Super Admin / Mini Super Admin <a href="admin.html#admin">เข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่าน</a></p>
+      </div>
+    </dialog>
   </main>
 
   <footer class="bg-green-900 text-white text-center py-6 mt-auto">
@@ -476,9 +482,10 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=2.2.0"></script>
-  <script src="assets/api-client.js?v=2.2.0"></script>
-  <script src="assets/dashboard.js?v=2.2.0" defer></script>
+  <script src="assets/config.js?v=2.2.1"></script>
+  <script src="assets/api-client.js?v=2.2.1"></script>
+  <script src="assets/staff-auth.js?v=2.2.1"></script>
+  <script src="assets/dashboard.js?v=2.2.1" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -692,28 +699,82 @@
       toggleOtherMaterial(materialSelect);
     }
 
-    // --- UTILS ---
-    function toggleAuth(page) {
-       document.getElementById('loginPage').classList.toggle('hidden');
-       document.getElementById('registerPage').classList.toggle('hidden');
+    // --- 2.2.1 sign-in popups: farmers/buyers (#hubAuth) and officers (#staffAuth) ---
+    const AUTH = { opener: null };
+    function setMsg(id, html, kind) {
+      const el = document.getElementById(id);
+      el.innerHTML = html || '';
+      el.className = 'ggh-dmsg' + (html ? ' is-' + (kind || 'error') : '');
     }
+    function openDialog(id, opener) {
+      const dlg = document.getElementById(id);
+      ['hubAuth', 'staffAuth'].forEach((x) => { const d = document.getElementById(x); if (x !== id && d.open) d.close(); });
+      AUTH.opener = opener || document.activeElement;
+      if (!dlg.open) { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); }
+      return dlg;
+    }
+    function closeDialog(dlg) { if (dlg.open) { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); } }
+    document.querySelectorAll('.ggh-dialog').forEach((dlg) => {
+      dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => closeDialog(dlg)));
+      // A tap on the dimmed background closes the popup (the box itself fills the dialog element).
+      dlg.addEventListener('click', (e) => { if (e.target === dlg) closeDialog(dlg); });
+      dlg.addEventListener('close', () => { const o = AUTH.opener; AUTH.opener = null; if (o && document.contains(o) && o.focus) o.focus(); });
+    });
+    function selectTab(dlg, attr, tab) {
+      dlg.querySelectorAll(`[role="tab"][data-${attr}tab]`).forEach((b) => { const on = b.dataset[attr + 'tab'] === tab; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
+      dlg.querySelectorAll(`[data-${attr}panel]`).forEach((p) => p.classList.toggle('hidden', p.dataset[attr + 'panel'] !== tab));
+      const first = dlg.querySelector(`[data-${attr}panel="${tab}"] input:not([type="radio"]):not([type="checkbox"])`);
+      if (first) setTimeout(() => first.focus(), 30);
+    }
+    function wireTabs(dlgId, attr, onSwitch) {
+      const dlg = document.getElementById(dlgId);
+      dlg.querySelectorAll(`[data-${attr}tab]`).forEach((b) => b.addEventListener('click', () => { selectTab(dlg, attr, b.dataset[attr + 'tab']); if (onSwitch) onSwitch(b.dataset[attr + 'tab']); }));
+      const tabs = [...dlg.querySelectorAll(`[role="tab"][data-${attr}tab]`)];
+      tabs.forEach((b, i) => b.addEventListener('keydown', (e) => {
+        const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!d) return;
+        e.preventDefault(); const n = tabs[(i + d + tabs.length) % tabs.length]; n.click(); n.focus();
+      }));
+    }
+    wireTabs('hubAuth', 'hub');
+    wireTabs('staffAuth', 'staff', (tab) => { if (tab === 'register') prepareStaffRegister(); });
 
-    // 2.2.0 entry doors: register with the role already chosen, or go to the sign-in box.
-    function openDoor(action, role) {
-      if (action === 'register') {
-        const f = document.getElementById('regForm');
-        if (role && f.role) f.role.value = role;
-        toggleAuth('register');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        setTimeout(() => f.name && f.name.focus(), 300);
-        return;
-      }
-      const card = document.getElementById('loginCard');
-      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => document.getElementById('loginPhone').focus(), 350);
+    function openHub(tab, role, phone, opener) {
+      const dlg = openDialog('hubAuth', opener);
+      const f = document.getElementById('hubPanelRegister');
+      if (role) { const r = f.querySelector(`input[name="role"][value="${role}"]`); if (r) r.checked = true; }
+      if (phone) { document.getElementById('loginPhone').value = phone; f.phone.value = phone; }
+      setMsg('hubLoginMsg', ''); setMsg('hubRegMsg', '');
+      selectTab(dlg, 'hub', tab || 'login');
     }
-    document.querySelectorAll('[data-door]').forEach((b) => b.addEventListener('click', () => openDoor(b.dataset.door, b.dataset.role)));
-    
+    function openStaff(tab, phone, opener) {
+      // An officer who is still signed in goes straight to the officer pages.
+      if (!phone && window.GGH_STAFF && window.GGH_STAFF.hasSession()) { location.href = 'admin.html'; return; }
+      const dlg = openDialog('staffAuth', opener);
+      if (phone) document.getElementById('staffPhone').value = phone;
+      setMsg('staffLoginMsg', ''); setMsg('staffRegMsg', '');
+      selectTab(dlg, 'staff', tab || 'login');
+      if (tab === 'register') prepareStaffRegister();
+    }
+    function prepareStaffRegister() {
+      window.GGH_STAFF.prepareRegister(document.getElementById('staffPanelRegister'), 'sregProvinces')
+        .catch((err) => setMsg('staffRegMsg', escapeHtml(err.message)));
+    }
+    function openDoor(action, role, opener) {
+      if (action === 'staff') return openStaff('login', '', opener);
+      openHub(action === 'register' ? 'register' : 'login', role, '', opener);
+    }
+    document.querySelectorAll('[data-door]').forEach((b) => b.addEventListener('click', () => openDoor(b.dataset.door, b.dataset.role, b)));
+    // Kept for older links/buttons.
+    function toggleAuth(page) { openHub(page === 'register' ? 'register' : 'login'); }
+
+    // Shareable links (e.g. in LINE): #sell, #buy, #login, #staff, #staff-register. Read before the dashboard rewrites the hash.
+    (function openFromHash() {
+      const h = decodeURIComponent((location.hash || '').slice(1));
+      const map = { sell: ['register', 'farmer'], buy: ['register', 'buyer'], login: ['login', ''], register: ['register', ''] };
+      if (map[h]) { setTimeout(() => openHub(map[h][0], map[h][1]), 0); history.replaceState(null, '', location.pathname + location.search); }
+      else if (h === 'staff' || h === 'staff-register') { setTimeout(() => openStaff(h === 'staff' ? 'login' : 'register'), 0); history.replaceState(null, '', location.pathname + location.search); }
+    })();
+
     function logout() {
       Swal.fire({
          title: 'ออกจากระบบ?', icon: 'question', showCancelButton: true, confirmButtonText: 'ยืนยัน', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#d33'
@@ -725,92 +786,94 @@
       });
     }
 
-    // --- PDPA LOGIC ---
-    function showPDPA() {
-        const f = document.getElementById('regForm');
-        const u = f.phone.value.replace(/\D/g, '');
-        // ลบเงื่อนไขเช็ครหัสผ่านออก
-        if(!f.name.value || u.length !== 10) {
-            return Swal.fire('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
-        }
-        document.getElementById('pdpaModal').classList.remove('hidden');
-    }
-
-    function handlePDPA(consent) {
-        document.getElementById('pdpaModal').classList.add('hidden');
-        if(consent) {
-            const isChecked = document.getElementById('pdpaCheck').checked;
-            if(!isChecked) {
-                document.getElementById('pdpaModal').classList.remove('hidden');
-                return Swal.fire('แจ้งเตือน', 'กรุณาติ๊กถูกที่ช่อง "ข้าพเจ้ายินยอม"', 'warning');
-            }
-            register();
-        } else {
-            Swal.fire('แจ้งเตือน', 'ท่านต้องยินยอมนโยบาย PDPA เพื่อใช้งานระบบ', 'error')
-            .then(() => location.reload());
-        }
-    }
-
-    // --- AUTH (Login by Phone Only) ---
+    // --- AUTH: farmers and buyers sign in by phone only. Messages stay inside the popup. ---
     function login() {
       const u = document.getElementById('loginPhone').value.replace(/\D/g, '');
       const btn = document.getElementById('loginBtn');
-      const originalText = btn.innerText;
-      
-      if(u.length !== 10) return Swal.fire('แจ้งเตือน', 'กรุณากรอกหมายเลขโทรศัพท์ให้ครบ 10 หลัก', 'warning');
-      
-      btn.innerText = 'กำลังตรวจสอบข้อมูล...';
-      btn.disabled = true;
-      
+      if (u.length !== 10) return setMsg('hubLoginMsg', 'กรุณากรอกหมายเลขโทรศัพท์ให้ครบ 10 หลัก');
+      setMsg('hubLoginMsg', '');
+      btn.textContent = 'กำลังตรวจสอบข้อมูล…'; btn.disabled = true;
+      const done = () => { btn.textContent = 'เข้าสู่ระบบ'; btn.disabled = false; };
       google.script.run
-        .withSuccessHandler(function(data) {
-          if (data.status === 'success') {
-            currentUser = data;
-            setupUI(data);
-          } else {
-            Swal.fire('ผิดพลาด', data.message, 'error');
-            btn.innerText = originalText;
-            btn.disabled = false;
-          }
+        .withSuccessHandler(function (data) {
+          done();
+          if (data.status === 'success') { closeDialog(document.getElementById('hubAuth')); currentUser = data; setupUI(data); }
+          else setMsg('hubLoginMsg', escapeHtml(data.message || 'เข้าสู่ระบบไม่สำเร็จ'));
         })
-        .withFailureHandler(function(err) {
+        .withFailureHandler(function (err) {
+          done();
           const msg = String(err && err.message || '');
           if (/^STAFF_ACCOUNT:/.test(msg)) {
-            // 2.2.0: an officer number typed into the farmer/buyer box.
-            Swal.fire({ icon: 'info', title: 'หมายเลขนี้เป็นบัญชีเจ้าหน้าที่', text: msg.replace(/^STAFF_ACCOUNT:\s*/, ''),
-              showCancelButton: true, confirmButtonText: 'ไปหน้าเจ้าหน้าที่', cancelButtonText: 'ปิด', confirmButtonColor: '#15803d' })
-              .then((r) => { if (r.isConfirmed) location.href = 'admin.html'; });
-          } else {
-            Swal.fire('เข้าสู่ระบบไม่สำเร็จ', msg || 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่', 'error');
-          }
-          btn.innerText = originalText;
-          btn.disabled = false;
+            // An officer number typed here: switch to the officer popup with the number filled in.
+            setMsg('hubLoginMsg', `${escapeHtml(msg.replace(/^STAFF_ACCOUNT:\s*/, ''))}<br><button type="button" class="ggh-dlink" data-to-staff>เปิดหน้าต่างเจ้าหน้าที่</button>`, 'info');
+            document.querySelector('#hubLoginMsg [data-to-staff]').addEventListener('click', () => openStaff('login', u));
+          } else if (/ไม่พบหมายเลข/.test(msg)) {
+            setMsg('hubLoginMsg', `${escapeHtml(msg)}<br><button type="button" class="ggh-dlink" data-to-register>ลงทะเบียนด้วยหมายเลขนี้</button>`);
+            document.querySelector('#hubLoginMsg [data-to-register]').addEventListener('click', () => openHub('register', '', u));
+          } else setMsg('hubLoginMsg', escapeHtml(msg || 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่'));
         })
-        .loginServer({ action: 'login', username: u }); 
+        .loginServer({ action: 'login', username: u });
     }
 
+    document.getElementById('hubPanelRegister').addEventListener('submit', (e) => { e.preventDefault(); register(); });
     function register() {
-      const f = document.getElementById('regForm');
+      const f = document.getElementById('hubPanelRegister');
       const u = f.phone.value.replace(/\D/g, '');
-
-      Swal.showLoading();
-
+      const role = (f.querySelector('input[name="role"]:checked') || {}).value || 'farmer';
+      const miss = [];
+      if (!f.name.value.trim()) miss.push('ชื่อ');
+      if (u.length !== 10) miss.push('หมายเลขโทรศัพท์ 10 หลัก');
+      if (miss.length) return setMsg('hubRegMsg', 'กรุณากรอก: ' + miss.join(', '));
+      if (!document.getElementById('pdpaCheck').checked) return setMsg('hubRegMsg', 'กรุณาอ่านและติ๊กยินยอมการใช้ข้อมูลส่วนบุคคล (PDPA) ก่อนลงทะเบียน');
+      const btn = document.getElementById('regBtn');
+      setMsg('hubRegMsg', ''); btn.textContent = 'กำลังลงทะเบียน…'; btn.disabled = true;
+      const done = () => { btn.textContent = 'ลงทะเบียนและเข้าใช้งาน'; btn.disabled = false; };
       google.script.run
-        .withSuccessHandler(function(d) {
-          Swal.close();
-          if (d.status === 'success') {
-            Swal.fire('สำเร็จ', 'ลงทะเบียนเรียบร้อย สามารถเข้าสู่ระบบได้ทันที', 'success');
-            toggleAuth('login');
-          } else {
-            Swal.fire('ผิดพลาด', d.message, 'error');
-          }
+        .withSuccessHandler(function (d) {
+          done();
+          if (d.status !== 'success') return setMsg('hubRegMsg', escapeHtml(d.message || 'ลงทะเบียนไม่สำเร็จ'));
+          closeDialog(document.getElementById('hubAuth'));
+          if (d.token) { currentUser = d; setupUI(d); Swal.fire({ icon: 'success', title: 'ลงทะเบียนสำเร็จ', text: 'เข้าใช้งานได้ทันที ครั้งต่อไปเข้าสู่ระบบด้วยหมายเลขโทรศัพท์นี้', timer: 3500 }); }
+          else { openHub('login', '', u); setMsg('hubLoginMsg', 'ลงทะเบียนสำเร็จ กรุณาเข้าสู่ระบบ', 'ok'); }
         })
-        .withFailureHandler(function(err) {
-          Swal.close();
-          Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+        .withFailureHandler(function (err) {
+          done();
+          const msg = String(err && err.message || '');
+          if (/ลงทะเบียนแล้ว/.test(msg)) {
+            setMsg('hubRegMsg', `${escapeHtml(msg)}<br><button type="button" class="ggh-dlink" data-to-login>เข้าสู่ระบบด้วยหมายเลขนี้</button>`);
+            document.querySelector('#hubRegMsg [data-to-login]').addEventListener('click', () => openHub('login', '', u));
+          } else setMsg('hubRegMsg', escapeHtml(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่'));
         })
-        .registerServer({ role: f.role.value, name: f.name.value, phone: u, password: "" });
+        .registerServer({ role: role, name: f.name.value.trim(), phone: u, password: '' });
     }
+
+    // --- Officers: shared logic in assets/staff-auth.js; on success go to the officer pages. ---
+    document.getElementById('staffPanelLogin').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('staffLoginBtn'), phone = window.GGH_STAFF.digits(e.target.phone.value);
+      btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ…'; setMsg('staffLoginMsg', '');
+      try { await window.GGH_STAFF.login(phone); location.href = 'admin.html'; }
+      catch (err) {
+        const msg = String(err.message || '');
+        if (/^MARKET_ACCOUNT:/.test(msg)) {
+          setMsg('staffLoginMsg', `${escapeHtml(msg.replace(/^MARKET_ACCOUNT:\s*/, ''))}<br><button type="button" class="ggh-dlink" data-to-hub>เปิดหน้าต่างเกษตรกรและผู้รับซื้อ</button>`, 'info');
+          document.querySelector('#staffLoginMsg [data-to-hub]').addEventListener('click', () => openHub('login', '', phone));
+        } else if (/ลงทะเบียน/.test(msg)) {
+          setMsg('staffLoginMsg', `${escapeHtml(msg)}<br><button type="button" class="ggh-dlink" data-to-sreg>ลงทะเบียนเจ้าหน้าที่</button>`);
+          document.querySelector('#staffLoginMsg [data-to-sreg]').addEventListener('click', () => { document.getElementById('staffPanelRegister').phone.value = phone; selectTab(document.getElementById('staffAuth'), 'staff', 'register'); prepareStaffRegister(); });
+        } else setMsg('staffLoginMsg', escapeHtml(msg));
+      } finally { btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ'; }
+    });
+    document.getElementById('staffPanelRegister').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const { input, missing } = window.GGH_STAFF.readRegister(e.target);
+      if (missing.length) return setMsg('staffRegMsg', 'กรุณากรอก: ' + escapeHtml(missing.join(', ')));
+      const btn = document.getElementById('staffRegBtn');
+      btn.disabled = true; btn.textContent = 'กำลังลงทะเบียน…'; setMsg('staffRegMsg', '');
+      try { await window.GGH_STAFF.register(input); location.href = 'admin.html'; }
+      catch (err) { setMsg('staffRegMsg', escapeHtml(err.message)); }
+      finally { btn.disabled = false; btn.textContent = 'ลงทะเบียนและเข้าใช้งาน'; }
+    });
 
     // --- UI SETUP ---
     function setupUI(user) {

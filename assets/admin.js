@@ -104,7 +104,7 @@
   function loginTab(tab) {
     document.querySelectorAll('[data-ltab]').forEach((b) => { const on = b.dataset.ltab === tab; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
     document.querySelectorAll('[data-lpanel]').forEach((f) => f.classList.toggle('hidden', f.dataset.lpanel !== tab));
-    if (tab === 'register') loadRegMeta().catch((err) => { $('regError').textContent = err.message; });
+    if (tab === 'register') window.GGH_STAFF.prepareRegister($('staffRegForm'), 'regProvinces').catch((err) => { $('regError').textContent = err.message; });
     const first = document.querySelector(`[data-lpanel="${tab}"] input`); if (first) first.focus();
   }
   document.querySelectorAll('[data-ltab]').forEach((b, i, all) => {
@@ -112,32 +112,16 @@
     b.addEventListener('keydown', (e) => { const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!d) return; e.preventDefault(); const n = all[(i + d + all.length) % all.length]; loginTab(n.dataset.ltab); n.focus(); });
   });
   document.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => loginTab(b.dataset.goto)));
-  async function loadRegMeta() {
-    if (reg.meta) return;
-    reg.meta = await call('staffMetaServer');
-    const m = reg.meta;
-    $('regOffice').innerHTML = '<option value="">เลือกหน่วยงาน</option>' + Object.entries(m.officeTypes).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join('');
-    $('regGroup').innerHTML = '<option value="">เลือกกลุ่ม</option>' + m.groups.map((g) => `<option>${esc(g)}</option>`).join('');
-    $('regDistrict').innerHTML = '<option value="">เลือกอำเภอ</option>' + m.districts.map((d) => `<option value="${esc(d.code)}">${esc(d.name)}</option>`).join('');
-    $('regProvinces').innerHTML = m.provinces.map((p) => `<option value="${esc(p)}">`).join('');
-    if (!$('regProvince').value) $('regProvince').value = m.province;
-    syncRegOffice();
-  }
-  function syncRegOffice() {
-    const prov = $('regOffice').value === 'province';
-    ['regGroup', 'regGroupLabel'].forEach((id) => $(id).classList.toggle('hidden', !prov));
-    ['regDistrict', 'regDistrictLabel'].forEach((id) => $(id).classList.toggle('hidden', prov));
-  }
-  $('regOffice').addEventListener('change', syncRegOffice);
-  const digits = (v) => String(v || '').replace(/\D/g, '');
+  // Registration fields, checks and phone sign-in come from assets/staff-auth.js (shared with the homepage popup).
+  const digits = window.GGH_STAFF.digits;
   $('staffLoginForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const phone = digits($('staffPhone').value);
     if (!/^0\d{9}$/.test(phone)) { $('staffLoginError').textContent = 'กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก'; return; }
     busy($('staffLoginBtn'), 'กำลังตรวจสอบ…', async () => {
       try {
-        const r = await call('staffLoginServer', { phone });
-        state.token = r.token; sessionStorage.setItem(TOKEN_KEY, r.token); $('staffLoginError').textContent = '';
+        const r = await window.GGH_STAFF.login(phone);
+        state.token = r.token; $('staffLoginError').textContent = '';
         await enterApp(r);
       } catch (err) {
         // A farmer/buyer number typed here: point to the homepage box instead of "not found".
@@ -149,20 +133,12 @@
   });
   $('staffRegForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    const f = e.target;
-    const input = { name: f.name.value.trim().replace(/\s+/g, ' '), phone: digits(f.phone.value), officeType: f.officeType.value, group: f.group.value, district: f.district.value, province: f.province.value.trim() };
-    const miss = [];
-    if (!/\S+\s+\S+/.test(input.name)) miss.push('ชื่อ-สกุล');
-    if (!/^0\d{9}$/.test(input.phone)) miss.push('หมายเลขโทรศัพท์ 10 หลัก');
-    if (!input.officeType) miss.push('หน่วยงาน');
-    if (input.officeType === 'province' && !input.group) miss.push('กลุ่ม');
-    if (input.officeType === 'district' && !input.district) miss.push('อำเภอ');
-    if (!input.province) miss.push('จังหวัด');
-    if (miss.length) { $('regError').textContent = 'กรุณากรอก: ' + miss.join(', '); return; }
+    const { input, missing } = window.GGH_STAFF.readRegister(e.target);
+    if (missing.length) { $('regError').textContent = 'กรุณากรอก: ' + missing.join(', '); return; }
     busy($('regBtn'), 'กำลังลงทะเบียน…', async () => {
       try {
-        const r = await call('staffRegisterServer', input);
-        state.token = r.token; sessionStorage.setItem(TOKEN_KEY, r.token); $('regError').textContent = '';
+        const r = await window.GGH_STAFF.register(input);
+        state.token = r.token; $('regError').textContent = '';
         await enterApp(r);
         toast(r.message);
       } catch (err) { $('regError').textContent = err.message; }
@@ -1213,6 +1189,9 @@
   });
 
   /* ---------------- start ---------------- */
+  // admin.html#admin (from the homepage officer popup) opens the username/password tab; #register the officer form.
+  if (!state.token && location.hash === '#admin') loginTab('admin');
+  else if (!state.token && location.hash === '#register') loginTab('register');
   if (state.token) {
     call('adminMeServer').then(enterApp).catch(() => signOut());
   }

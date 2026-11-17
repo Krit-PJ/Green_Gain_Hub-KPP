@@ -142,3 +142,7 @@ Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts
 - `ghgCropSaveServer` รับ `useGlobalPrice`, `priceBahtKg` (ราคาเฉพาะพืช), `removablePct`, `removableReference`; `ghgSettingsServer` คืน `price`
 - `reportCatalogServer` คืน `types` (district, province, ghg, register); ส่วนรายงานใหม่ `residue.balance`, `residue.ghgcrops`; คอลัมน์ `printHide` ไม่พิมพ์แต่อยู่ใน Excel/CSV, ส่วน `landscape` พิมพ์แนวนอน
 - หน่วย: `ตันคาร์บอนไดออกไซด์เทียบเท่า` (เดิม tCO2e); `loginServer` แจ้ง `STAFF_ACCOUNT:` และ `staffLoginServer` แจ้ง `MARKET_ACCOUNT:` เมื่อกรอกเบอร์ผิดช่อง
+
+## 2.2.1
+
+- `registerServer` (เกษตรกร/ผู้รับซื้อ) คืน session ทันที: `{ token, phone, role, name }` เหมือน `loginServer`

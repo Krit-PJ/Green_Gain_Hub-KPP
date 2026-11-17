@@ -7,8 +7,8 @@
   <meta name="robots" content="noindex">
   <title>สำหรับเจ้าหน้าที่ · Green Gain Hub กำแพงเพชร</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.2.0">
-  <link rel="stylesheet" href="assets/admin.css?v=2.2.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.2.1">
+  <link rel="stylesheet" href="assets/admin.css?v=2.2.1">
 </head>
 <body class="adm">
   <header class="adm-top">
@@ -44,10 +44,8 @@
         <input id="regPhone" name="phone" type="tel" inputmode="numeric" maxlength="12" autocomplete="tel" placeholder="08XXXXXXXX" required>
         <label for="regOffice">หน่วยงาน</label>
         <select id="regOffice" name="officeType" required><option value="">เลือกหน่วยงาน</option></select>
-        <label for="regGroup" class="hidden" id="regGroupLabel">กลุ่ม</label>
-        <select id="regGroup" name="group" class="hidden"><option value="">เลือกกลุ่ม</option></select>
-        <label for="regDistrict" id="regDistrictLabel">อำเภอ</label>
-        <select id="regDistrict" name="district"><option value="">เลือกอำเภอ</option></select>
+        <label class="adm-reg-field hidden" data-reg="group">กลุ่ม<select id="regGroup" name="group"><option value="">เลือกกลุ่ม</option></select></label>
+        <label class="adm-reg-field" data-reg="district">อำเภอ<select id="regDistrict" name="district"><option value="">เลือกอำเภอ</option></select></label>
         <label for="regProvince">จังหวัด <span class="adm-muted">(พิมพ์เพื่อค้นหา)</span></label>
         <input id="regProvince" name="province" list="regProvinces" value="กำแพงเพชร" autocomplete="off" required>
         <datalist id="regProvinces"></datalist>
@@ -436,8 +434,9 @@
   <div class="adm-toast" id="toast" role="status" hidden></div>
   <dialog class="adm-dialog" id="photoDialog" aria-label="ภาพถ่าย"><div class="adm-dialog-body" id="photoBody"></div><form method="dialog"><button class="adm-btn">ปิด</button></form></dialog>
 
-  <script src="assets/config.js?v=2.2.0"></script>
-  <script src="assets/crop-import.js?v=2.2.0"></script>
-  <script src="assets/admin.js?v=2.2.0"></script>
+  <script src="assets/config.js?v=2.2.1"></script>
+  <script src="assets/crop-import.js?v=2.2.1"></script>
+  <script src="assets/staff-auth.js?v=2.2.1"></script>
+  <script src="assets/admin.js?v=2.2.1"></script>
 </body>
 </html>

@@ -21,7 +21,7 @@
           return;
         }
         const result = payload.result;
-        if (method === 'loginServer' && result && result.token) {
+        if ((method === 'loginServer' || method === 'registerServer') && result && result.token) {
           sessionToken = result.token;
           sessionStorage.setItem('ggh_session_token', sessionToken);
         }

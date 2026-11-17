@@ -1,4 +1,4 @@
-/* Green Gain Hub 2.2.0 (base 1.5.0) — public landing dashboard (login page).
+/* Green Gain Hub 2.2.1 (base 1.5.0) — public landing dashboard (login page).
    Palette follows the Nakhon Pathom Smart Map reference (#1a7f37) with a straw
    accent reserved for "harvest soon" — the one thing a buyer acts on. */
 :root {
@@ -338,20 +338,6 @@ body.ggh-landing-on main { max-width: 84rem; }
 /* ---------- 2.1.0 top bar title, lead text, Green Gain Hub sign-in card ---------- */
 .ggh-topbar-title { font-size: clamp(.8rem, .55rem + 1.4vw, 1.25rem); text-align: center; text-wrap: balance; }
 .ggh-lede.ggh-lede-lead { margin-top: 0; font-size: clamp(1rem, .92rem + .4vw, 1.25rem); line-height: 1.5; color: var(--ggh-green-dark); font-weight: 600; max-width: 62ch; }
-#loginCard.ggh-login { background: linear-gradient(155deg, #0b3d1d 0%, #14612d 48%, #1e8440 100%); color: #fff; border: 0; box-shadow: 0 12px 30px rgba(15, 77, 36, .28); }
-#loginCard .ggh-login-brand { display: inline-flex; align-items: center; gap: .3rem; font-weight: 700; font-size: .88rem; color: #0f4d24; background: #f6d77e; border-radius: 999px; padding: .2rem .75rem; margin-bottom: .55rem; }
-#loginCard .ggh-login-title { color: #fff; }
-#loginCard .ggh-login-help { color: #dcefe2; }
-#loginCard .label-text { color: #eef8f0; }
-#loginCard .input-field { border-color: transparent; }
-#loginCard .input-field:focus { box-shadow: 0 0 0 3px rgba(246, 215, 126, .65); }
-#loginCard #loginBtn { background: #fff; color: #0f4d24; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
-#loginCard #loginBtn:hover { background: #f6d77e; }
-#loginCard .border-t { border-color: rgba(255, 255, 255, .25); }
-#loginCard .text-gray-500 { color: #d3eadb; }
-#loginCard .text-green-700 { color: #fde8a6; }
-#loginCard .ggh-staff-link a { color: #e9f6ed; }
-#loginCard :focus-visible { outline: 2px solid #f6d77e; outline-offset: 2px; }
 
 /* ---------- 2.2.0 entry doors: say what you came to do, then the province data ---------- */
 .ggh-topbar-title { font-size: clamp(1rem, .8rem + 1vw, 1.35rem); }
@@ -389,3 +375,74 @@ body.ggh-landing-on main { max-width: 84rem; }
 .ggh-bal-facts dd { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .ggh-bal-facts small { font-weight: 400; color: var(--ggh-muted); }
 @media (min-width: 1024px) { .ggh-balance { grid-column: span 12; } }
+
+/* ---------- 2.2.1 sign-in popups (native <dialog>) ---------- */
+.ggh-dialog { border: 0; padding: 0; background: transparent; max-width: min(30rem, calc(100% - 2rem)); width: 100%; max-height: calc(100dvh - 2rem); overflow: visible; }
+.ggh-dialog::backdrop { background: rgba(15, 30, 20, .55); }
+.ggh-dialog-box { background: var(--ggh-surface); border-radius: 16px; overflow: auto; max-height: calc(100dvh - 2rem); box-shadow: 0 18px 50px rgba(0,0,0,.28); }
+.ggh-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.2rem 1rem; color: #fff;
+  background: linear-gradient(155deg, #0b3d1d 0%, #14612d 55%, #1e8440 100%); }
+.ggh-dialog-head.is-staff { background: linear-gradient(155deg, #26332b 0%, #3d5246 100%); }
+.ggh-dialog-head h2 { font-size: 1.25rem; font-weight: 700; line-height: 1.3; }
+.ggh-dialog-kicker { display: inline-block; font-size: .82rem; font-weight: 700; color: #0f4d24; background: #f6d77e; border-radius: 999px; padding: .1rem .7rem; margin-bottom: .35rem; }
+.ggh-dialog-head.is-staff .ggh-dialog-kicker { background: #e4ebe6; color: #26332b; }
+.ggh-dialog-close { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; color: #fff; font-size: 1.15rem; background: rgba(255,255,255,.14); }
+.ggh-dialog-close:hover { background: rgba(255,255,255,.26); }
+.ggh-dialog-close:focus-visible { outline: 3px solid #f6d77e; outline-offset: 2px; }
+.ggh-dtabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--ggh-line); }
+.ggh-dtabs button { min-height: 48px; font-weight: 700; color: var(--ggh-muted); border-bottom: 3px solid transparent; }
+.ggh-dtabs button[aria-selected="true"] { color: var(--ggh-green-dark); border-bottom-color: var(--ggh-green); }
+.ggh-dpanel { display: grid; gap: .45rem; padding: 1rem 1.2rem 1.2rem; }
+.ggh-dpanel .label-text { margin: .35rem 0 0; }
+.ggh-dhelp { font-size: .92rem; color: var(--ggh-muted); }
+.ggh-dbtn { min-height: 50px; margin-top: .4rem; border-radius: 12px; background: var(--ggh-green); color: #fff; font-weight: 700; font-size: 1.05rem; }
+.ggh-dbtn:hover { background: var(--ggh-green-dark); }
+.ggh-dswitch { text-align: center; font-size: .9rem; color: var(--ggh-muted); margin-top: .25rem; }
+.ggh-dswitch button, .ggh-dlink { color: var(--ggh-green-dark); font-weight: 700; text-decoration: underline; min-height: 36px; }
+.ggh-dmsg:empty { display: none; }
+.ggh-dmsg { font-size: .92rem; border-radius: 10px; padding: .55rem .75rem; }
+.ggh-dmsg.is-error { background: #fbeae8; color: #8a2a20; }
+.ggh-dmsg.is-info { background: #fff6dc; color: #6b4d00; }
+.ggh-dmsg.is-ok { background: #e6f2e9; color: var(--ggh-green-dark); }
+.ggh-dmuted { font-size: .82rem; color: var(--ggh-muted); font-weight: 400; }
+.ggh-dfoot { border-top: 1px solid var(--ggh-line); padding: .75rem 1.2rem 1rem; font-size: .85rem; color: var(--ggh-muted); }
+.ggh-dfoot a { color: var(--ggh-green-dark); font-weight: 600; }
+.ggh-reg-field { display: grid; gap: .25rem; }
+.ggh-roles { border: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.ggh-roles legend { margin-bottom: .35rem; }
+.ggh-roles label { display: block; cursor: pointer; }
+.ggh-roles input { position: absolute; opacity: 0; }
+.ggh-roles span { display: grid; gap: .05rem; min-height: 56px; padding: .5rem .75rem; border: 1px solid #cfd8d2; border-radius: 12px; font-size: .85rem; color: var(--ggh-muted); }
+.ggh-roles b { font-size: 1rem; color: var(--ggh-ink); }
+.ggh-roles input:checked + span { border-color: var(--ggh-green); background: #eef6ef; box-shadow: inset 0 0 0 1px var(--ggh-green); }
+.ggh-roles input:focus-visible + span { outline: 2px solid var(--ggh-green-dark); outline-offset: 2px; }
+.ggh-consent { border: 1px solid var(--ggh-line); border-radius: 10px; padding: .5rem .75rem; font-size: .88rem; line-height: 1.6; color: #374151; margin-top: .4rem; }
+.ggh-consent summary { cursor: pointer; font-weight: 700; color: var(--ggh-green-dark); min-height: 32px; display: flex; align-items: center; }
+.ggh-consent p { margin-top: .45rem; }
+.ggh-consent-sub { color: var(--ggh-muted); }
+.ggh-consent-check { display: flex; gap: .55rem; align-items: flex-start; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: .65rem .75rem; font-weight: 700; color: #166534; font-size: .92rem; cursor: pointer; }
+.ggh-consent-check input { width: 20px; height: 20px; margin-top: .1rem; flex: 0 0 auto; }
+/* Phones: the popup rises from the bottom and uses the full width. */
+@media (max-width: 639px) {
+  .ggh-dialog { max-width: 100%; margin: auto 0 0; max-height: 94dvh; }
+  .ggh-dialog-box { border-radius: 18px 18px 0 0; max-height: 94dvh; padding-bottom: env(safe-area-inset-bottom); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ggh-dialog[open] .ggh-dialog-box { animation: ggh-rise .18s ease-out; }
+  @keyframes ggh-rise { from { transform: translateY(14px); opacity: .6; } to { transform: none; opacity: 1; } }
+}
+
+/* District panel without a selection: a ranking of districts by the map's current measure (replaces the sign-in card). */
+.ggh-rank-title { font-size: 1rem; font-weight: 700; color: var(--ggh-ink); }
+.ggh-rank-sub { font-size: .82rem; color: var(--ggh-muted); margin: .15rem 0 .6rem; }
+.ggh-rank { list-style: none; display: grid; gap: .15rem; }
+.ggh-rank button { width: 100%; display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: .1rem .5rem; align-items: center; text-align: left;
+  padding: .35rem .45rem; border-radius: 8px; min-height: 44px; }
+.ggh-rank button:hover, .ggh-rank button:focus-visible { background: #eef6ef; }
+.ggh-rank-n { font-size: .8rem; color: var(--ggh-muted); font-variant-numeric: tabular-nums; }
+.ggh-rank-name { font-size: .92rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ggh-rank-val { font-size: .9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ggh-rank-bar { grid-column: 2 / 4; height: 6px; border-radius: 3px; background: var(--ggh-zero); overflow: hidden; }
+.ggh-rank-bar i { display: block; height: 100%; border-radius: 3px; background: var(--ggh-seq-4); }
+.ggh-rank-hint { font-size: .8rem; color: var(--ggh-muted); margin-top: .6rem; }
+.ggh-rank-rest { font-size: .82rem; color: var(--ggh-muted); margin-top: .5rem; line-height: 1.5; }

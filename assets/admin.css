@@ -301,3 +301,4 @@ input:focus, select:focus { outline: none; border-color: var(--ggh-green); box-s
 .adm-report-sec th.num { white-space: normal; }
 .adm-report-sec th:not(.num), .adm-report-sec td:not(.num) { min-width: 4.5em; }
 @media print { body.is-printing-report .adm-report-sec th:not(.num), body.is-printing-report .adm-report-sec td:not(.num) { min-width: 4em; } }
+.adm-reg-field { display: grid; gap: .35rem; }
