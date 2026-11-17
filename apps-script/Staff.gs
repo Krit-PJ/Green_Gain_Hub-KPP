@@ -99,6 +99,9 @@ function staffLogin_(input) {
   const a = staffFindByPhone_(phone);
   if (!a || a.status !== 'active') {
     cache.put(failKey, String(fails + 1), ADMIN_LOCK_SECONDS);
+    if (!a && dataRows_(sheet_('users')).some(function (r) { return normalizePhone_(r[0]) === phone; })) {
+      throw new Error('MARKET_ACCOUNT: หมายเลขนี้ลงทะเบียนเป็นเกษตรกรหรือผู้รับซื้อ กรุณาเข้าสู่ระบบที่หน้าแรก');
+    }
     throw new Error(a ? 'บัญชีนี้ถูกระงับ กรุณาติดต่อผู้ดูแลระบบ' : 'ไม่พบหมายเลขนี้ กรุณาลงทะเบียนเจ้าหน้าที่ก่อน');
   }
   if (a.role !== 'admin') throw new Error('บัญชี ' + roleLabel_(a.role) + ' เข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่าน');

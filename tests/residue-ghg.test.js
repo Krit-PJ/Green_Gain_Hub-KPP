@@ -15,7 +15,7 @@ console.log = () => {};
 
 /* ---------- setup ---------- */
 const setup = api.setupSystem();
-assert(/PASS: ghg_params \(AR5, EF 94\.15 gCO2e\/kg\) and ghg_crops are ready; validation (\d+)\/\1 PASS/.test(setup), 'GHG schema + validation suite must pass in setupSystem:\n' + setup);
+assert(/PASS: ghg_params \(AR5, EF 94\.15 gCO2e\/kg\) and ghg_crops are ready; central price 0\.8 baht\/kg \(set 1\)(?:; 2\.2\.0 migration[^;]*)?; validation (\d+)\/\1 PASS/.test(setup), 'GHG schema + validation suite must pass in setupSystem:\n' + setup);
 assert(/targets 2570 seeded \(70500 rai\)/.test(setup) && /photo folder/.test(setup), 'targets and photo folder must be prepared:\n' + setup);
 assert(/became Mini Super Admin: old\.importer/.test(setup) && sheets.admins.rows[1][2] === 'mini', 'admin without district must migrate to mini');
 assert(sheets.residue_methods.rows.length === 7 && sheets.residue_methods.rows.map((r) => r[0]).slice(1).join('|') === 'ไถกลบ|อัดฟางก้อน|อัดใบอ้อย|ทำปุ๋ยหมัก|เพาะเห็ด|อื่น ๆ', 'default methods');
@@ -97,7 +97,7 @@ assert(e1.record.area === 30 && e1.record.photoCount === 1 && e1.id === s1.id, '
 
 /* ---------- public endpoint ---------- */
 let pub = get({ api: 'v1', endpoint: 'residue', fy: '2570' });
-assert(pub.ok && pub.apiVersion === '2.1.0', 'residue endpoint');
+assert(pub.ok && pub.apiVersion === '2.2.0', 'residue endpoint');
 let t = pub.data.totals;
 const ghgRice = 30 * 880 * 94.15 / 1e6, ghgCane = 40 * 1040 * 94.15 / 1e6, ghgCass = 10 * 500 * 0.8 * 94.15 / 1e6, ghgMaize = 15.064;
 assert(t.records === 5 && t.areaRai === 190 && near(t.ghg, ghgRice + ghgCane + ghgCass + ghgMaize, 1e-3) && t.excludedRai === 10, 'public totals: ' + JSON.stringify(t));
@@ -143,10 +143,11 @@ assert(adm.length === 2 && a1.personal === 1500 && a1.area === 50 && a1.pct === 
 const mt = sec(rd, 'residue.methods');
 assert(mt.rows.find((r) => r.method === 'อัดฟางก้อน').target === 4000 && mt.totals.target === 10500 && mt.totals.pct === round1(90 / 10500 * 100), 'method targets: ' + JSON.stringify(mt.totals));
 function round1(x) { return Math.round(x * 10) / 10; }
-const rp = ok(post('reportDataServer', [{ sections: ['residue.summary', 'residue.map', 'residue.districts', 'residue.crops', 'residue.params'], fy: 2570 }], M), 'province report');
+const rp = ok(post('reportDataServer', [{ sections: ['residue.summary', 'residue.map', 'residue.districts', 'residue.crops', 'residue.ghgcrops', 'residue.params'], fy: 2570 }], M), 'province report');
 assert(rp.residue.district === '' && Object.keys(sec(rp, 'residue.map').map.values).length === 11, 'province map has 11 districts');
 assert(sec(rp, 'residue.districts').totals.target === 70500 && sec(rp, 'residue.districts').totals.area === 190, 'province district table');
-const cr = sec(rp, 'residue.crops');
+const cr = sec(rp, 'residue.ghgcrops');
+assert(near(sec(rp, 'residue.crops').totals.lfire, cr.totals.lfire, 1e-6) && sec(rp, 'residue.crops').columns.length === 6, 'simple crop table reconciles with the GHG appendix');
 assert(near(cr.totals.lfire, cr.totals.ch4e + cr.totals.n2oe, 1e-3) && cr.rows.length === 4, 'crop GHG table: ' + JSON.stringify(cr.totals));
 assert(sec(rp, 'residue.params').rows.some((r) => /EF_CO2e/.test(r.item) && r.value === 94.15), 'params section lists the combined EF with sources');
 

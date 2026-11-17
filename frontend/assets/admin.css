@@ -1,4 +1,4 @@
-/* Green Gain Hub 2.0.0 — admin pages. Uses the colour tokens from dashboard.css. */
+/* Green Gain Hub 2.2.0 — admin pages. Uses the colour tokens from dashboard.css. */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 .hidden { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -225,3 +225,79 @@ input:focus, select:focus { outline: none; border-color: var(--ggh-green); box-s
 @media (max-width: 959px) { .adm-nav-group { display: flex; align-items: center; padding: 0 .4rem 0 .9rem; border-left: 1px solid var(--ggh-line); } .adm-nav-group:first-child { border-left: 0; padding-left: .2rem; } }
 .adm-brand { line-height: 1.3; }
 @media (max-width: 600px) { .adm-brand { font-size: .85rem; } .adm-brand span { display: block; } }
+
+/* ---------- 2.2.0 task-based menu: one row of top items, sub-tabs inside the page ---------- */
+.adm-brand small { display: block; font-size: .78rem; font-weight: 400; opacity: .85; }
+@media (min-width: 960px) {
+  .adm-app { grid-template-columns: minmax(0, 1fr); }
+  .adm-nav { flex-direction: row; border-right: 0; border-bottom: 1px solid var(--ggh-line); position: static; }
+  .adm-nav button { text-align: center; border-left: 0; border-bottom: 3px solid transparent; border-radius: 0; }
+  .adm-nav button[aria-current="page"] { border-bottom-color: var(--ggh-green); background: transparent; }
+}
+.adm-nav button { font-size: 1rem; padding: .7rem 1.1rem; }
+.adm-subnav { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .25rem; }
+.adm-subnav button { min-height: 40px; padding: 0 .95rem; border-radius: 999px; border: 1px solid #cfd8d2; background: #fff; font-weight: 600; font-size: .9rem; color: var(--ggh-muted); }
+.adm-subnav button[aria-current="page"] { background: #eef6ef; border-color: var(--ggh-green); color: var(--ggh-green-dark); }
+.adm-content { display: grid; gap: 1rem; min-width: 0; }
+.adm-span2 { grid-column: span 2; }
+@media (max-width: 600px) { .adm-span2 { grid-column: auto; } }
+.adm-filters-tight { padding: .5rem .75rem; grid-template-columns: repeat(2, minmax(9rem, 14rem)); }
+.adm-badge.warn { background: #fdecc8; color: #7a4b00; }
+#ghgOwnPrice.is-off { opacity: .5; }
+.adm-price { border-top: 4px solid var(--ggh-straw); }
+
+/* Overview: residue balance ①–⑥ (a real sequence, so numbered) */
+.adm-ov-flow { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); }
+.adm-ov-step { position: relative; background: var(--ggh-surface); border: 1px solid var(--ggh-line); border-radius: var(--ggh-radius-lg); padding: .8rem .9rem .85rem; display: grid; gap: .1rem; align-content: start; }
+.adm-ov-step p { font-size: .85rem; color: var(--ggh-muted); font-weight: 600; }
+.adm-ov-step b { font-size: 1.55rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.adm-ov-step > span:not(.adm-ov-n) { font-size: .85rem; color: var(--ggh-muted); }
+.adm-ov-step small { font-size: .8rem; color: var(--ggh-ink); margin-top: .2rem; }
+.adm-ov-n { font-weight: 700; color: var(--ggh-green-dark); font-size: 1.05rem; }
+.adm-ov-step.is-good { border-color: #9fcfa9; background: #f2f9f3; }
+.adm-ov-step.is-warn { border-color: #f0cf8a; background: #fffaf0; }
+.adm-ov-legend { display: flex; flex-wrap: wrap; gap: .3rem 1rem; font-size: .85rem; margin-bottom: .4rem; }
+.adm-ov-legend i { display: inline-block; width: .85rem; height: .85rem; border-radius: 3px; vertical-align: -1px; margin-right: .3rem; }
+.adm-ov-legend .is-h, .adm-ov-bars .is-h { background: #c9b27a; }
+.adm-ov-legend .is-m, .adm-ov-bars .is-m { background: var(--ggh-green); }
+.adm-ov-months { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: .3rem; align-items: end; }
+.adm-ov-month { display: grid; gap: .25rem; text-align: center; font-size: .72rem; color: var(--ggh-muted); }
+.adm-ov-bars { height: 8.5rem; display: flex; gap: 2px; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--ggh-line); }
+.adm-ov-bars i { display: block; width: 40%; min-height: 1px; border-radius: 4px 4px 0 0; }
+.adm-ov-how ol { margin: .4rem 0 0 1.2rem; display: grid; gap: .3rem; font-size: .88rem; }
+.adm-ov-how summary { cursor: pointer; font-weight: 600; }
+.adm-mini-balance p { font-size: .92rem; }
+
+/* Report types */
+.adm-rtypes { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.adm-rtypes button { text-align: left; display: grid; gap: .2rem; padding: .7rem .85rem; border-radius: 10px; border: 1px solid #cfd8d2; background: #fff; min-height: 64px; }
+.adm-rtypes button span { font-size: .84rem; color: var(--ggh-muted); }
+.adm-rtypes button[aria-checked="true"] { border-color: var(--ggh-green); background: #eef6ef; box-shadow: inset 0 0 0 1px var(--ggh-green); }
+.adm-report-tablewrap { overflow-x: auto; }
+.adm-report-sec th { white-space: normal; }
+
+/* Printing (2.2.0): tables stay inside the page. Wide sections go on landscape pages,
+   Excel-only columns are dropped, cells wrap, and headers repeat on every page. */
+@media print {
+  body.is-printing-report .adm-subnav { display: none !important; }
+  body.is-printing-report .adm-report { max-width: none; }
+  body.is-printing-report .adm-report-tablewrap { overflow: visible; }
+  body.is-printing-report .adm-report-sec table { width: 100%; table-layout: auto; font-size: 8.5pt; }
+  body.is-printing-report .adm-report-sec table.is-wide { font-size: 7.5pt; }
+  body.is-printing-report .adm-report-sec th, body.is-printing-report .adm-report-sec td { padding: 2px 4px; overflow-wrap: anywhere; word-break: normal; }
+  body.is-printing-report .adm-report-sec .num { white-space: nowrap; }
+  body.is-printing-report .adm-report-sec .print-hide { display: none; }
+  body.is-printing-report .adm-report-sec tfoot { display: table-row-group; }
+  body.is-printing-report .adm-report-sec.is-landscape { page: wide; break-before: page; }
+  body.is-printing-report .adm-report.first-wide .adm-report-head { page: wide; }
+  body.is-printing-report .adm-report.first-wide .adm-report-head + .adm-report-sec { break-before: auto; }
+  body.is-printing-report .adm-report-sec.is-landscape + .adm-report-sec:not(.is-landscape) { break-before: page; }
+  body.is-printing-report .adm-report-note { font-size: 7.5pt; }
+  body.is-printing-report .adm-report-head h1 { font-size: 14pt; }
+  body.is-printing-report .adm-report-sec h2 { font-size: 11pt; }
+}
+.adm-check.hidden { display: none !important; }
+/* Long Thai units in numeric headers wrap; text columns keep a readable minimum width. */
+.adm-report-sec th.num { white-space: normal; }
+.adm-report-sec th:not(.num), .adm-report-sec td:not(.num) { min-width: 4.5em; }
+@media print { body.is-printing-report .adm-report-sec th:not(.num), body.is-printing-report .adm-report-sec td:not(.num) { min-width: 4em; } }

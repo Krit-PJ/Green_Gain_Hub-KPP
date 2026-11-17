@@ -46,6 +46,7 @@ const ADMIN_METHODS = {
   residueListServer: { role: 'admin', fn: function (a, s) { return residueList_(a[0], s); } },
   residueDeleteServer: { role: 'admin', fn: function (a, s) { return residueDelete_(a[0], s); } },
   residuePhotoServer: { role: 'admin', fn: function (a, s) { return residuePhoto_(a[0], s); } },
+  residueBalanceServer: { role: 'admin', fn: function (a, s) { return residueBalanceServer_(a[0], s); } },
   reportCatalogServer: { role: 'admin', fn: function (a, s) { return reportCatalog_(s); } },
   reportDataServer: { role: 'admin', fn: function (a, s) { return reportData_(a[0], s); } },
   reportExportLogServer: { role: 'admin', fn: function (a, s) { return reportExportLog_(a[0], s); } },
@@ -61,6 +62,7 @@ const ADMIN_METHODS = {
   ghgSettingsServer: { role: 'mini', fn: function () { return ghgSettingsGet_(); } },
   ghgParamsSaveServer: { role: 'mini', fn: function (a, s) { return ghgParamsSave_(a[0], s); } },
   ghgCropSaveServer: { role: 'mini', fn: function (a, s) { return ghgCropSave_(a[0], s); } },
+  residuePriceSaveServer: { role: 'mini', fn: function (a, s) { return residuePriceSave_(a[0], s); } },
   ghgCalculateServer: { role: 'mini', fn: function (a) { return ghgCalculateServer_(a[0]); } },
   residueSettingsServer: { role: 'mini', fn: function (a) { return residueSettingsGet_(a[0]); } },
   residueTargetsSaveServer: { role: 'mini', fn: function (a, s) { return residueTargetsSave_(a[0], s); } },
@@ -277,7 +279,7 @@ function adminMeServer(s) {
   return { status: 'success', username: s.username, name: s.name, role: s.role, roleLabel: roleLabel_(s.role), district: s.district || '',
     districtName: names[s.district] || '', scope: s.scope || (s.role === 'admin' ? 'district' : 'all'),
     officeType: a.officeType || '', group: a.group || '', officeLabel: a.role ? staffOfficeLabel_(a) : roleLabel_(s.role),
-    phone: a.phone || '', province: provinceName_(), apiVersion: APP_VERSION };
+    phone: a.phone || '', province: provinceName_(), apiVersion: APP_VERSION, hasPassword: !!a.hash };
 }
 
 function adminChangePasswordServer(input, s) {

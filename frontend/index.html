@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1a7f37">
-  <meta name="description" content="ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร จังหวัดกำแพงเพชร: พื้นที่จัดการเศษวัสดุ ปริมาณก๊าซเรือนกระจกที่ลดได้ สถานการณ์การเพาะปลูก และตลาดเศษวัสดุ รายอำเภอ">
+  <meta name="description" content="Green Gain Hub กำแพงเพชร ตลาดและศูนย์จัดการเศษวัสดุการเกษตร: เกษตรกรประกาศขายฟางและใบอ้อย ผู้รับซื้อหาแปลงใกล้ตัว และข้อมูลการจัดการเศษวัสดุรายอำเภอ (ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร จังหวัดกำแพงเพชร)">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.1.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.2.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -73,7 +73,8 @@
     <div class="container mx-auto px-3 sm:px-4 py-2 flex justify-between items-center gap-2 max-w-5xl" style="padding-top: max(.5rem, env(safe-area-inset-top));">
       <img src="https://doaenews.doae.go.th/wp-content/uploads/2021/03/DOAE-2.png" class="h-8 sm:h-10 w-auto shrink-0" alt="กรมส่งเสริมการเกษตร">
       <div class="text-center min-w-0">
-        <h1 class="ggh-topbar-title text-green-800 font-bold leading-tight">ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร</h1>
+        <h1 class="ggh-topbar-title text-green-800 font-bold leading-tight">Green Gain Hub <span data-province>กำแพงเพชร</span></h1>
+        <p class="ggh-topbar-sub">ตลาดและศูนย์จัดการเศษวัสดุการเกษตร</p>
         <!-- <p class="text-[10px] md:text-xs text-gray-500 font-medium">จังหวัดกำแพงเพชร</p> -->
       </div>
       <img src="https://upload.wikimedia.org/wikipedia/commons/f/fd/Seal_of_Kamphaeng_Phet_Province_%28color_version%2C_Thai_Fine_Art_Department%29.png" class="h-8 sm:h-10 w-auto shrink-0" alt="ตราจังหวัดกำแพงเพชร">
@@ -90,11 +91,43 @@
         <p class="ggh-updated" id="dashUpdated" aria-live="polite">กำลังโหลดข้อมูล…</p>
       </header>
 
+      <!-- 2.2.0: say what you came to do first; the province data follows below. -->
+      <section class="ggh-doors" aria-labelledby="doorsTitle">
+        <h2 id="doorsTitle" class="sr-only">คุณต้องการทำอะไร</h2>
+        <article class="ggh-door ggh-door-sell">
+          <h3><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i> ขายเศษวัสดุ</h3>
+          <p>สำหรับเกษตรกร ประกาศแปลงที่จะเก็บเกี่ยว ให้ผู้รับซื้อในพื้นที่เห็นและโทรหา ไม่ต้องเผา</p>
+          <p class="ggh-door-fact" id="doorFactSell" hidden></p>
+          <div class="ggh-door-actions">
+            <button type="button" data-door="register" data-role="farmer" class="is-main">ลงทะเบียนขาย</button>
+            <button type="button" data-door="login">เข้าสู่ระบบ</button>
+          </div>
+        </article>
+        <article class="ggh-door ggh-door-buy">
+          <h3><i class="fa-solid fa-truck" aria-hidden="true"></i> รับซื้อเศษวัสดุ</h3>
+          <p>สำหรับผู้ประกอบการ ดูแปลงพร้อมขาย วันเก็บเกี่ยว และระยะทางจากจุดรับซื้อของคุณ</p>
+          <p class="ggh-door-fact" id="doorFactBuy" hidden></p>
+          <div class="ggh-door-actions">
+            <button type="button" data-door="register" data-role="buyer" class="is-main">ลงทะเบียนรับซื้อ</button>
+            <button type="button" data-door="login">เข้าสู่ระบบ</button>
+          </div>
+        </article>
+        <article class="ggh-door ggh-door-staff">
+          <h3><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> สำหรับเจ้าหน้าที่</h3>
+          <p>บันทึกการจัดการเศษวัสดุ ดูภาพรวมรายอำเภอ และออกรายงาน</p>
+          <p class="ggh-door-fact" id="doorFactStaff" hidden></p>
+          <div class="ggh-door-actions">
+            <a href="admin.html" class="is-main">เข้าสู่ระบบเจ้าหน้าที่</a>
+          </div>
+        </article>
+      </section>
+
+      <h2 class="ggh-data-title">ข้อมูลจังหวัด<span data-province>กำแพงเพชร</span></h2>
       <nav class="ggh-tabs" role="tablist" aria-label="เลือกมุมมองข้อมูล">
         <button type="button" role="tab" id="tab-overview" aria-controls="loginPage" aria-selected="true" data-tab="overview">การจัดการเศษวัสดุ</button>
+        <button type="button" role="tab" id="tab-market" aria-controls="loginPage" aria-selected="false" data-tab="market">ตลาดเศษวัสดุ</button>
         <button type="button" role="tab" id="tab-crops" aria-controls="loginPage" aria-selected="false" data-tab="crops">สถานการณ์การเพาะปลูก</button>
         <button type="button" role="tab" id="tab-reports" aria-controls="loginPage" aria-selected="false" data-tab="reports">รายงานอำเภอ</button>
-        <button type="button" role="tab" id="tab-market" aria-controls="loginPage" aria-selected="false" data-tab="market">ตลาดเศษวัสดุ</button>
       </nav>
 
       <section class="ggh-toolbar" data-tabs="overview" aria-label="ตัวเลือกข้อมูลการจัดการเศษวัสดุ">
@@ -117,7 +150,8 @@
       </section>
 
       <section class="ggh-mapcard" aria-label="แผนที่รายอำเภอ">
-        <div class="ggh-cropicons" id="resCropIcons" data-tabs="overview" role="radiogroup" aria-label="เลือกชนิดพืชเพื่อดูปริมาณ GHG ที่ลดได้"></div>
+        <p class="ggh-ci-caption" data-tabs="overview">ก๊าซเรือนกระจกที่ลดได้ รายพืช (ตันคาร์บอนไดออกไซด์เทียบเท่า)</p>
+        <div class="ggh-cropicons" id="resCropIcons" data-tabs="overview" role="radiogroup" aria-label="เลือกชนิดพืชเพื่อดูปริมาณ ก๊าซเรือนกระจกที่ลดได้"></div>
         <div class="ggh-mapbar">
           <div class="ggh-metric" id="dashMetrics" role="radiogroup" aria-label="ระบายสีแผนที่ตาม"></div>
           <label class="ggh-search">
@@ -134,7 +168,7 @@
 
       <aside class="ggh-side">
         <div class="ggh-login" id="loginCard">
-          <p class="ggh-login-brand">Green Gain Hub: <span data-province>กำแพงเพชร</span></p>
+          <p class="ggh-login-brand">สำหรับเกษตรกรและผู้รับซื้อ</p>
           <h2 class="ggh-login-title">เข้าสู่ระบบ</h2>
           <p class="ggh-login-help">กรอกหมายเลขโทรศัพท์ที่ลงทะเบียนไว้ เพื่อบันทึกแปลงหรือจุดรับซื้อ และดูคู่ค้าใกล้คุณ</p>
           <div class="input-group">
@@ -154,13 +188,19 @@
         </div>
       </aside>
 
+      <section class="ggh-panel ggh-balance hidden" id="resBalanceWrap" data-tabs="overview" aria-labelledby="resBalanceTitle">
+        <h3 id="resBalanceTitle" class="ggh-panel-title">เศษวัสดุที่จัดการได้ เทียบกับพื้นที่เก็บเกี่ยว</h3>
+        <p class="ggh-panel-sub" id="resBalanceSub"></p>
+        <div id="resBalance"></div>
+      </section>
+
       <section class="ggh-panel ggh-resmethods" data-tabs="overview" aria-labelledby="resMethodsTitle">
         <h3 id="resMethodsTitle" class="ggh-panel-title">พื้นที่จัดการเศษวัสดุ แยกตามประเภท</h3>
         <p class="ggh-panel-sub" id="resMethodsSub"></p>
         <div class="ggh-target" id="resProgress"></div>
         <div class="ggh-methods" id="resMethods"></div>
         <details class="ggh-res-note">
-          <summary>วิธีคำนวณ GHG ที่ลดได้ และข้อจำกัด</summary>
+          <summary>วิธีคำนวณ ก๊าซเรือนกระจกที่ลดได้ และข้อจำกัด</summary>
           <div id="resNote"></div>
         </details>
       </section>
@@ -421,6 +461,7 @@
 
   <footer class="bg-green-900 text-white text-center py-6 mt-auto">
     <div class="container mx-auto px-4">
+      <p class="text-xs md:text-sm opacity-90 mb-2">ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร จังหวัดกำแพงเพชร</p>
       <h4 class="font-bold text-sm md:text-base mb-1">สำนักงานเกษตรจังหวัดกำแพงเพชร</h4>
       <p class="text-xs md:text-sm opacity-80 mb-3">กรมส่งเสริมการเกษตร กระทรวงเกษตรและสหกรณ์</p>
       <p class="ggh-counter" id="visitCounter" aria-live="polite" hidden>
@@ -435,9 +476,9 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=2.1.0"></script>
-  <script src="assets/api-client.js?v=2.1.0"></script>
-  <script src="assets/dashboard.js?v=2.1.0" defer></script>
+  <script src="assets/config.js?v=2.2.0"></script>
+  <script src="assets/api-client.js?v=2.2.0"></script>
+  <script src="assets/dashboard.js?v=2.2.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -656,6 +697,22 @@
        document.getElementById('loginPage').classList.toggle('hidden');
        document.getElementById('registerPage').classList.toggle('hidden');
     }
+
+    // 2.2.0 entry doors: register with the role already chosen, or go to the sign-in box.
+    function openDoor(action, role) {
+      if (action === 'register') {
+        const f = document.getElementById('regForm');
+        if (role && f.role) f.role.value = role;
+        toggleAuth('register');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(() => f.name && f.name.focus(), 300);
+        return;
+      }
+      const card = document.getElementById('loginCard');
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => document.getElementById('loginPhone').focus(), 350);
+    }
+    document.querySelectorAll('[data-door]').forEach((b) => b.addEventListener('click', () => openDoor(b.dataset.door, b.dataset.role)));
     
     function logout() {
       Swal.fire({
@@ -717,7 +774,15 @@
           }
         })
         .withFailureHandler(function(err) {
-          Swal.fire('Error', 'Connection Error: ' + err.message, 'error');
+          const msg = String(err && err.message || '');
+          if (/^STAFF_ACCOUNT:/.test(msg)) {
+            // 2.2.0: an officer number typed into the farmer/buyer box.
+            Swal.fire({ icon: 'info', title: 'หมายเลขนี้เป็นบัญชีเจ้าหน้าที่', text: msg.replace(/^STAFF_ACCOUNT:\s*/, ''),
+              showCancelButton: true, confirmButtonText: 'ไปหน้าเจ้าหน้าที่', cancelButtonText: 'ปิด', confirmButtonColor: '#15803d' })
+              .then((r) => { if (r.isConfirmed) location.href = 'admin.html'; });
+          } else {
+            Swal.fire('เข้าสู่ระบบไม่สำเร็จ', msg || 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่', 'error');
+          }
           btn.innerText = originalText;
           btn.disabled = false;
         })

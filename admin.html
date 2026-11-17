@@ -5,16 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1a7f37">
   <meta name="robots" content="noindex">
-  <title>ผู้ดูแลระบบ · ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร</title>
+  <title>สำหรับเจ้าหน้าที่ · Green Gain Hub กำแพงเพชร</title>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.1.0">
-  <link rel="stylesheet" href="assets/admin.css?v=2.1.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.2.0">
+  <link rel="stylesheet" href="assets/admin.css?v=2.2.0">
 </head>
 <body class="adm">
   <header class="adm-top">
-    <a class="adm-brand" href="./">ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร <span id="admProvince">จังหวัดกำแพงเพชร</span></a>
+    <a class="adm-brand" href="./">Green Gain Hub <span id="admProvince">กำแพงเพชร</span><small>สำหรับเจ้าหน้าที่</small></a>
     <div class="adm-user hidden" id="admUser">
       <span id="admUserName"></span><span class="adm-role" id="admUserRole"></span><span class="adm-role" id="admUserDistrict" hidden></span>
+      <button type="button" class="adm-link" id="admAccountBtn">บัญชีของฉัน</button>
       <button type="button" class="adm-link" id="admLogout">ออกจากระบบ</button>
     </div>
   </header>
@@ -23,7 +24,7 @@
     <!-- Login -->
     <section class="adm-login" id="viewLogin" aria-labelledby="loginTitle">
       <h1 id="loginTitle">สำหรับเจ้าหน้าที่</h1>
-      <p class="adm-muted">ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร</p>
+      <p class="adm-muted">บันทึกการจัดการเศษวัสดุ ดูภาพรวม และออกรายงาน เกษตรกรและผู้รับซื้อ <a href="./#market">เข้าสู่ระบบที่หน้าแรก</a></p>
       <div class="adm-login-tabs" role="tablist" aria-label="วิธีเข้าใช้งาน">
         <button type="button" role="tab" id="ltab-phone" aria-selected="true" aria-controls="staffLoginForm" data-ltab="phone">เข้าสู่ระบบ</button>
         <button type="button" role="tab" id="ltab-register" aria-selected="false" aria-controls="staffRegForm" data-ltab="register">ลงทะเบียนใหม่</button>
@@ -68,24 +69,34 @@
 
     <!-- App -->
     <div class="adm-app hidden" id="viewApp">
-      <nav class="adm-nav" aria-label="เมนูผู้ดูแล" id="admNav">
-        <span class="adm-nav-group" data-role="mini" data-group="daily">งานประจำ</span>
-        <button type="button" data-view="record" aria-current="page">บันทึกข้อมูล</button>
-        <button type="button" data-view="records">รายการบันทึก</button>
-        <button type="button" data-view="reports">รายงาน</button>
-        <button type="button" data-view="admins" data-role="mini">ผู้ใช้งาน</button>
-        <span class="adm-nav-group" data-role="mini" data-group="settings">ตั้งค่าและข้อมูลพื้นฐาน</span>
-        <button type="button" data-view="targets" data-role="mini">เป้าหมายและประเภท</button>
-        <button type="button" data-view="ghg" data-role="mini">ค่าคำนวณ GHG และมูลค่า</button>
-        <button type="button" data-view="import" data-role="mini">นำเข้าข้อมูลเพาะปลูก</button>
-        <button type="button" data-view="history" data-role="mini">ข้อมูลที่นำเข้าแล้ว</button>
-        <button type="button" data-view="crops" data-role="mini">ชนิดพืช (ทะเบียน)</button>
-        <button type="button" data-view="api" data-role="mini">การเชื่อมต่อ API</button>
-        <button type="button" data-view="log" data-role="mini">บันทึกการใช้งาน</button>
-        <button type="button" data-view="account">บัญชีของฉัน</button>
-      </nav>
+      <!-- Menu is built from MENU in admin.js: Admin 4 items; Mini/Super 5 groups with sub-tabs. -->
+      <nav class="adm-nav" aria-label="เมนูหลัก" id="admNav"></nav>
 
       <div class="adm-content">
+        <nav class="adm-subnav hidden" id="admSubnav" aria-label="เมนูย่อย"></nav>
+
+        <!-- 2.2.0 overview: residue balance ①–⑥ -->
+        <section class="adm-view hidden" data-panel="overview" aria-labelledby="ovTitle">
+          <div class="adm-head">
+            <h2 id="ovTitle">ภาพรวมเศษวัสดุ</h2>
+            <form class="adm-filters adm-filters-tight" id="ovFilter">
+              <label>ปีงบประมาณ<select name="fy" id="ovFy"></select></label>
+              <label id="ovDistrictWrap">พื้นที่<select name="district" id="ovDistrict"></select></label>
+            </form>
+          </div>
+          <p class="adm-muted" id="ovScope"></p>
+          <div class="adm-ov-flow" id="ovFlow" aria-live="polite"></div>
+          <div class="adm-card" id="ovTodo"></div>
+          <div class="adm-card">
+            <h3>พื้นที่เก็บเกี่ยวและพื้นที่จัดการ รายเดือน</h3>
+            <div class="adm-ov-legend"><span><i class="is-h"></i>เก็บเกี่ยว (ทะเบียนเกษตรกร)</span><span><i class="is-m"></i>จัดการแล้ว (บันทึกของเจ้าหน้าที่)</span></div>
+            <div class="adm-ov-months" id="ovMonths"></div>
+          </div>
+          <h3>รายอำเภอ</h3>
+          <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>อำเภอ</th><th class="num">เก็บเกี่ยว (ไร่)</th><th class="num">จัดการแล้ว (ไร่)</th><th class="num">ร้อยละ</th>
+            <th class="num">ยังไม่มีบันทึก (ไร่)</th><th class="num">ประกาศขาย (ไร่)</th><th class="num">ผู้รับซื้อ</th><th>ข้อสังเกต</th></tr></thead><tbody id="ovBody"></tbody><tfoot id="ovFoot"></tfoot></table></div>
+          <details class="adm-card adm-ov-how"><summary>ตัวเลขแต่ละขั้นมาจากไหน</summary><ol id="ovHow"></ol></details>
+        </section>
         <!-- Residue record form -->
         <section class="adm-view" data-panel="record" aria-labelledby="recTitle">
           <div class="adm-head">
@@ -135,6 +146,14 @@
               </div>
               <label>แหล่งอ้างอิง / วิธีวัด<input name="reference" maxlength="200" placeholder="เช่น ชั่งน้ำหนักจากแปลงตัวอย่าง 3 จุด"></label>
             </details>
+            <details class="adm-rec-more" id="recSaleWrap">
+              <summary>ขายให้ผู้รับซื้อ / ปริมาณที่นำออกจริง <span class="adm-muted">(ไม่บังคับ)</span></summary>
+              <p class="adm-muted">ใช้เชื่อมรายการนี้กับตลาดเศษวัสดุ ถ้ากรอกปริมาณที่ขายหรือนำออกจริง ระบบจะใช้คิดมูลค่าแทนค่าประมาณ (ก๊าซเรือนกระจกคิดเท่าเดิม)</p>
+              <div class="adm-rec-grid">
+                <label>ผู้รับซื้อในระบบ<select name="buyerId" id="recBuyer"></select></label>
+                <label>ปริมาณที่ขายหรือนำออกจริง (ตัน)<input type="number" name="soldTonnes" min="0" step="any" inputmode="decimal"></label>
+              </div>
+            </details>
             <label><span>หมายเหตุ <span class="adm-muted">(ไม่บังคับ)</span></span><input name="note" maxlength="300"></label>
             <p class="adm-muted">ผู้บันทึกข้อมูล: <strong id="recRecorder"></strong></p>
             <label class="adm-check adm-confirm-check"><input type="checkbox" name="confirmed"> ข้าพเจ้าตรวจสอบแล้วว่าข้อมูลถูกต้องตามที่ดำเนินการจริง</label>
@@ -146,6 +165,7 @@
         <!-- Residue record list -->
         <section class="adm-view hidden" data-panel="records" aria-labelledby="recsTitle">
           <h2 id="recsTitle">รายการบันทึก</h2>
+          <div class="adm-card adm-mini-balance hidden" id="recsBalance" aria-live="polite"></div>
           <form class="adm-filters" id="recsFilter">
             <label>ปีงบประมาณ<select name="fy" id="recsFy"></select></label>
             <label id="recsDistrictWrap">อำเภอ<select name="district" id="recsDistrict"></select></label>
@@ -160,7 +180,19 @@
 
         <!-- GHG parameters (Mini Super Admin / Super Admin) -->
         <section class="adm-view hidden" data-panel="ghg" aria-labelledby="ghgTitle">
-          <h2 id="ghgTitle">ค่าคำนวณ GHG และมูลค่า</h2>
+          <h2 id="ghgTitle">ราคาและค่าคำนวณก๊าซเรือนกระจก</h2>
+          <form class="adm-form adm-form-wide adm-price" id="priceForm" autocomplete="off">
+            <h3>ราคากลางเศษวัสดุ</h3>
+            <p class="adm-muted">ตั้งครั้งเดียว ใช้กับทุกชนิดพืชที่เลือก "ใช้ราคากลาง" มูลค่าทุกรายการและหน้าแรกเปลี่ยนตามทันที พืชที่ต้องการราคาเฉพาะ แก้ได้ในตารางค่าตามชนิดพืชด้านล่าง</p>
+            <div class="adm-rec-grid">
+              <label>ราคากลาง (บาท/กก.)<input name="price" type="number" step="any" min="0.01" max="100" required></label>
+              <label class="adm-span2">แหล่งที่มาของราคา<input name="reference" maxlength="200" required></label>
+            </div>
+            <p class="adm-muted" id="priceStatus"></p>
+            <div class="adm-confirm"><button type="submit" class="adm-btn adm-btn-primary">บันทึกราคากลาง</button></div>
+            <p class="adm-result" id="priceResult" role="status"></p>
+          </form>
+          <h3>ค่าคำนวณก๊าซเรือนกระจก</h3>
           <p class="adm-muted">สูตรตาม IPCC 2006 Equation 2.27 ค่าคงที่แก้ไขได้ ทุกครั้งที่แก้จะเป็นชุดค่าใหม่ บันทึกในประวัติการใช้งาน และผลคำนวณทั้งหมดใช้ชุดค่าเดียวกันเสมอ (ไม่ผสมค่า AR5 กับ AR6)</p>
           <div class="adm-card" id="ghgStatus"></div>
           <form class="adm-form adm-form-wide" id="ghgForm" autocomplete="off">
@@ -185,7 +217,7 @@
             <div id="ghgValidation"></div>
           </form>
           <h3>ค่าตามชนิดพืช</h3>
-          <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>พืช</th><th class="num">Biomass consumed<br>(kg/ไร่)</th><th class="num">Cf</th><th class="num">เศษวัสดุ<br>(ตัน/ไร่)</th><th class="num">GHG 100 ไร่<br>Standard</th><th class="num">GHG 100 ไร่<br>Residue</th><th class="num">ราคา<br>(บาท/กก.)</th><th>แหล่งอ้างอิง</th><th>สถานะ</th><th><span class="sr-only">จัดการ</span></th></tr></thead><tbody id="ghgCropsBody"></tbody></table></div>
+          <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>พืช</th><th class="num">Biomass consumed<br>(kg/ไร่)</th><th class="num">Cf</th><th class="num">เศษวัสดุ<br>(ตัน/ไร่)</th><th class="num">ต่อ 100 ไร่ Standard<br>(ตันคาร์บอนไดออกไซด์เทียบเท่า)</th><th class="num">ต่อ 100 ไร่ Residue<br>(ตันคาร์บอนไดออกไซด์เทียบเท่า)</th><th class="num">ราคา<br>(บาท/กก.)</th><th class="num">นำออกได้<br>(%)</th><th>แหล่งอ้างอิง</th><th>สถานะ</th><th><span class="sr-only">จัดการ</span></th></tr></thead><tbody id="ghgCropsBody"></tbody></table></div>
           <form class="adm-form adm-form-wide" id="ghgCropForm" autocomplete="off">
             <h3 id="ghgCropTitle">เพิ่มหรือแก้ไขค่าพืช</h3>
             <div class="adm-rec-grid">
@@ -196,9 +228,17 @@
               <label>ชื่อเศษวัสดุ<input name="residueName" maxlength="80"></label>
               <label>เศษวัสดุ (ตัน/ไร่)<input name="residueTRai" type="number" step="any" min="0"></label>
               <label>ลำดับ<input name="sortOrder" type="number" min="1" max="99" value="10"></label>
-              <label>ราคาเศษวัสดุ (บาท/กก.)<input name="priceBahtKg" type="number" step="any" min="0" value="10"></label>
+              <label>สัดส่วนที่นำออกจากแปลงได้ (%)<input name="removablePct" type="number" step="any" min="0" max="100"></label>
             </div>
-            <label>แหล่งที่มาของราคา<input name="priceReference" maxlength="200" value="ค่าเริ่มต้นที่กำหนด 10 บาท/กก."></label>
+            <label>แหล่งอ้างอิงสัดส่วนที่นำออกได้<input name="removableReference" maxlength="200"></label>
+            <fieldset class="adm-rec-set">
+              <legend>ราคา</legend>
+              <label class="adm-check"><input name="useGlobalPrice" type="checkbox" checked> ใช้ราคากลาง</label>
+              <div class="adm-rec-grid" id="ghgOwnPrice">
+                <label>ราคาเฉพาะพืช (บาท/กก.)<input name="priceBahtKg" type="number" step="any" min="0"></label>
+                <label class="adm-span2">แหล่งที่มาของราคาเฉพาะพืช<input name="priceReference" maxlength="200"></label>
+              </div>
+            </fieldset>
             <label>แหล่งอ้างอิง Biomass consumed / Cf<input name="reference" maxlength="200"></label>
             <label>แหล่งอ้างอิงเศษวัสดุต่อไร่<input name="residueReference" maxlength="200"></label>
             <label class="adm-check"><input name="active" type="checkbox" checked> เปิดให้เลือกตอนบันทึก</label>
@@ -209,7 +249,7 @@
 
         <!-- Targets, management types, province name -->
         <section class="adm-view hidden" data-panel="targets" aria-labelledby="tgTitle">
-          <h2 id="tgTitle">เป้าหมายและประเภทการจัดการ</h2>
+          <h2 id="tgTitle">เป้าหมายและวิธีจัดการ</h2>
           <form class="adm-form adm-form-wide" id="tgForm">
             <div class="adm-head"><h3>เป้าหมายพื้นที่จัดการเศษวัสดุ (ไร่)</h3><label class="adm-inline">ปีงบประมาณ<select name="fy" id="tgFy"></select></label></div>
             <p class="adm-muted">เป้ารวมของอำเภอใช้คำนวณร้อยละ เป้ารายประเภทไม่บังคับ จำนวน นวส. ใช้คำนวณเป้าหมายต่อคนในรายงานราย Admin</p>
@@ -295,13 +335,12 @@
         <section class="adm-view hidden" data-panel="reports" aria-labelledby="repTitle">
           <div class="adm-report-form">
             <h2 id="repTitle">รายงาน</h2>
-            <p class="adm-muted">เลือกส่วนที่ต้องการ แล้วกดสร้างรายงาน จากนั้นพิมพ์ บันทึกเป็น PDF หรือดาวน์โหลด Excel/CSV ทุกครั้งที่ดูหรือส่งออกจะบันทึกในประวัติการใช้งาน</p>
+            <p class="adm-muted">เลือกแบบรายงาน กดสร้างรายงาน แล้วพิมพ์ บันทึกเป็น PDF หรือดาวน์โหลด Excel/CSV ทุกครั้งที่ดูหรือส่งออกจะบันทึกในประวัติการใช้งาน</p>
             <form class="adm-form adm-form-wide" id="reportForm">
-              <label>ชื่อรายงาน<input name="title" maxlength="150" id="reportTitle" value=""></label>
-              <div class="adm-confirm" id="reportPresets">
-                <button type="button" class="adm-btn" data-preset="district">รายงานระดับอำเภอ</button>
-                <button type="button" class="adm-btn" data-preset="province" data-role="mini">รายงานระดับจังหวัด</button>
-              </div>
+              <fieldset class="adm-rec-set">
+                <legend>แบบรายงาน</legend>
+                <div class="adm-rtypes" id="reportTypes" role="radiogroup" aria-label="แบบรายงาน"></div>
+              </fieldset>
               <div class="adm-fields" id="reportResidueFields">
                 <label>ปีงบประมาณ<select name="fy" id="reportFy"></select></label>
                 <label>พื้นที่<select name="district" id="reportDistrict"></select></label>
@@ -309,13 +348,13 @@
               <div class="adm-fields" id="reportCropFields">
                 <label>พืชและปีการผลิต<select name="cropKey" id="reportCrop"></select></label>
                 <label>ข้อมูล ณ สิ้นเดือน<select name="asOf" id="reportAsOf"></select></label>
-                <label>การวางหน้ากระดาษ (พิมพ์/PDF)<select name="orientation"><option value="portrait">แนวตั้ง A4</option><option value="landscape">แนวนอน A4</option></select></label>
               </div>
-              <div class="adm-sections" id="reportSections"></div>
-              <div class="adm-confirm">
-                <button type="button" class="adm-btn" id="reportAll">เลือกทั้งหมด</button>
-                <button type="button" class="adm-btn" id="reportNone">ล้างที่เลือก</button>
-              </div>
+              <label>ชื่อรายงาน<input name="title" maxlength="150" id="reportTitle" value=""></label>
+              <details class="adm-rec-more" id="reportMore">
+                <summary>ปรับแต่งส่วนของรายงาน <span class="adm-muted" id="reportPicked"></span></summary>
+                <label>การวางหน้ากระดาษ (พิมพ์/PDF)<select name="orientation"><option value="auto">อัตโนมัติ (ตารางกว้างพิมพ์แนวนอน)</option><option value="portrait">แนวตั้ง A4 ทั้งหมด</option><option value="landscape">แนวนอน A4 ทั้งหมด</option></select></label>
+                <div class="adm-sections" id="reportSections"></div>
+              </details>
               <label class="adm-check hidden" id="reportUnmaskWrap"><input type="checkbox" name="unmaskPhones"> แสดงเบอร์โทรเต็ม (Super Admin / Mini Super Admin และจะบันทึกในประวัติการใช้งาน)</label>
               <div class="adm-confirm">
                 <button type="submit" class="adm-btn adm-btn-primary" id="reportBuild">สร้างรายงาน</button>
@@ -332,7 +371,7 @@
         </section>
 
         <section class="adm-view hidden" data-panel="api" aria-labelledby="apiTitle">
-          <h2 id="apiTitle">การเชื่อมต่อ API</h2>
+          <h2 id="apiTitle">การเชื่อมต่อระบบอื่น (API)</h2>
           <div class="adm-card" id="apiStatus"></div>
           <form class="adm-form" id="apiForm" autocomplete="off">
             <h3>KPP Smart Agri-Materials (รายงานอำเภอ)</h3>
@@ -353,7 +392,7 @@
         </section>
 
         <section class="adm-view hidden" data-panel="admins" aria-labelledby="adminsTitle">
-          <h2 id="adminsTitle">ผู้ดูแลระบบ</h2>
+          <h2 id="adminsTitle">เจ้าหน้าที่และผู้ดูแล</h2>
           <p class="adm-muted">เจ้าหน้าที่ลงทะเบียนเองได้ที่หน้าเข้าสู่ระบบ (เข้าใช้ด้วยหมายเลขโทรศัพท์ และได้สิทธิ์ Admin เสมอ) ถ้าพบบัญชีที่ไม่ถูกต้อง ให้แก้ไขสถานะเป็น "ระงับ" ได้ทันที</p>
           <p class="adm-muted"><strong>Super Admin</strong> จัดการได้ทุกส่วน <strong>Mini Super Admin</strong> จัดการได้เทียบเท่า Super Admin แต่จัดการบัญชี Super Admin ไม่ได้ <strong>Admin</strong> (ผู้บันทึกข้อมูล) บันทึกและเห็นข้อมูลเฉพาะอำเภอที่ลงทะเบียน</p>
           <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>ชื่อ</th><th>ชื่อผู้ใช้</th><th>โทรศัพท์</th><th>บทบาท</th><th>หน่วยงาน</th><th>สถานะ</th><th>เข้าใช้ล่าสุด</th><th><span class="sr-only">จัดการ</span></th></tr></thead><tbody id="adminsBody"></tbody></table></div>
@@ -374,12 +413,13 @@
         </section>
 
         <section class="adm-view hidden" data-panel="log" aria-labelledby="logTitle">
-          <h2 id="logTitle">บันทึกการใช้งาน</h2>
+          <h2 id="logTitle">ประวัติการใช้งาน</h2>
           <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>รายละเอียด</th></tr></thead><tbody id="logBody"></tbody></table></div>
         </section>
 
         <section class="adm-view hidden" data-panel="account" aria-labelledby="accTitle">
           <h2 id="accTitle">บัญชีของฉัน</h2>
+          <div class="adm-card" id="accInfo"></div>
           <form class="adm-form" id="pwForm" autocomplete="off">
             <h3>เปลี่ยนรหัสผ่าน</h3>
             <label>รหัสผ่านปัจจุบัน<input name="current" type="password" autocomplete="current-password" required></label>
@@ -396,8 +436,8 @@
   <div class="adm-toast" id="toast" role="status" hidden></div>
   <dialog class="adm-dialog" id="photoDialog" aria-label="ภาพถ่าย"><div class="adm-dialog-body" id="photoBody"></div><form method="dialog"><button class="adm-btn">ปิด</button></form></dialog>
 
-  <script src="assets/config.js?v=2.1.0"></script>
-  <script src="assets/crop-import.js?v=2.1.0"></script>
-  <script src="assets/admin.js?v=2.1.0"></script>
+  <script src="assets/config.js?v=2.2.0"></script>
+  <script src="assets/crop-import.js?v=2.2.0"></script>
+  <script src="assets/admin.js?v=2.2.0"></script>
 </body>
 </html>

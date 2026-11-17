@@ -1,7 +1,7 @@
 /* Green Gain Hub 2.1.0 — public landing dashboard.
  *
- * ?api=v1&endpoint=summary and ?api=v1&endpoint=residue of the GGH backend feed four tabs:
- *   การจัดการเศษวัสดุ   managed area by type, target %, GHG avoided by crop and district (residue records)
+ * ?api=v1&endpoint=summary, residue and balance (2.2.0) of the GGH backend feed four tabs:
+ *   การจัดการเศษวัสดุ   managed area by type, target %, ก๊าซเรือนกระจก avoided by crop and district (residue records)
  *   สถานการณ์การเพาะปลูก planted / harvested / remaining area by month and district
  *                  (DOAE farmer registry, imported by admins), sub-districts on demand
  *   รายงานอำเภอ    KPP Smart Agri-Materials district reports (proxied server-side)
@@ -24,7 +24,7 @@
   const TABS = ['overview', 'crops', 'reports', 'market'];
 
   const state = { summary: null, geo: null, tab: 'overview', metricByTab: {}, selected: null, map: null, layer: null, layers: {},
-    cropKey: '', asOf: null, detail: {}, residue: null, resFy: null, resCrop: 'all' };
+    cropKey: '', asOf: null, detail: {}, residue: null, resFy: null, resCrop: 'all', balance: null };
   const RES_CACHE_KEY = 'ggh_residue_v2';
   const ICON = {
     all: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>',
@@ -173,7 +173,7 @@
   function resCropName(k) { const c = (res()?.crops || []).find((x) => x.key === k); return c ? c.name : 'ทุกชนิดพืช'; }
 
   const METRICS = {
-    resGhg: { label: 'GHG ที่ลดได้ (tCO₂e)', digits: 2, value: (c) => (res() ? resSum(resCells({ d: c })).g : null), needs: 'residue' },
+    resGhg: { label: 'ก๊าซเรือนกระจกที่ลดได้ (ตันคาร์บอนไดออกไซด์เทียบเท่า)', digits: 2, value: (c) => (res() ? resSum(resCells({ d: c })).g : null), needs: 'residue' },
     resArea: { label: 'พื้นที่จัดการเศษวัสดุ (ไร่)', digits: 0, value: (c) => (res() ? resSum(resCells({ d: c })).a : null), needs: 'residue' },
     resPct: { label: 'ร้อยละของเป้าหมาย (ทุกพืช)', digits: 1, value: (c) => { const t = resTarget(c); return t ? resSum(resCells({ d: c, crop: 'all' })).a / t * 100 : null; }, needs: 'residue' },
     cropRemaining: { label: 'คงเหลือยังไม่เก็บเกี่ยว (ไร่)', digits: 0, value: (c) => cropDistrict(c)?.remaining ?? null, needs: 'crop' },
@@ -249,8 +249,8 @@
         const code = resScopeCode();
         meta = [state.resCrop === 'all' ? 'ทุกชนิดพืช' : resCropName(state.resCrop), code ? 'อำเภอ' + districtName(code) : 'ทั้งจังหวัด'].map(esc).join(' · ');
         const sx = resSum(resCells({ d: code })), all = resSum(resCells({ d: code, crop: 'all' })), tg = resTarget(code);
-        html += kpi(fmtG(sx.g), 'tCO₂e ปริมาณ GHG ที่ลดได้ (ประมาณการ)', `CH₄ ${fmt(sx.ch4e, 2)} + N₂O ${fmt(sx.n2oe, 2)} tCO₂e`, 'ggh-kpi-hero');
-        html += kpi(fmt(sx.a, 2), 'ไร่ พื้นที่จัดการเศษวัสดุ', `${fmt(sx.n)} รายการ` + (sx.x ? `, ยังไม่คำนวณ GHG ${fmt(sx.x, 2)} ไร่` : ''));
+        html += kpi(fmtG(sx.g), 'ตันคาร์บอนไดออกไซด์เทียบเท่า: ก๊าซเรือนกระจกที่ลดได้', `ประมาณการ จากมีเทน ${fmt(sx.ch4e, 2)} + ไนตรัสออกไซด์ ${fmt(sx.n2oe, 2)}`, 'ggh-kpi-hero');
+        html += kpi(fmt(sx.a, 2), 'ไร่ พื้นที่จัดการเศษวัสดุ', `${fmt(sx.n)} รายการ` + (sx.x ? `, ยังไม่คำนวณก๊าซเรือนกระจก ${fmt(sx.x, 2)} ไร่` : ''));
         html += kpi(tg ? fmt(all.a / tg * 100, 1) + '%' : '–', 'ร้อยละของเป้าหมาย', tg ? `${fmt(all.a)} จากเป้า ${fmt(tg)} ไร่ (ทุกประเภท ทุกพืช)` : 'ยังไม่กำหนดเป้าหมาย', 'ggh-kpi-harvest');
         html += kpi(fmt(sx.t, 1), 'ตัน ปริมาณเศษวัสดุที่จัดการ', 'ประมาณจากอัตราชีวมวลต่อไร่');
         html += kpi(baht(sx.v), 'บาท มูลค่าเศษวัสดุ (ประมาณการ)', priceNote() + (R.methods.some((m) => m.countValue === false) ? ` · ไม่นับ${R.methods.filter((m) => m.countValue === false).map((m) => m.method).join(', ')}` : ''));
@@ -316,7 +316,7 @@
           <span class="ggh-progress" aria-hidden="true"><i style="width:${p}%"></i></span>
           <small>เก็บเกี่ยวแล้ว ${p}% · คงเหลือ ${fmt(t.remaining)} ไร่</small>
         </button>
-        ${res() ? `<button type="button" class="ggh-cropcard-link" data-res="${esc(g)}">${done.a ? `จัดการเศษวัสดุแล้ว ${fmt(done.a)} ไร่ · ลด GHG ${fmtG(done.g)} tCO₂e · มูลค่า ${baht(done.v)} บาท` : 'ยังไม่มีการบันทึกการจัดการเศษวัสดุ'}</button>` : ''}
+        ${res() ? `<button type="button" class="ggh-cropcard-link" data-res="${esc(g)}">${done.a ? `จัดการเศษวัสดุแล้ว ${fmt(done.a)} ไร่ · ลดก๊าซเรือนกระจก ${fmtG(done.g)} ตันคาร์บอนไดออกไซด์เทียบเท่า · มูลค่า ${baht(done.v)} บาท` : 'ยังไม่มีการบันทึกการจัดการเศษวัสดุ'}</button>` : ''}
       </div>`;
     }).join('') : '<span class="ggh-district-empty">ยังไม่มีข้อมูลเพาะปลูก</span>';
     chips.querySelectorAll('[data-key]').forEach((b) => b.addEventListener('click', () => {
@@ -343,7 +343,7 @@
     if (!sel || !box) return;
     const years = R ? R.fiscalYears : (state.resFy ? [state.resFy] : []);
     sel.innerHTML = years.map((y) => `<option value="${y}" ${R && y === R.fy ? 'selected' : ''}>${y}</option>`).join('');
-    scope.textContent = R ? `${R.fyRange} · ปริมาณ GHG ประมาณการด้วย ${R.params.label}` : '';
+    scope.textContent = R ? `${R.fyRange} · ปริมาณก๊าซเรือนกระจก ประมาณการด้วย ${R.params.label}` : '';
     if (!R) { box.innerHTML = ''; return; }
     const keys = ['rice', 'sugarcane', 'maize', 'cassava'];
     const crops = R.crops.filter((c) => keys.includes(c.key) || R.cells.some((x) => x.c === c.key));
@@ -381,11 +381,11 @@
         <p class="ggh-method-num">${fmt(r.s.a, 2)} <small>ไร่</small></p>
         <div class="ggh-bar-track"><div class="ggh-bar-fill" style="width:${total ? (r.s.a / total * 100).toFixed(1) : 0}%"></div></div>
         <p class="ggh-method-meta">${total ? fmt(r.s.a / total * 100, 1) + '% ของพื้นที่จัดการ' : '–'}${r.t ? ` · เป้า ${fmt(r.t)} ไร่ (${fmt(r.s.a / r.t * 100, 1)}%)` : ''}</p>
-        <p class="ggh-method-meta">GHG ลดได้ ${fmtG(r.s.g)} tCO₂e · ${fmt(r.s.t, 1)} ตัน${r.s.x ? ` · ยังไม่คำนวณ GHG ${fmt(r.s.x, 2)} ไร่` : ''}</p>
+        <p class="ggh-method-meta">ลดก๊าซเรือนกระจกได้ ${fmtG(r.s.g)} ตันคาร์บอนไดออกไซด์เทียบเท่า · ${fmt(r.s.t, 1)} ตัน${r.s.x ? ` · ยังไม่คำนวณก๊าซเรือนกระจก ${fmt(r.s.x, 2)} ไร่` : ''}</p>
         <p class="ggh-method-meta">${(R.methods.find((m) => m.method === r.m) || {}).countValue === false ? 'ไม่นับมูลค่า' : `มูลค่า ≈ ${baht(r.s.v)} บาท`}</p>
       </article>`).join('');
     $('resNote').innerHTML = `<p>ชุดค่า: ${esc(R.params.label)} ชุดที่ ${esc(R.params.version)} · โหมด ${R.params.mode === 'standard' ? 'Standard (IPCC 2006 Table 2.4)' : 'เศษวัสดุต่อไร่ × Cf'}</p>
-      <p>สูตร: GHG = พื้นที่ × ชีวมวลที่เผาไหม้ (กก./ไร่) × (EF_CH₄ × GWP_CH₄ + EF_N₂O × GWP_N₂O) ÷ 1,000,000</p>
+      <p>สูตร: ก๊าซเรือนกระจกที่ลดได้ = พื้นที่ × ชีวมวลที่เผาไหม้ (กก./ไร่) × (EF_CH₄ × GWP_CH₄ + EF_N₂O × GWP_N₂O) ÷ 1,000,000</p>
       <p>มูลค่า (ประมาณการ) = ปริมาณเศษวัสดุ (ตัน) × 1,000 × ราคา (บาท/กก.) · ${esc(priceNote())} · ไม่ใช่ราคาซื้อขายจริงในตลาด</p>
       <ul>${R.boundary.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`;
   }
@@ -447,7 +447,7 @@
       extra = `<br>${esc(REPORT_STATUS[reportFor(p.code)?.status] || REPORT_STATUS.none)}`;
     } else if (METRICS[id].needs === 'residue') {
       const sx = resSum(resCells({ d: p.code })), tg = resTarget(p.code);
-      extra = `<br>${esc(state.resCrop === 'all' ? 'ทุกพืช' : resCropName(state.resCrop))}: ${fmt(sx.a, 2)} ไร่, GHG ${fmtG(sx.g)} tCO₂e` + (tg ? `<br>เป้าหมาย ${fmt(tg)} ไร่` : '');
+      extra = `<br>${esc(state.resCrop === 'all' ? 'ทุกพืช' : resCropName(state.resCrop))}: ${fmt(sx.a, 2)} ไร่, ก๊าซเรือนกระจก ${fmtG(sx.g)} ตันคาร์บอนไดออกไซด์เทียบเท่า` + (tg ? `<br>เป้าหมาย ${fmt(tg)} ไร่` : '');
     }
     return `<strong>อ.${esc(p.name)}</strong><br>${esc(METRICS[id].label)}: ${v === null ? 'ไม่มีข้อมูล' : fmt(v, METRICS[id].digits)}${extra}`;
   }
@@ -485,7 +485,7 @@
     });
   }
   function shortLabel(id) {
-    return { resGhg: 'GHG ที่ลดได้', resArea: 'พื้นที่จัดการ', resPct: 'ร้อยละของเป้า', cropRemaining: 'คงเหลือ', cropHarvested: 'เก็บเกี่ยวแล้ว', cropTotal: 'พื้นที่ปลูก', cropNext: 'เดือนถัดไป',
+    return { resGhg: 'ก๊าซเรือนกระจกที่ลดได้', resArea: 'พื้นที่จัดการ', resPct: 'ร้อยละของเป้า', cropRemaining: 'คงเหลือ', cropHarvested: 'เก็บเกี่ยวแล้ว', cropTotal: 'พื้นที่ปลูก', cropNext: 'เดือนถัดไป',
       R31: 'ไถกลบ/ย่อยสลาย', R30: 'แปรรูป', R29: 'ส่งเสริม', areaRai: 'แปลงพร้อมขาย', buyers: 'จุดรับซื้อ' }[id] || METRICS[id].label;
   }
 
@@ -540,7 +540,7 @@
     const sx = resSum(resCells({ d: code })), all = resSum(resCells({ d: code, crop: 'all' })), tg = resTarget(code);
     const methods = R.methods.map((m) => m.method).map((m) => ({ m, a: resSum(resCells({ d: code, m })).a })).filter((x) => x.a);
     return `<h4><span>การจัดการเศษวัสดุ</span><span class="ggh-kpi-group-meta">ปีงบ ${esc(R.fy)} · ${esc(state.resCrop === 'all' ? 'ทุกพืช' : resCropName(state.resCrop))}</span></h4>` +
-      dl([['พื้นที่จัดการ (ไร่)', fmt(sx.a, 2)], ['GHG ที่ลดได้ (tCO₂e)', fmtG(sx.g)], ['มูลค่า (บาท)', baht(sx.v)], ['เป้าหมาย (ไร่)', tg ? fmt(tg) : '–'],
+      dl([['พื้นที่จัดการ (ไร่)', fmt(sx.a, 2)], ['ก๊าซเรือนกระจกที่ลดได้ (ตันคาร์บอนไดออกไซด์เทียบเท่า)', fmtG(sx.g)], ['มูลค่า (บาท)', baht(sx.v)], ['เป้าหมาย (ไร่)', tg ? fmt(tg) : '–'],
         ['ร้อยละของเป้า', tg ? `${fmt(all.a / tg * 100, 1)}% <small>ทุกพืช</small>` : '–']]) +
       (methods.length ? `<ul>${methods.map((x) => `<li><span>${esc(x.m)}</span><span>${fmt(x.a, 2)} ไร่</span></li>`).join('')}</ul>` : '<p class="ggh-district-empty">ยังไม่มีการบันทึก</p>');
   }
@@ -581,7 +581,7 @@
     if (state.tab === 'overview') {
       const R = res();
       $('dashTableSub').textContent = R ? `${state.resCrop === 'all' ? 'ทุกชนิดพืช' : resCropName(state.resCrop)} ปีงบประมาณ ${R.fy} · ร้อยละคิดจากพื้นที่จัดการทุกประเภททุกพืชเทียบกับเป้าหมายอำเภอ` : 'กำลังโหลด…';
-      cols = ['อำเภอ', ['พื้นที่จัดการ (ไร่)', 1], ['เป้าหมาย (ไร่)', 1], ['ร้อยละของเป้า', 2], ['GHG ที่ลดได้ (tCO₂e)', 1], ['เศษวัสดุ (ตัน)', 1], ['มูลค่า (บาท)', 1]];
+      cols = ['อำเภอ', ['พื้นที่จัดการ (ไร่)', 1], ['เป้าหมาย (ไร่)', 1], ['ร้อยละของเป้า', 2], ['ก๊าซเรือนกระจกที่ลดได้ (ตันคาร์บอนไดออกไซด์เทียบเท่า)', 1], ['เศษวัสดุ (ตัน)', 1], ['มูลค่า (บาท)', 1]];
       rows = codes.map((code) => ({ code, s: resSum(resCells({ d: code })), all: resSum(resCells({ d: code, crop: 'all' })), t: resTarget(code) }))
         .sort((a, b) => b.s.g - a.s.g || b.all.a - a.all.a).map(({ code, s: sx, all, t }) => {
           const p = t ? Math.round(all.a / t * 1000) / 10 : null;
@@ -745,7 +745,7 @@
     const el = $('dashSourceNote'); if (!el) return;
     const base = 'ภาพรวมรายอำเภอ ไม่แสดงข้อมูลส่วนบุคคล';
     const src = {
-      overview: 'การบันทึกของเจ้าหน้าที่ผู้บันทึกข้อมูลรายอำเภอ ปริมาณ GHG ที่ลดได้ประมาณการตาม IPCC 2006 (ไม่ใช่คาร์บอนเครดิตที่รับรอง)',
+      overview: 'การบันทึกของเจ้าหน้าที่ผู้บันทึกข้อมูลรายอำเภอ ปริมาณ ก๊าซเรือนกระจกที่ลดได้ประมาณการตาม IPCC 2006 (ไม่ใช่คาร์บอนเครดิตที่รับรอง)',
       crops: `${(state.summary?.crops?.source) || 'ทะเบียนเกษตรกร'} พื้นที่เก็บเกี่ยวเป็นค่าคาดการณ์ตามวันที่คาดว่าจะเก็บเกี่ยว`,
       reports: 'KPP Smart Agri-Materials นับเฉพาะรายงานที่ส่งแล้วหรือตรวจรับแล้ว',
       market: 'แปลงและจุดรับซื้อที่ลงทะเบียนใน Green Gain Hub เข้าสู่ระบบเพื่อดูคู่ค้าบนแผนที่'
@@ -784,7 +784,50 @@
     if (fy) fy.addEventListener('change', () => { state.resFy = Number(fy.value); loadResidue(state.resFy); });
   }
 
+  /* ---------- 2.2.0 entry doors and residue balance ---------- */
+  function renderDoors() {
+    const s = state.summary && state.summary.totals, R = res();
+    const set = (id, text) => { const el = $(id); if (!el) return; el.textContent = text || ''; el.hidden = !text; };
+    set('doorFactSell', s && s.buyers ? `ตอนนี้มีผู้รับซื้อ ${fmt(s.buyers)} ราย รับซื้อรวม ${fmt(s.capacityTonPerDay, 0)} ตัน/วัน` : '');
+    set('doorFactBuy', s && s.farmerPlots ? `แปลงพร้อมขาย ${fmt(s.farmerPlots)} แปลง รวม ${fmt(s.areaRai, 0)} ไร่` : '');
+    set('doorFactStaff', R && R.totals && R.totals.areaRai ? `ปีงบประมาณ ${R.fy} จัดการแล้ว ${fmt(R.totals.areaRai, 0)} ไร่ ไม่ต้องเผา` : '');
+  }
+  function loadBalance(fy) {
+    if (!API_BASE || API_BASE.includes('PUT_YOUR')) return Promise.resolve();
+    const params = { api: 'v1', endpoint: 'balance' };
+    if (fy) params.fy = fy;
+    if (API_KEY) params.key = API_KEY;
+    const url = apiUrl(params);
+    return getJson(url).catch(() => jsonp(url)).then((p) => {
+      if (!p || !p.ok || !p.data) throw new Error((p && p.error) || 'balance API error');
+      state.balance = p.data;
+      renderBalance();
+    }).catch((err) => { state.balance = null; renderBalance(); console.warn('[GGH balance]', err); });
+  }
+  /* One stacked bar: of the harvested area, the share with a management record vs. without one. */
+  function renderBalance() {
+    const wrap = $('resBalanceWrap'), b = state.balance;
+    if (!wrap) return;
+    const code = resScopeCode();
+    const t = b ? (code ? (b.byDistrict || []).find((d) => d.district === code) : b.totals) : null;
+    if (!t || !(t.harvestedRai > 0)) { wrap.classList.add('hidden'); return; }
+    wrap.classList.remove('hidden');
+    const done = Math.min(t.managedRai, t.harvestedRai), pct = t.harvestedRai ? done / t.harvestedRai * 100 : 0;
+    $('resBalanceSub').textContent = `${code ? 'อำเภอ' + districtName(code) : 'ทั้งจังหวัด'} ปีงบประมาณ ${b.fy}: พื้นที่เก็บเกี่ยวจากทะเบียนเกษตรกร เทียบกับพื้นที่ที่เจ้าหน้าที่บันทึกการจัดการแล้ว`;
+    $('resBalance').innerHTML = `<div class="ggh-bal-bar" role="img" aria-label="จัดการแล้ว ${fmt(pct, 1)}% ของพื้นที่เก็บเกี่ยว">
+        <i class="is-done" style="width:${pct.toFixed(2)}%"></i><i class="is-left" style="width:${(100 - pct).toFixed(2)}%"></i></div>
+      <dl class="ggh-bal-facts">
+        <div><dt><span class="ggh-bal-key is-done"></span>จัดการแล้ว</dt><dd>${fmt(t.managedRai, 0)} ไร่ <small>(${fmt(pct, 1)}%)</small></dd></div>
+        <div><dt><span class="ggh-bal-key is-left"></span>ยังไม่มีบันทึกการจัดการ</dt><dd>${fmt(t.atRiskRai, 0)} ไร่</dd></div>
+        <div><dt>พื้นที่เก็บเกี่ยว</dt><dd>${fmt(t.harvestedRai, 0)} ไร่${t.potentialTon ? ` <small>(เศษวัสดุ ≈ ${fmt(t.potentialTon, 0)} ตัน)</small>` : ''}</dd></div>
+        <div><dt>ประกาศขายในตลาด</dt><dd>${fmt(t.listedRai, 0)} ไร่ · ผู้รับซื้อ ${fmt(t.buyers)} ราย</dd></div>
+      </dl>
+      <p class="ggh-footnote">"ยังไม่มีบันทึก" ไม่ได้แปลว่าถูกเผา เป็นพื้นที่ที่ควรติดตาม ส่วนที่นำออกจากแปลงได้โดยไม่กระทบดินประมาณ ${t.removableTon ? fmt(t.removableTon, 0) + ' ตัน' : '–'} ส่วนที่เหลือควรไถกลบหรือคลุมดิน</p>`;
+  }
+
   function renderAll() {
+    renderDoors();
+    renderBalance();
     renderCropToolbar();
     renderKpis();
     renderMetrics();
@@ -851,6 +894,7 @@
       state.residue = p.data; state.resFy = p.data.fy;
       try { localStorage.setItem(RES_CACHE_KEY, JSON.stringify(p.data)); } catch (e) { /* ignore */ }
       renderAll();
+      loadBalance(p.data.fy);
     }).catch((err) => {
       if (!res()) state.residue = { error: true };
       renderAll();

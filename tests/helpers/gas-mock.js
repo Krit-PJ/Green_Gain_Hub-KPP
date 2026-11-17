@@ -69,7 +69,7 @@ function load(options) {
     getRootFolder: () => root
   };
   global.PropertiesService = { getScriptProperties: () => ({ getProperty: (k) => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = String(v); }, deleteProperty: (k) => { delete props[k]; } }) };
-  global.CacheService = { getScriptCache: () => ({ get: (k) => cache.get(k) ?? null, put: (k, v) => cache.set(k, v), remove: (k) => cache.delete(k) }) };
+  global.CacheService = { getScriptCache: () => ({ get: (k) => cache.get(k) ?? null, put: (k, v) => cache.set(k, v), remove: (k) => cache.delete(k), removeAll: (ks) => ks.forEach((k) => cache.delete(k)) }) };
   global.LockService = { getScriptLock: () => ({ waitLock() {}, tryLock() { return true; }, releaseLock() {} }) };
   global.Utilities = {
     DigestAlgorithm: { SHA_256: 'sha256', MD5: 'md5' }, Charset: { UTF_8: 'utf8' },
@@ -93,7 +93,7 @@ function load(options) {
   global.ContentService = { MimeType: { JSON: 'json', JAVASCRIPT: 'js' }, createTextOutput: (b) => (last = { body: b, setMimeType(m) { this.mime = m; return this; } }) };
   global.UrlFetchApp = options.urlFetch || { fetchAll: () => { throw new Error('no network in tests'); } };
   const dir = path.join(__dirname, '..', '..', 'apps-script');
-  const files = options.files || ['Districts.gs', 'Code.gs', 'Admin.gs', 'Crops.gs', 'Counter.gs', 'Reports.gs', 'Ghg.gs', 'Residue.gs', 'Staff.gs'];
+  const files = options.files || ['Districts.gs', 'Code.gs', 'Admin.gs', 'Crops.gs', 'Counter.gs', 'Reports.gs', 'Ghg.gs', 'Residue.gs', 'Staff.gs', 'Balance.gs'];
   const src = files.map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
   const names = options.expose || [];
   const api = new Function(src + '; return { doGet, doPost, setupSystem' + names.map((n) => ', ' + n).join('') + ' };')();

@@ -15,7 +15,7 @@ new vm.Script(js, { filename: 'frontend/assets/dashboard.js' });
 ['id="loginPage"', 'id="loginPhone"', 'id="loginBtn"', 'onclick="login()"', "toggleAuth('register')", 'id="registerPage"'].forEach(s => assert(html.includes(s), 'login markup missing: ' + s));
 ['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashSearch"',
   'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="reports"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=2.1.0') && html.includes('assets/dashboard.css?v=2.1.0'), 'dashboard assets are not linked');
+assert(html.includes('assets/dashboard.js?v=2.2.0') && html.includes('assets/dashboard.css?v=2.2.0'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
@@ -31,7 +31,7 @@ assert(/noindex/.test(admin), 'admin page must not be indexed');
 // 1.7.0: footer counter (once per session) and admin reports.
 assert(html.includes('id="visitCounter"') && /วันนี้[\s\S]*เดือนนี้[\s\S]*ทั้งหมด/.test(html), 'footer counter markup missing');
 assert(js.includes("'ggh_visit_counted'") && js.includes("counted ? 'visits' : 'hit'"), 'counter must hit once per session, then only read');
-assert(admin.includes('data-view="reports"') && admin.includes('id="reportPrint"') && admin.includes('id="reportXlsx"') && admin.includes('id="reportCsv"'), 'report actions missing');
+assert(admin.includes('data-panel="reports"') && admin.includes('id="reportPrint"') && admin.includes('id="reportXlsx"') && admin.includes('id="reportCsv"'), 'report actions missing');
 assert(adminJs.includes("'\\ufeff'") && adminJs.includes('reportExportLogServer'), 'CSV must carry a BOM and exports must be logged');
 assert(!/getMatchingDataServer|\.phone\b|\.lat\b|\.lng\b/.test(js), 'dashboard must not touch personal or plot-level data');
 
@@ -48,12 +48,23 @@ assert(/data-tab="overview">การจัดการเศษวัสดุ<
 assert(html.includes('id="resCropIcons"') && html.includes('id="resMethods"') && html.includes('id="resProgress"') && html.includes('id="resFy"'), 'residue tab markup missing');
 assert(!/ggh-cropmonths" data-tabs="overview/.test(html), 'old overview cards must be removed from the residue tab');
 assert(admin.includes('id="recForm"') && admin.includes('capture="environment"') && admin.includes('name="confirmed"') && admin.includes('id="recGpsBtn"'), 'recording form missing');
-assert(admin.includes('value="mini"') && admin.includes('id="adminDistrict"') && admin.includes('data-preset="district"') && admin.includes('data-preset="province"'), 'roles / report presets missing');
+assert(admin.includes('value="mini"') && admin.includes('id="adminDistrict"') && admin.includes('id="reportTypes"') && !admin.includes('id="reportAll"'), 'roles / report types (no select-all) missing');
 const dash = fs.readFileSync(path.join(__dirname, '..', 'frontend', 'assets', 'dashboard.js'), 'utf8');
 assert(dash.includes("endpoint: 'residue'") && dash.includes('resGhg') && dash.includes('data-province'), 'dashboard must load residue data');
 // 2.1.0: top bar name, no hero title, Green Gain Hub brand in the sign-in card, officer sign-in/registration, value.
-assert(/ggh-topbar-title[^>]*>ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร</.test(html) && !html.includes('class="ggh-title"'), 'top bar title / hero title');
-assert(/ggh-login-brand">Green Gain Hub: <span data-province>/.test(html), 'Green Gain Hub name belongs to the sign-in card');
+// 2.2.0: short name on top, full official name in the footer; entry doors; sign-in card for farmers and buyers.
+assert(/ggh-topbar-title[^>]*>Green Gain Hub <span data-province>/.test(html) && html.includes('ggh-topbar-sub') && !html.includes('class="ggh-title"'), 'top bar title / hero title');
+assert(/<footer[\s\S]*ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร/.test(html), 'full official name in the footer');
+assert(/ggh-login-brand">สำหรับเกษตรกรและผู้รับซื้อ</.test(html) && html.includes('STAFF_ACCOUNT'), 'sign-in card names its users and points officers away');
+assert(['data-role="farmer"', 'data-role="buyer"', 'href="admin.html" class="is-main"'].every((x) => html.includes(x)) && html.indexOf('ggh-doors') < html.indexOf('ggh-tabs"'), 'entry doors before the province data');
+assert(!/tCO₂e|tCO2e/.test(html + dash) && dash.includes('ตันคาร์บอนไดออกไซด์เทียบเท่า'), 'Thai GHG unit on the homepage');
+assert(dash.includes("endpoint: 'balance'") && html.includes('id="resBalance"'), 'residue balance on the homepage');
 assert(admin.includes('id="staffLoginForm"') && admin.includes('id="staffRegForm"') && admin.includes('id="regProvinces"') && admin.includes('id="regGroup"'), 'officer sign-in / registration');
-assert(admin.includes('name="priceBahtKg"') && admin.includes('name="countValue"') && dash.includes('มูลค่าเศษวัสดุ'), 'value settings and display');
+assert(admin.includes('name="priceBahtKg"') && admin.includes('name="useGlobalPrice"') && admin.includes('id="priceForm"') && admin.includes('name="countValue"') && dash.includes('มูลค่าเศษวัสดุ'), 'value settings and display');
+// 2.2.0 admin: task menus, overview, buyer link, print rules.
+const adminCss = fs.readFileSync(path.join(__dirname, '..', 'frontend', 'assets', 'admin.css'), 'utf8');
+assert(/admin: \[\{ key: 'record'[\s\S]*?\{ key: 'account'/.test(adminJs) && (adminJs.match(/\{ key: '(overview|data|reports|users|settings)', label/g) || []).length === 5, 'Admin 4 items, Mini/Super 5 groups');
+assert(admin.includes('data-panel="overview"') && admin.includes('id="recBuyer"') && admin.includes('name="soldTonnes"') && adminJs.includes('residueBalanceServer'), 'overview and marketplace link');
+assert(adminCss.includes('@page') === false && adminJs.includes('@page wide') && adminCss.includes('page: wide') && adminCss.includes('.print-hide') && adminCss.includes('display: table-header-group'), 'print: named landscape pages, excel-only columns, repeated headers');
+assert(!/tCO₂e|tCO2e/.test(admin + adminJs), 'Thai GHG unit on the admin page');
 
