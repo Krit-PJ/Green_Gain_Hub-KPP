@@ -29,5 +29,9 @@
 | `ghg_params` (2.0.0) | Key, Value, Unit, Description | EF, GWP, ชุดค่า, โหมด, เลขชุดค่า |
 | `ghg_crops` (2.0.0) | Crop_Key, Crop_Name, Consumed_t_ha, Cf, Residue_t_rai, Residue_Name, Residue_Reference, IPCC_Reference, Active, Sort_Order, Updated_At, Updated_By | ค่าว่าง = ไม่มีค่ามาตรฐาน |
 | `Config` (2.0.0) | + province_name, office_name | |
+| `ghg_crops` (2.1.0) | + Price_baht_kg, Price_Reference | ค่าเริ่มต้น 10 บาท/กก. |
+| `residue_methods` (2.1.0) | + Count_Value | ไถกลบ = FALSE เป็นค่าเริ่มต้น |
+| `admins` (2.1.0) | + Office_Type, Office_Group, Province, Registered_Via | ลงทะเบียนเอง: Username = p+เบอร์, Registered_Via = self, ไม่มีรหัสผ่าน |
+| `Config` (2.1.0) | + staff_groups | กลุ่มของสำนักงานเกษตรจังหวัด คั่นด้วย \| |
 
 ห้ามแก้ไขชีตเหล่านี้ด้วยมือระหว่างใช้งาน ให้จัดการผ่านหน้า `admin.html`

@@ -1,4 +1,4 @@
-# Deploy Green Gain Hub 2.0.0
+# Deploy Green Gain Hub 2.1.0
 
 สถานะ 3 พ.ย. 2569: **Deploy แล้ว**
 
@@ -10,7 +10,7 @@
 
 ## อัปเดตโค้ดครั้งถัดไป
 
-1. เปิดโปรเจกต์ Green Gain Hub KPP API แล้ววางไฟล์ `apps-script/Code.gs`, `Districts.gs`, `Admin.gs`, `Crops.gs`, `Counter.gs`, `Reports.gs`, `Ghg.gs`, `Residue.gs` (ชื่อไฟล์ใน Apps Script ตรงกัน)
+1. เปิดโปรเจกต์ Green Gain Hub KPP API แล้ววางไฟล์ `apps-script/Code.gs`, `Districts.gs`, `Admin.gs`, `Crops.gs`, `Counter.gs`, `Reports.gs`, `Ghg.gs`, `Residue.gs`, `Staff.gs` (ชื่อไฟล์ใน Apps Script ตรงกัน)
 2. Run `setupSystem()` (2.0.0: ครั้งแรกต้องอนุญาตสิทธิ์ Google Drive เพิ่มเพื่อสร้างโฟลเดอร์ภาพ; บรรทัดสุดท้ายแสดงผลการเชื่อมต่อ Smart Agri: `PASS`, `INFO` หรือ `FAIL`)
 3. **ทำให้ใช้งานได้ > จัดการการทำให้ใช้งานได้ > ✏️ แก้ไข** Deployment `AKfycbylUGpPc7g9…` > **เวอร์ชันใหม่** > ทำให้ใช้งานได้ (URL เดิม)
 4. ตรวจ `…/exec?api=v1&endpoint=health` และ `…/exec?api=v1&endpoint=summary&refresh=1`

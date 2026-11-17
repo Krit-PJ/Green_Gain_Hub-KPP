@@ -15,7 +15,7 @@ const RESIDUE_SHEETS = {
   residue_records: ['Record_ID', 'Record_Date', 'Fiscal_Year', 'District_Code', 'District_Name', 'Subdistrict_Code', 'Subdistrict_Name',
     'Crop_Key', 'Crop_Name', 'Crop_Other', 'Method', 'Method_Other', 'Area_Rai', 'Lat', 'Lng', 'Photo_IDs', 'Biomass_Mode', 'MB_kg_rai', 'Cf',
     'Fresh_kg_rai', 'DMF', 'Data_Status', 'Reference', 'Note', 'Recorded_By', 'Recorder_Name', 'Confirmed_At', 'Status', 'Created_At', 'Updated_At', 'Updated_By'],
-  residue_methods: ['Method', 'Crop_Key', 'Needs_Detail', 'Active', 'Sort_Order', 'Updated_At'],
+  residue_methods: ['Method', 'Crop_Key', 'Needs_Detail', 'Active', 'Sort_Order', 'Updated_At', 'Count_Value'],
   residue_targets: ['Fiscal_Year', 'District_Code', 'District_Name', 'Method', 'Target_Rai', 'Officers', 'Note', 'Updated_At', 'Updated_By']
 };
 const RC = {}; // column index by header (0-based) for residue_records
@@ -25,6 +25,8 @@ const RESIDUE_DEFAULT_METHODS = [
   ['ไถกลบ', '', false, true, 1], ['อัดฟางก้อน', 'rice', false, true, 2], ['อัดใบอ้อย', 'sugarcane', false, true, 3],
   ['ทำปุ๋ยหมัก', '', false, true, 4], ['เพาะเห็ด', '', false, true, 5], ['อื่น ๆ', '', true, true, 9]
 ];
+// Ploughing-in sells nothing, so by default it does not add to the estimated value (switchable per type).
+function residueDefaultCountValue_(method) { return method !== 'ไถกลบ'; }
 // ไฟล์ "1.2 เป้าหมาย ปี 2570": district code, officers (นวส.), target (rai, all management types)
 const RESIDUE_TARGETS_2570 = [['6201', 8, 12000], ['6202', 4, 6000], ['6203', 4, 6000], ['6204', 7, 10500], ['6205', 4, 6000], ['6206', 5, 7500],
   ['6207', 4, 6000], ['6208', 2, 3000], ['6209', 2, 3000], ['6210', 4, 6000], ['6211', 3, 4500]];
@@ -55,7 +57,8 @@ function ensureResidueSchema_() {
   Object.keys(RESIDUE_SHEETS).forEach(function (n) { ensureSheet_(n, RESIDUE_SHEETS[n]); });
   const now = new Date();
   const ms = sheetByName_('residue_methods');
-  if (ms.getLastRow() < 2) ms.getRange(2, 1, RESIDUE_DEFAULT_METHODS.length, 6).setValues(RESIDUE_DEFAULT_METHODS.map(function (r) { return r.concat([now]); }));
+  if (ms.getLastRow() < 2) ms.getRange(2, 1, RESIDUE_DEFAULT_METHODS.length, 7).setValues(RESIDUE_DEFAULT_METHODS.map(function (r) { return r.concat([now, residueDefaultCountValue_(r[0])]); }));
+  dataRows_(ms).forEach(function (r, i) { if (text_(r[0]) && (r[6] === '' || r[6] === undefined)) ms.getRange(i + 2, 7).setValue(residueDefaultCountValue_(text_(r[0]))); });
   const ts = sheetByName_('residue_targets');
   let seeded = '';
   if (ts.getLastRow() < 2) {
@@ -125,7 +128,8 @@ function residueMethods_(includeInactive) {
   const sh = spreadsheet_().getSheetByName('residue_methods');
   const rows = sh ? dataRows_(sh) : RESIDUE_DEFAULT_METHODS;
   return rows.map(function (r) {
-    return { method: text_(r[0]), cropKey: text_(r[1]), needsDetail: truthyCell_(r[2]), active: truthyCell_(r[3]), sortOrder: Number(r[4]) || 99 };
+    return { method: text_(r[0]), cropKey: text_(r[1]), needsDetail: truthyCell_(r[2]), active: truthyCell_(r[3]), sortOrder: Number(r[4]) || 99,
+      countValue: r[6] === '' || r[6] === undefined ? residueDefaultCountValue_(text_(r[0])) : truthyCell_(r[6]) };
   }).filter(function (m) { return m.method && (includeInactive || m.active); }).sort(function (a, b) { return a.sortOrder - b.sortOrder; });
 }
 
@@ -148,8 +152,11 @@ function cropGroupOf_(name) {
 
 /* ------------------------------ scope ------------------------------ */
 
+/** District recorder (Admin of สนง.เกษตรอำเภอ) is limited to one district; everyone else may choose. */
+function residueDistrictScoped_(s) { return s.role === 'admin' && s.scope !== 'province'; }
+
 function residueScopeDistrict_(s, requested) {
-  if (s.role === 'admin') {
+  if (residueDistrictScoped_(s)) {
     if (!s.district) throw new Error('บัญชีนี้ยังไม่ได้กำหนดอำเภอ กรุณาติดต่อผู้ดูแลระบบ');
     return s.district;
   }
@@ -192,12 +199,15 @@ function residueCtx_() {
   const p = ghgParams_();
   const crops = {};
   ghgCrops_(true).forEach(function (c) { crops[c.key] = c; });
-  return { p: p, crops: crops, label: ghgParamLabel_(p) };
+  const methods = {};
+  residueMethods_(true).forEach(function (m) { methods[m.method] = m; });
+  return { p: p, crops: crops, methods: methods, label: ghgParamLabel_(p) };
 }
 
 function residueCompute_(rec, ctx) {
   const crop = ctx.crops[rec.crop];
-  const out = { ghg: null, ch4: null, n2o: null, ch4e: null, n2oe: null, btotal: null, bburned: null, mode: '', dataStatus: '', reference: '', tonnes: null, reason: '' };
+  const out = { ghg: null, ch4: null, n2o: null, ch4e: null, n2oe: null, btotal: null, bburned: null, mode: '', dataStatus: '', reference: '', tonnes: null, reason: '',
+    value: null, valueCounted: false };
   if (!crop) { out.reason = 'ไม่พบค่าพืช'; return out; }
   let item = null;
   if (rec.biomassMode === 'custom') {
@@ -217,6 +227,11 @@ function residueCompute_(rec, ctx) {
   if (rec.biomassMode === 'custom' && rec.mb !== null) out.tonnes = rec.area * rec.mb / 1000;
   else if (rec.biomassMode === 'custom' && rec.fresh !== null && rec.dmf) out.tonnes = rec.area * rec.fresh * rec.dmf / 1000;
   else if (crop.residueTRai !== '') out.tonnes = rec.area * Number(crop.residueTRai);
+  // Estimated value = residue tonnes × 1,000 × baht/kg of the crop, only for types that count value.
+  const m = ctx.methods && ctx.methods[rec.method];
+  out.valueCounted = m ? m.countValue : residueDefaultCountValue_(rec.method);
+  const price = crop.priceBahtKg === '' || crop.priceBahtKg === undefined ? null : Number(crop.priceBahtKg);
+  if (out.tonnes !== null && price !== null) out.value = out.valueCounted ? out.tonnes * 1000 * price : 0;
   return out;
 }
 
@@ -230,13 +245,14 @@ function residuePublicRecord_(rec, ctx, s) {
     biomassMode: rec.biomassMode, mb: rec.mb, cf: rec.cf, fresh: rec.fresh, dmf: rec.dmf, reference: rec.reference, note: rec.note,
     recordedBy: rec.recordedBy, recorderName: rec.recorderName, createdAt: rec.createdAt, updatedAt: rec.updatedAt,
     ghg: c.ghg === null ? null : round_(c.ghg, 4), tonnes: c.tonnes === null ? null : round_(c.tonnes, 2), ghgNote: c.reason, dataStatus: c.dataStatus || 'Estimated',
-    canEdit: s.role !== 'admin' || (own && rec.district === s.district)
+    value: c.value === null ? null : round_(c.value, 2), valueCounted: c.valueCounted,
+    canEdit: s.role !== 'admin' || (own && (!residueDistrictScoped_(s) || rec.district === s.district))
   };
 }
 
 function residueMeta_(s) {
   const names = residueDistrictNames_();
-  const district = s.role === 'admin' ? s.district : '';
+  const district = residueDistrictScoped_(s) ? s.district : '';
   const ctx = residueCtx_();
   const fy = currentFiscalYear_();
   return {
@@ -267,10 +283,10 @@ function residueList_(input, s) {
   const out = list.reverse().slice(0, 500).map(function (r) { return residuePublicRecord_(r, ctx, s); });
   const totals = list.reduce(function (a, r) {
     const c = residueCompute_(r, ctx);
-    a.area += r.area; a.records++; if (c.ghg !== null) a.ghg += c.ghg; if (c.tonnes !== null) a.tonnes += c.tonnes;
+    a.area += r.area; a.records++; if (c.ghg !== null) a.ghg += c.ghg; if (c.tonnes !== null) a.tonnes += c.tonnes; if (c.value !== null) a.value += c.value;
     return a;
-  }, { area: 0, ghg: 0, tonnes: 0, records: 0 });
-  return { status: 'success', records: out, totals: { area: round_(totals.area, 2), ghg: round_(totals.ghg, 4), tonnes: round_(totals.tonnes, 2), records: totals.records },
+  }, { area: 0, ghg: 0, tonnes: 0, records: 0, value: 0 });
+  return { status: 'success', records: out, totals: { area: round_(totals.area, 2), ghg: round_(totals.ghg, 4), tonnes: round_(totals.tonnes, 2), records: totals.records, value: round_(totals.value, 2) },
     truncated: list.length > 500, params: ctx.label };
 }
 
@@ -283,8 +299,8 @@ function residueValidate_(input, s, existing) {
   if (v.date < '2020-01-01') throw new Error('วันที่ดำเนินการไม่ถูกต้อง');
   v.fy = fiscalYearOf_(v.date);
   const names = residueDistrictNames_();
-  v.district = s.role === 'admin' ? s.district : String(input.district || (existing && existing.district) || '');
-  if (!names[v.district]) throw new Error(s.role === 'admin' ? 'บัญชีนี้ยังไม่ได้กำหนดอำเภอ' : 'กรุณาเลือกอำเภอ');
+  v.district = residueDistrictScoped_(s) ? s.district : String(input.district || (existing && existing.district) || '');
+  if (!names[v.district]) throw new Error(residueDistrictScoped_(s) ? 'บัญชีนี้ยังไม่ได้กำหนดอำเภอ' : 'กรุณาเลือกอำเภอ');
   v.districtName = names[v.district];
   const tambon = KPP_SUBDISTRICTS.find(function (t) { return t[0] === String(input.subdistrict || ''); });
   if (!tambon || tambon[0].slice(0, 4) !== v.district) throw new Error('กรุณาเลือกตำบลในอำเภอ' + v.districtName);
@@ -393,7 +409,7 @@ function residueFindRow_(id) {
 function residueCanEdit_(rec, s) {
   if (!rec || rec.status !== 'active') return false;
   if (s.role !== 'admin') return true;
-  return rec.district === s.district && rec.recordedBy === s.username;
+  return rec.recordedBy === s.username && (!residueDistrictScoped_(s) || rec.district === s.district);
 }
 
 function residueSave_(input, s) {
@@ -455,7 +471,7 @@ function residueDelete_(input, s) {
 function residuePhoto_(input, s) {
   input = input || {};
   const rec = residueFindRow_(cleanText_(input.id, 40));
-  if (!rec || (s.role === 'admin' && rec.district !== s.district)) throw new Error('ไม่พบรายการ หรือไม่มีสิทธิ์ดูภาพ');
+  if (!rec || (residueDistrictScoped_(s) && rec.district !== s.district)) throw new Error('ไม่พบรายการ หรือไม่มีสิทธิ์ดูภาพ');
   const i = Math.max(0, Math.min(RESIDUE_MAX_PHOTOS - 1, Number(input.index) || 0));
   const fid = rec.photos[i];
   if (!fid) throw new Error('ไม่พบภาพ');
@@ -541,17 +557,19 @@ function residueMethodSave_(input, s) {
   const sh = sheetByName_('residue_methods');
   const rows = dataRows_(sh);
   const idx = rows.findIndex(function (r) { return text_(r[0]) === method; });
-  const values = [method, cropKey, !!input.needsDetail, input.active !== false, Math.max(1, Math.min(99, Number(input.sortOrder) || 50)), new Date()];
-  if (idx >= 0) sh.getRange(idx + 2, 1, 1, 6).setValues([values]); else sh.appendRow(values);
+  const countValue = input.countValue === undefined ? residueDefaultCountValue_(method) : !!input.countValue;
+  const values = [method, cropKey, !!input.needsDetail, input.active !== false, Math.max(1, Math.min(99, Number(input.sortOrder) || 50)), new Date(), countValue];
+  if (idx >= 0) sh.getRange(idx + 2, 1, 1, 7).setValues([values]); else sh.appendRow(values);
   invalidateResidue_();
-  adminAudit_(s, 'residue_method_save', method + (cropKey ? ' (' + cropKey + ')' : '') + (input.active === false ? ' ปิด' : ''));
+  adminAudit_(s, 'residue_method_save', method + (cropKey ? ' (' + cropKey + ')' : '') + (input.active === false ? ' ปิด' : '') + (countValue ? ' นับมูลค่า' : ' ไม่นับมูลค่า'));
   return { status: 'success', methods: residueMethods_(true) };
 }
 
 function residueSettingsGet_(input) {
   const fy = Number(input && input.fy) || currentFiscalYear_();
   return { status: 'success', province: provinceName_(), office: officeName_(), fy: fy, fiscalYears: residueFiscalYears_(),
-    targets: residueTargets_(fy), methods: residueMethods_(true), crops: ghgCrops_(true).map(function (c) { return { key: c.key, name: c.name }; }) };
+    targets: residueTargets_(fy), methods: residueMethods_(true), crops: ghgCrops_(true).map(function (c) { return { key: c.key, name: c.name }; }),
+    groups: staffGroups_() };
 }
 
 function residueSiteSave_(input, s) {
@@ -561,6 +579,11 @@ function residueSiteSave_(input, s) {
   if (!province) throw new Error('กรุณากรอกชื่อจังหวัด');
   setConfigValue_('province_name', province.replace(/^จังหวัด/, ''), 'ชื่อจังหวัดที่แสดงบนหน้าเว็บและรายงาน');
   if (office) setConfigValue_('office_name', office, 'ชื่อหน่วยงานในหัวรายงาน');
+  if (Array.isArray(input.groups)) {
+    const groups = input.groups.map(function (g) { return cleanText_(g, 80); }).filter(Boolean).slice(0, 20);
+    if (!groups.length) throw new Error('ต้องมีกลุ่มของสำนักงานเกษตรจังหวัดอย่างน้อย 1 กลุ่ม');
+    setConfigValue_('staff_groups', groups.join('|'), 'กลุ่มของสำนักงานเกษตรจังหวัด (ใช้ตอนลงทะเบียนเจ้าหน้าที่)');
+  }
   invalidateResidue_();
   try { CacheService.getScriptCache().remove(SUMMARY_CACHE_KEY); } catch (err) { /* ignore */ }
   adminAudit_(s, 'site_save', 'จังหวัด ' + province + (office ? ', หน่วยงาน ' + office : ''));
@@ -582,17 +605,18 @@ function residueCells_(records, ctx) {
   const cells = {};
   records.forEach(function (r) {
     const k = r.district + '|' + r.crop + '|' + r.method;
-    const x = cells[k] || (cells[k] = { d: r.district, c: r.crop, m: r.method, n: 0, a: 0, t: 0, g: 0, ch4: 0, n2o: 0, ch4e: 0, n2oe: 0, b: 0, x: 0 });
+    const x = cells[k] || (cells[k] = { d: r.district, c: r.crop, m: r.method, n: 0, a: 0, t: 0, g: 0, ch4: 0, n2o: 0, ch4e: 0, n2oe: 0, b: 0, x: 0, v: 0 });
     const v = residueCompute_(r, ctx);
     x.n++; x.a += r.area;
     if (v.tonnes !== null) x.t += v.tonnes;
+    if (v.value !== null) x.v += v.value;
     if (v.ghg === null) x.x += r.area;
     else { x.g += v.ghg; x.ch4 += v.ch4; x.n2o += v.n2o; x.ch4e += v.ch4e; x.n2oe += v.n2oe; x.b += v.btotal; }
   });
   return Object.keys(cells).sort().map(function (k) {
     const x = cells[k];
     return { d: x.d, c: x.c, m: x.m, n: x.n, a: round_(x.a, 2), t: round_(x.t, 3), g: round_(x.g, 6), ch4: round_(x.ch4, 8), n2o: round_(x.n2o, 9),
-      ch4e: round_(x.ch4e, 6), n2oe: round_(x.n2oe, 6), b: round_(x.b, 2), x: round_(x.x, 2) };
+      ch4e: round_(x.ch4e, 6), n2oe: round_(x.n2oe, 6), b: round_(x.b, 2), x: round_(x.x, 2), v: round_(x.v, 2) };
   });
 }
 
@@ -613,10 +637,10 @@ function getResiduePublic_(p) {
     ok: true, generatedAt: new Date().toISOString(), fy: fy, fyRange: fiscalRangeText_(fy), fiscalYears: residueFiscalYears_(),
     province: provinceName_(), params: ctx.label,
     crops: ghgCrops_(true).map(function (c) { return ghgCropPublic_(c, ctx.p); }),
-    methods: residueMethods_(true).map(function (m) { return { method: m.method, cropKey: m.cropKey, active: m.active }; }),
+    methods: residueMethods_(true).map(function (m) { return { method: m.method, cropKey: m.cropKey, active: m.active, countValue: m.countValue }; }),
     cells: cells,
     totals: { records: sum('n'), areaRai: round_(sum('a'), 2), tonnes: round_(sum('t'), 2), ghg: round_(sum('g'), 4), ch4: round_(sum('ch4'), 6), n2o: round_(sum('n2o'), 6),
-      ch4e: round_(sum('ch4e'), 4), n2oe: round_(sum('n2oe'), 4), excludedRai: round_(sum('x'), 2), districts: Object.keys(cells.reduce(function (o, c) { o[c.d] = 1; return o; }, {})).length },
+      ch4e: round_(sum('ch4e'), 4), n2oe: round_(sum('n2oe'), 4), excludedRai: round_(sum('x'), 2), value: round_(sum('v'), 2), districts: Object.keys(cells.reduce(function (o, c) { o[c.d] = 1; return o; }, {})).length },
     targets: { total: t.total, officers: t.officers, byMethod: t.byMethod,
       byDistrict: t.rows.reduce(function (o, d) { o[d.district] = { total: d.total, officers: d.officers, byMethod: d.byMethod }; return o; }, {}) },
     boundary: GHG_BOUNDARY
@@ -651,9 +675,10 @@ function residueGroupBy_(R, keyFn) {
   const g = {};
   R.computed.forEach(function (x) {
     const k = keyFn(x.r);
-    const o = g[k] || (g[k] = { n: 0, area: 0, tonnes: 0, ghg: 0, ch4: 0, n2o: 0, ch4e: 0, n2oe: 0, btotal: 0, excluded: 0, modes: {}, status: {}, refs: {} });
+    const o = g[k] || (g[k] = { n: 0, area: 0, tonnes: 0, ghg: 0, ch4: 0, n2o: 0, ch4e: 0, n2oe: 0, btotal: 0, excluded: 0, value: 0, modes: {}, status: {}, refs: {} });
     o.n++; o.area += x.r.area;
     if (x.v.tonnes !== null) o.tonnes += x.v.tonnes;
+    if (x.v.value !== null) o.value += x.v.value;
     if (x.v.ghg === null) o.excluded += x.r.area;
     else {
       o.ghg += x.v.ghg; o.ch4 += x.v.ch4; o.n2o += x.v.n2o; o.ch4e += x.v.ch4e; o.n2oe += x.v.n2oe; o.btotal += x.v.btotal;
@@ -663,6 +688,11 @@ function residueGroupBy_(R, keyFn) {
   return g;
 }
 
+function residueValueNote_(R) {
+  const off = Object.keys(R.ctx.methods).filter(function (m) { return !R.ctx.methods[m].countValue; });
+  return 'มูลค่า (ประมาณการ) = ปริมาณเศษวัสดุ (ตัน) × 1,000 × ราคา (บาท/กก.) ของแต่ละพืช' + (off.length ? ' ไม่นับมูลค่าประเภท: ' + off.join(', ') : '');
+}
+
 function residueReportSection_(key, R, s) {
   const p = R.ctx.p;
   const scope = residueScopeText_(R);
@@ -670,7 +700,7 @@ function residueReportSection_(key, R, s) {
   const total = R.computed.reduce(function (a, x) { return a + x.r.area; }, 0);
   const target = residueTargetOf_(R, '');
   if (key === 'residue.summary') {
-    const g = residueGroupBy_(R, function () { return 'all'; }).all || { n: 0, area: 0, tonnes: 0, ghg: 0, ch4: 0, n2o: 0, ch4e: 0, n2oe: 0, excluded: 0 };
+    const g = residueGroupBy_(R, function () { return 'all'; }).all || { n: 0, area: 0, tonnes: 0, ghg: 0, ch4: 0, n2o: 0, ch4e: 0, n2oe: 0, excluded: 0, value: 0 };
     return {
       subtitle: scope,
       columns: [col_('item', 'รายการ'), col_('value', 'ค่า', 'number'), col_('unit', 'หน่วย')],
@@ -682,10 +712,12 @@ function residueReportSection_(key, R, s) {
         { item: 'CH4', value: round_(g.ch4, 6), unit: 'ตัน CH4 (' + round_(g.ch4e, 4) + ' tCO2e)' },
         { item: 'N2O', value: round_(g.n2o, 6), unit: 'ตัน N2O (' + round_(g.n2oe, 4) + ' tCO2e)' },
         { item: 'ปริมาณเศษวัสดุที่จัดการ (ประมาณ)', value: round_(g.tonnes, 2), unit: 'ตัน' },
+        { item: 'มูลค่าเศษวัสดุ (ประมาณการ)', value: round_(g.value, 2), unit: 'บาท' },
         { item: 'จำนวนรายการบันทึก', value: g.n, unit: 'รายการ' },
         { item: 'พื้นที่ที่ยังไม่คำนวณ GHG (ไม่มีค่ามาตรฐาน)', value: round_(g.excluded, 2), unit: 'ไร่' }
       ],
-      notes: ['ชุดค่าที่ใช้: ' + label + ' ชุดที่ ' + R.ctx.label.version + ' โหมด ' + (p.DEFAULT_MODE === 'standard' ? 'Standard (IPCC Table 2.4)' : 'Residue (เศษวัสดุต่อไร่ × Cf)')].concat(GHG_BOUNDARY.slice(0, 1))
+      notes: ['ชุดค่าที่ใช้: ' + label + ' ชุดที่ ' + R.ctx.label.version + ' โหมด ' + (p.DEFAULT_MODE === 'standard' ? 'Standard (IPCC Table 2.4)' : 'Residue (เศษวัสดุต่อไร่ × Cf)'),
+        residueValueNote_(R)].concat(GHG_BOUNDARY.slice(0, 1))
     };
   }
   if (key === 'residue.methods') {
@@ -693,28 +725,31 @@ function residueReportSection_(key, R, s) {
     const methods = residueMethods_(true).map(function (m) { return m.method; });
     Object.keys(g).forEach(function (m) { if (methods.indexOf(m) < 0) methods.push(m); });
     const rows = methods.filter(function (m) { return g[m] || residueMethods_(false).some(function (x) { return x.method === m; }); }).map(function (m) {
-      const x = g[m] || { n: 0, area: 0, tonnes: 0, ghg: 0 };
+      const x = g[m] || { n: 0, area: 0, tonnes: 0, ghg: 0, value: 0 };
       const t = residueTargetOf_(R, m);
-      return { method: m, n: x.n, area: round_(x.area, 2), share: pct_(x.area, total), tonnes: round_(x.tonnes, 2), ghg: round_(x.ghg, 4), target: t === null ? '' : t, pct: t ? pct_(x.area, t) : '' };
+      const mm = R.ctx.methods[m];
+      return { method: m + (mm && !mm.countValue ? ' (ไม่นับมูลค่า)' : ''), n: x.n, area: round_(x.area, 2), share: pct_(x.area, total), tonnes: round_(x.tonnes, 2), value: round_(x.value, 2),
+        ghg: round_(x.ghg, 4), target: t === null ? '' : t, pct: t ? pct_(x.area, t) : '' };
     });
     return {
       subtitle: scope,
       columns: [col_('method', 'ประเภทการจัดการ'), col_('n', 'รายการ', 'number'), col_('area', 'พื้นที่ (ไร่)', 'number'), col_('share', 'สัดส่วน (%)', 'number'),
-        col_('tonnes', 'ปริมาณเศษวัสดุ (ตัน)', 'number'), col_('ghg', 'GHG ที่ลดได้ (tCO2e)', 'number'), col_('target', 'เป้าหมายรายประเภท (ไร่)', 'number'), col_('pct', 'ร้อยละ', 'number')],
+        col_('tonnes', 'ปริมาณเศษวัสดุ (ตัน)', 'number'), col_('value', 'มูลค่า (บาท)', 'number'), col_('ghg', 'GHG ที่ลดได้ (tCO2e)', 'number'), col_('target', 'เป้าหมายรายประเภท (ไร่)', 'number'), col_('pct', 'ร้อยละ', 'number')],
       rows: rows,
       totals: { method: 'รวม', n: R.computed.length, area: round_(total, 2), share: total ? 100 : 0, tonnes: round_(rows.reduce(function (a, r) { return a + r.tonnes; }, 0), 2),
+        value: round_(rows.reduce(function (a, r) { return a + r.value; }, 0), 2),
         ghg: round_(rows.reduce(function (a, r) { return a + r.ghg; }, 0), 4), target: target === null ? '' : target, pct: target ? pct_(total, target) : '' },
-      notes: ['ร้อยละรวม = พื้นที่จัดการทุกประเภท ÷ เป้าหมาย' + (target === null ? ' (ยังไม่กำหนดเป้าหมาย)' : '')]
+      notes: ['ร้อยละรวม = พื้นที่จัดการทุกประเภท ÷ เป้าหมาย' + (target === null ? ' (ยังไม่กำหนดเป้าหมาย)' : ''), residueValueNote_(R)]
     };
   }
   if (key === 'residue.districts' || key === 'residue.map') {
     const g = residueGroupBy_(R, function (r) { return r.district; });
     const codes = Object.keys(R.names).sort().filter(function (c) { return !R.district || c === R.district; });
     const rows = codes.map(function (c) {
-      const x = g[c] || { n: 0, area: 0, tonnes: 0, ghg: 0 };
+      const x = g[c] || { n: 0, area: 0, tonnes: 0, ghg: 0, value: 0 };
       const d = R.targets.rows.find(function (t) { return t.district === c; }) || {};
       return { code: c, name: R.names[c], n: x.n, area: round_(x.area, 2), target: d.total === null || d.total === undefined ? '' : d.total,
-        pct: d.total ? pct_(x.area, d.total) : '', tonnes: round_(x.tonnes, 2), ghg: round_(x.ghg, 4), officers: d.officers === null || d.officers === undefined ? '' : d.officers };
+        pct: d.total ? pct_(x.area, d.total) : '', tonnes: round_(x.tonnes, 2), value: round_(x.value, 2), ghg: round_(x.ghg, 4), officers: d.officers === null || d.officers === undefined ? '' : d.officers };
     });
     const sum = function (k) { return rows.reduce(function (a, r) { return a + (Number(r[k]) || 0); }, 0); };
     const out = {
@@ -722,10 +757,10 @@ function residueReportSection_(key, R, s) {
       columns: key === 'residue.map'
         ? [col_('name', 'อำเภอ'), col_('ghg', 'GHG ที่ลดได้ (tCO2e)', 'number'), col_('area', 'พื้นที่จัดการ (ไร่)', 'number'), col_('pct', 'ร้อยละของเป้าหมาย', 'number')]
         : [col_('name', 'อำเภอ'), col_('officers', 'นวส. (คน)', 'number'), col_('n', 'รายการ', 'number'), col_('area', 'พื้นที่จัดการ (ไร่)', 'number'), col_('target', 'เป้าหมาย (ไร่)', 'number'),
-          col_('pct', 'ร้อยละ', 'number'), col_('tonnes', 'เศษวัสดุ (ตัน)', 'number'), col_('ghg', 'GHG ที่ลดได้ (tCO2e)', 'number')],
+          col_('pct', 'ร้อยละ', 'number'), col_('tonnes', 'เศษวัสดุ (ตัน)', 'number'), col_('value', 'มูลค่า (บาท)', 'number'), col_('ghg', 'GHG ที่ลดได้ (tCO2e)', 'number')],
       rows: rows,
       totals: { name: R.district ? 'รวม' : 'รวมทั้งจังหวัด', officers: sum('officers'), n: sum('n'), area: round_(sum('area'), 2), target: target === null ? '' : target,
-        pct: target ? pct_(sum('area'), target) : '', tonnes: round_(sum('tonnes'), 2), ghg: round_(sum('ghg'), 4) }
+        pct: target ? pct_(sum('area'), target) : '', tonnes: round_(sum('tonnes'), 2), value: round_(sum('value'), 2), ghg: round_(sum('ghg'), 4) }
     };
     if (key === 'residue.map') { out.map = { metric: 'ghg', unit: 'tCO2e', values: rows.reduce(function (o, r) { o[r.code] = r.ghg; return o; }, {}) }; out.notes = ['สีเข้ม = GHG ที่ลดได้มาก ขอบเขตอำเภอ: OpenGISData-Thailand (CC BY 4.0)']; }
     return out;
@@ -739,6 +774,7 @@ function residueReportSection_(key, R, s) {
       return { crop: c.name, area: round_(x.area, 2), mode: Object.keys(x.modes).join('/') || '–', bburned: done ? round_(x.btotal / done, 2) : '',
         btotal: round_(x.btotal, 2), ch4: round_(x.ch4, 6), n2o: round_(x.n2o, 6), ch4e: round_(x.ch4e, 4), n2oe: round_(x.n2oe, 4), lfire: round_(x.ghg, 4),
         perRai: done ? round_(x.ghg * 1000 / done, 2) : '', excluded: round_(x.excluded, 2), status: Object.keys(x.status).join('/') || '–',
+        tonnes: round_(x.tonnes, 2), price: c.priceBahtKg === '' ? '' : c.priceBahtKg, value: round_(x.value, 2),
         reference: Object.keys(x.refs).join('; ') || (x.excluded ? 'ไม่มีค่ามาตรฐาน' : '') };
     });
     const sum = function (k, d) { return round_(rows.reduce(function (a, r) { return a + (Number(r[k]) || 0); }, 0), d); };
@@ -747,9 +783,11 @@ function residueReportSection_(key, R, s) {
       columns: [col_('crop', 'ชนิดพืช'), col_('area', 'พื้นที่ (ไร่)', 'number'), col_('mode', 'Biomass Mode'), col_('bburned', 'Biomass Consumed (kg/ไร่)', 'number'),
         col_('btotal', 'Total Biomass Consumed (kg)', 'number'), col_('ch4', 'CH4 (ตัน)', 'number'), col_('n2o', 'N2O (ตัน)', 'number'), col_('ch4e', 'CH4 (tCO2e)', 'number'),
         col_('n2oe', 'N2O (tCO2e)', 'number'), col_('lfire', 'L_fire ที่ลดได้ (tCO2e)', 'number'), col_('perRai', 'GHG ต่อไร่ (kgCO2e)', 'number'),
-        col_('excluded', 'ไม่คำนวณ (ไร่)', 'number'), col_('status', 'Data Status'), col_('reference', 'Reference')],
+        col_('excluded', 'ไม่คำนวณ (ไร่)', 'number'), col_('tonnes', 'เศษวัสดุ (ตัน)', 'number'), col_('price', 'ราคา (บาท/กก.)', 'number'), col_('value', 'มูลค่า (บาท)', 'number'),
+        col_('status', 'Data Status'), col_('reference', 'Reference')],
       rows: rows,
-      totals: { crop: 'รวม', area: sum('area', 2), btotal: sum('btotal', 2), ch4: sum('ch4', 6), n2o: sum('n2o', 6), ch4e: sum('ch4e', 4), n2oe: sum('n2oe', 4), lfire: sum('lfire', 4), excluded: sum('excluded', 2) },
+      totals: { crop: 'รวม', area: sum('area', 2), btotal: sum('btotal', 2), ch4: sum('ch4', 6), n2o: sum('n2o', 6), ch4e: sum('ch4e', 4), n2oe: sum('n2oe', 4), lfire: sum('lfire', 4), excluded: sum('excluded', 2),
+        tonnes: sum('tonnes', 2), value: sum('value', 2) },
       notes: ['GHG Total = ΣCH4 CO2e + ΣN2O CO2e (ไม่รวมตัน CH4 กับตัน N2O โดยตรง)', 'Standard Mode ไม่ทราบปริมาณชีวมวลก่อนเผา จึงไม่แสดงค่า (N/A) และไม่คูณ Cf ซ้ำ']
     };
   }
@@ -759,15 +797,16 @@ function residueReportSection_(key, R, s) {
       const parts = k.split('|');
       const t = KPP_SUBDISTRICTS.find(function (x) { return x[0] === parts[0]; }) || [parts[0], parts[0]];
       const x = g[k];
-      return { district: R.names[parts[0].slice(0, 4)] || '', name: t[1], code: t[0], method: parts[1], n: x.n, area: round_(x.area, 2), tonnes: round_(x.tonnes, 2), ghg: round_(x.ghg, 4) };
+      return { district: R.names[parts[0].slice(0, 4)] || '', name: t[1], code: t[0], method: parts[1], n: x.n, area: round_(x.area, 2), tonnes: round_(x.tonnes, 2), value: round_(x.value, 2), ghg: round_(x.ghg, 4) };
     });
     return {
       subtitle: scope,
       columns: [col_('district', 'อำเภอ'), col_('name', 'ตำบล'), col_('method', 'ประเภทเศษวัสดุ/การจัดการ'), col_('n', 'รายการ', 'number'), col_('area', 'พื้นที่รวม (ไร่)', 'number'),
-        col_('tonnes', 'ปริมาณรวม (ตัน)', 'number'), col_('ghg', 'GHG ที่ลดได้ (tCO2e)', 'number')],
+        col_('tonnes', 'ปริมาณรวม (ตัน)', 'number'), col_('value', 'มูลค่า (บาท)', 'number'), col_('ghg', 'GHG ที่ลดได้ (tCO2e)', 'number')],
       rows: rows,
-      totals: { district: 'รวม', n: R.computed.length, area: round_(total, 2), tonnes: round_(rows.reduce(function (a, r) { return a + r.tonnes; }, 0), 2), ghg: round_(rows.reduce(function (a, r) { return a + r.ghg; }, 0), 4) },
-      notes: ['ปริมาณ (ตัน) = พื้นที่ × อัตราชีวมวลเศษวัสดุต่อไร่ของพืช (หรือค่าที่วัดจริงในรายการนั้น)']
+      totals: { district: 'รวม', n: R.computed.length, area: round_(total, 2), tonnes: round_(rows.reduce(function (a, r) { return a + r.tonnes; }, 0), 2),
+        value: round_(rows.reduce(function (a, r) { return a + r.value; }, 0), 2), ghg: round_(rows.reduce(function (a, r) { return a + r.ghg; }, 0), 4) },
+      notes: ['ปริมาณ (ตัน) = พื้นที่ × อัตราชีวมวลเศษวัสดุต่อไร่ของพืช (หรือค่าที่วัดจริงในรายการนั้น)', residueValueNote_(R)]
     };
   }
   if (key === 'residue.admins') {
@@ -801,13 +840,13 @@ function residueReportSection_(key, R, s) {
     const rows = R.computed.slice().sort(function (a, b) { return a.r.date < b.r.date ? -1 : a.r.date > b.r.date ? 1 : 0; }).map(function (x) {
       const r = x.r;
       return { date: r.date, district: r.districtName, name: r.subdistrictName, crop: r.cropName + (r.cropOther ? ' (' + r.cropOther + ')' : ''), method: r.method + (r.methodOther ? ': ' + r.methodOther : ''),
-        area: r.area, tonnes: x.v.tonnes === null ? '' : round_(x.v.tonnes, 2), ghg: x.v.ghg === null ? '' : round_(x.v.ghg, 4), status: x.v.dataStatus || '',
+        area: r.area, tonnes: x.v.tonnes === null ? '' : round_(x.v.tonnes, 2), value: x.v.value === null ? '' : round_(x.v.value, 2), ghg: x.v.ghg === null ? '' : round_(x.v.ghg, 4), status: x.v.dataStatus || '',
         lat: r.lat === null ? '' : r.lat, lng: r.lng === null ? '' : r.lng, photos: r.photos.length, recorder: r.recorderName };
     });
     return {
       subtitle: scope,
       columns: [col_('date', 'วันที่'), col_('district', 'อำเภอ'), col_('name', 'ตำบล'), col_('crop', 'พืช'), col_('method', 'การจัดการ'), col_('area', 'ไร่', 'number'),
-        col_('tonnes', 'ตัน', 'number'), col_('ghg', 'tCO2e', 'number'), col_('status', 'Data Status'), col_('lat', 'ละติจูด', 'number'), col_('lng', 'ลองจิจูด', 'number'),
+        col_('tonnes', 'ตัน', 'number'), col_('value', 'มูลค่า (บาท)', 'number'), col_('ghg', 'tCO2e', 'number'), col_('status', 'Data Status'), col_('lat', 'ละติจูด', 'number'), col_('lng', 'ลองจิจูด', 'number'),
         col_('photos', 'ภาพ', 'number'), col_('recorder', 'ผู้บันทึก')],
       rows: rows,
       totals: { date: 'รวม', area: round_(total, 2) }
@@ -829,6 +868,7 @@ function residueReportSection_(key, R, s) {
       rows.push({ item: c.name + ': Biomass consumed', value: pub.consumedKgRai === null ? '' : pub.consumedKgRai, unit: pub.consumedKgRai === null ? 'ไม่มีค่าเริ่มต้น' : 'kg/ไร่ (' + c.consumedTHa + ' t/ha)', ref: c.reference });
       rows.push({ item: c.name + ': Combustion Factor', value: c.cf === '' ? '' : c.cf, unit: 'ratio', ref: c.reference });
       rows.push({ item: c.name + ': เศษวัสดุต่อไร่ (' + (c.residueName || '') + ')', value: c.residueTRai === '' ? '' : c.residueTRai, unit: 'ตัน/ไร่', ref: c.residueReference });
+      rows.push({ item: c.name + ': ราคาเศษวัสดุ', value: c.priceBahtKg === '' ? '' : c.priceBahtKg, unit: 'บาท/กก.', ref: c.priceReference });
     });
     return {
       columns: [col_('item', 'พารามิเตอร์'), col_('value', 'ค่า', 'number'), col_('unit', 'หน่วย'), col_('ref', 'แหล่งอ้างอิง')],

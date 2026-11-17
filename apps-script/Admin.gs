@@ -19,7 +19,8 @@
  */
 
 const ADMIN_SHEETS = {
-  admins: ['Username', 'Name', 'Role', 'Status', 'Pass_Hash', 'Salt', 'Created_At', 'Created_By', 'Last_Login', 'Updated_At', 'Telephone', 'District_Code'],
+  admins: ['Username', 'Name', 'Role', 'Status', 'Pass_Hash', 'Salt', 'Created_At', 'Created_By', 'Last_Login', 'Updated_At', 'Telephone', 'District_Code',
+    'Office_Type', 'Office_Group', 'Province', 'Registered_Via'],
   admin_log: ['Time', 'Username', 'Name', 'Role', 'Action', 'Detail']
 };
 const ADMIN_ROLES = ['super', 'mini', 'admin'];
@@ -33,6 +34,9 @@ const PASSWORD_ROUNDS = 300;
 
 const ADMIN_METHODS = {
   adminLoginServer: { role: null, fn: function (a) { return adminLoginServer(a[0]); } },
+  staffMetaServer: { role: null, fn: function () { return staffMeta_(); } },
+  staffRegisterServer: { role: null, fn: function (a) { return staffRegister_(a[0]); } },
+  staffLoginServer: { role: null, fn: function (a) { return staffLogin_(a[0]); } },
   adminLogoutServer: { role: 'admin', fn: function (a, s, t) { return adminLogoutServer(t); } },
   adminMeServer: { role: 'admin', fn: function (a, s) { return adminMeServer(s); } },
   adminChangePasswordServer: { role: 'admin', fn: function (a, s) { return adminChangePasswordServer(a[0], s); } },
@@ -118,7 +122,7 @@ function ensureAdminSchema_() {
   });
   Object.keys(ADMIN_SHEETS).forEach(function (n) { ensureSheet_(n, ADMIN_SHEETS[n]); });
   sheetByName_('admins').getRange('A:A').setNumberFormat('@');
-  sheetByName_('admins').getRange('K:L').setNumberFormat('@');
+  sheetByName_('admins').getRange('K:P').setNumberFormat('@');
   return 'PASS: admins and admin_log sheets are ready' + migrateAdminRoles_();
 }
 
@@ -203,7 +207,8 @@ function adminRecord_(username) {
   if (!row) return null;
   const r = sheetByName_('admins').getRange(row, 1, 1, ADMIN_SHEETS.admins.length).getValues()[0];
   return { row: row, username: normalizeUsername_(r[0]), name: text_(r[1]), role: text_(r[2]), status: text_(r[3]) || 'active',
-    hash: String(r[4] || ''), salt: String(r[5] || ''), phone: text_(r[10]), district: text_(r[11]) };
+    hash: String(r[4] || ''), salt: String(r[5] || ''), phone: normalizePhone_(r[10]), district: text_(r[11]),
+    officeType: text_(r[12]) || (text_(r[2]) === 'admin' ? 'district' : ''), group: text_(r[13]), province: text_(r[14]), registeredVia: text_(r[15]) || 'admin' };
 }
 
 function adminLoginServer(input) {
@@ -222,12 +227,22 @@ function adminLoginServer(input) {
     throw new Error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
   }
   cache.remove(failKey);
+  if (a.role === 'admin' && !a.district && a.officeType !== 'province') throw new Error('บัญชีนี้ยังไม่ได้กำหนดอำเภอ กรุณาติดต่อผู้ดูแลระบบ');
+  return adminIssueSession_(a, 'login', 'เข้าสู่ระบบผู้ดูแล');
+}
+
+/** Session for an account record: Admin of a district office is limited to that district. */
+function adminSessionOf_(a) {
+  const scope = a.role === 'admin' ? (a.officeType === 'province' ? 'province' : 'district') : 'all';
+  return { username: a.username, role: a.role, name: a.name, district: scope === 'district' ? a.district : '', scope: scope };
+}
+
+function adminIssueSession_(a, action, detail) {
   const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-  if (a.role === 'admin' && !a.district) throw new Error('บัญชีนี้ยังไม่ได้กำหนดอำเภอ กรุณาติดต่อผู้ดูแลระบบ');
-  const session = { username: a.username, role: a.role, name: a.name, district: a.role === 'admin' ? a.district : '' };
-  cache.put('admin:' + token, JSON.stringify(session), ADMIN_SESSION_SECONDS);
+  const session = adminSessionOf_(a);
+  CacheService.getScriptCache().put('admin:' + token, JSON.stringify(session), ADMIN_SESSION_SECONDS);
   sheetByName_('admins').getRange(a.row, 9).setValue(new Date());
-  adminAudit_(session, 'login', 'เข้าสู่ระบบผู้ดูแล');
+  adminAudit_(session, action, detail);
   return Object.assign({ status: 'success', token: token, expiresIn: ADMIN_SESSION_SECONDS }, adminMeServer(session));
 }
 
@@ -250,16 +265,19 @@ function requireAdmin_(token, minRole) {
     throw new Error('บัญชีผู้ดูแลถูกระงับหรือถูกลบ');
   }
   if (adminLevel_(a.role) < adminLevel_(minRole || 'admin')) throw new Error(minRole === 'super' ? 'เฉพาะ Super Admin เท่านั้น' : 'เฉพาะ Super Admin และ Mini Super Admin เท่านั้น');
-  if (a.role === 'admin' && !a.district) throw new Error('บัญชีนี้ยังไม่ได้กำหนดอำเภอ กรุณาติดต่อผู้ดูแลระบบ');
-  const session = { username: a.username, role: a.role, name: a.name, district: a.role === 'admin' ? a.district : '' };
+  if (a.role === 'admin' && !a.district && a.officeType !== 'province') throw new Error('บัญชีนี้ยังไม่ได้กำหนดอำเภอ กรุณาติดต่อผู้ดูแลระบบ');
+  const session = adminSessionOf_(a);
   cache.put('admin:' + token, JSON.stringify(session), ADMIN_SESSION_SECONDS);
   return session;
 }
 
 function adminMeServer(s) {
   const names = residueDistrictNames_();
+  const a = adminRecord_(s.username) || {};
   return { status: 'success', username: s.username, name: s.name, role: s.role, roleLabel: roleLabel_(s.role), district: s.district || '',
-    districtName: names[s.district] || '', province: provinceName_(), apiVersion: APP_VERSION };
+    districtName: names[s.district] || '', scope: s.scope || (s.role === 'admin' ? 'district' : 'all'),
+    officeType: a.officeType || '', group: a.group || '', officeLabel: a.role ? staffOfficeLabel_(a) : roleLabel_(s.role),
+    phone: a.phone || '', province: provinceName_(), apiVersion: APP_VERSION };
 }
 
 function adminChangePasswordServer(input, s) {
@@ -280,7 +298,8 @@ function adminChangePasswordServer(input, s) {
 function adminsList_() {
   return dataRows_(sheetByName_('admins')).map(function (r) {
     return { username: normalizeUsername_(r[0]), name: text_(r[1]), role: text_(r[2]), status: text_(r[3]) || 'active',
-      phone: displayPhone_(r[10]), district: text_(r[11]), createdAt: dateTime_(r[6]), createdBy: text_(r[7]), lastLogin: dateTime_(r[8]) };
+      phone: displayPhone_(r[10]), district: text_(r[11]), officeType: text_(r[12]) || (text_(r[2]) === 'admin' ? 'district' : ''), group: text_(r[13]),
+      province: text_(r[14]), registeredVia: text_(r[15]) || 'admin', createdAt: dateTime_(r[6]), createdBy: text_(r[7]), lastLogin: dateTime_(r[8]) };
   });
 }
 
@@ -297,14 +316,22 @@ function adminSave_(input, s) {
   if (ADMIN_ROLES.indexOf(role) < 0) throw new Error('บทบาทไม่ถูกต้อง');
   if (['active', 'disabled'].indexOf(status) < 0) throw new Error('สถานะไม่ถูกต้อง');
   if (role === 'super' && s.role !== 'super') throw new Error('Mini Super Admin กำหนดบทบาท Super Admin ไม่ได้');
+  const officeType = role === 'admin' ? (input.officeType === 'province' ? 'province' : 'district') : '';
+  const group = officeType === 'province' ? cleanText_(input.group, 80) : '';
+  if (officeType === 'province' && staffGroups_().indexOf(group) < 0) throw new Error('กรุณาเลือกกลุ่มของสำนักงานเกษตรจังหวัด');
   const district = role === 'admin' ? String(input.district || '') : '';
-  if (role === 'admin' && !residueDistrictNames_()[district]) throw new Error('Admin (ผู้บันทึกข้อมูล) ต้องเลือกอำเภอที่ลงทะเบียน');
+  if (officeType === 'district' && !residueDistrictNames_()[district]) throw new Error('Admin (ผู้บันทึกข้อมูล) ต้องเลือกอำเภอที่ลงทะเบียน');
+  if (district && !residueDistrictNames_()[district]) throw new Error('ไม่พบอำเภอ');
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
     const sh = sheetByName_('admins');
     const existing = adminRecord_(username);
     const now = new Date();
+    if (phone) {
+      const other = staffFindByPhone_(phone);
+      if (other && other.username !== username) throw new Error('หมายเลขโทรศัพท์นี้ใช้กับบัญชีอื่นแล้ว (' + other.username + ')');
+    }
     if (existing) {
       if (existing.role === 'super' && s.role !== 'super') throw new Error('Mini Super Admin จัดการบัญชี Super Admin ไม่ได้');
       if (username === s.username && (role !== s.role || status !== 'active')) throw new Error('ไม่สามารถเปลี่ยนบทบาทหรือระงับบัญชีของตนเองได้');
@@ -312,13 +339,13 @@ function adminSave_(input, s) {
         throw new Error('ต้องมี Super Admin ที่ใช้งานได้อย่างน้อย 1 คน');
       }
       sh.getRange(existing.row, 2, 1, 3).setValues([[name, role, status]]);
-      sh.getRange(existing.row, 10, 1, 3).setValues([[now, phone, district]]);
+      sh.getRange(existing.row, 10, 1, 6).setValues([[now, phone, district, officeType, group, existing.province || provinceName_()]]);
       adminAudit_(s, 'admin_update', username + ' → ' + role + '/' + status + (district ? ' อ.' + residueDistrictNames_()[district] : ''));
       return { status: 'success', message: 'บันทึกผู้ดูแลแล้ว' };
     }
     const password = validatePassword_(input.password);
     const salt = Utilities.getUuid();
-    sh.appendRow([username, name, role, status, hashPassword_(salt, password), salt, now, s.name + ' (' + s.username + ')', '', now, phone, district]);
+    sh.appendRow([username, name, role, status, hashPassword_(salt, password), salt, now, s.name + ' (' + s.username + ')', '', now, phone, district, officeType, group, provinceName_(), 'admin']);
     sh.getRange(sh.getLastRow(), 1).setNumberFormat('@');
     adminAudit_(s, 'admin_create', username + ' (' + role + (district ? ' อ.' + residueDistrictNames_()[district] : '') + ')');
     return { status: 'success', message: 'เพิ่มผู้ดูแลแล้ว ส่งรหัสผ่านเริ่มต้นให้ผู้ใช้ทางช่องทางที่ปลอดภัย' };

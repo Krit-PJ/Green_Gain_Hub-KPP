@@ -78,8 +78,8 @@ function reportCatalog_(s) {
     crops: crops,
     fy: currentFiscalYear_(),
     fiscalYears: residueFiscalYears_(),
-    district: s.role === 'admin' ? s.district : '',
-    districts: Object.keys(names).sort().filter(function (c) { return s.role !== 'admin' || c === s.district; }).map(function (c) { return { code: c, name: names[c] }; }),
+    district: residueDistrictScoped_(s) ? s.district : '',
+    districts: Object.keys(names).sort().filter(function (c) { return !residueDistrictScoped_(s) || c === s.district; }).map(function (c) { return { code: c, name: names[c] }; }),
     province: provinceName_(),
     office: officeName_()
   };
