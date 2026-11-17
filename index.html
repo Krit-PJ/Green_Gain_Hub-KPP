@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1a7f37">
-  <meta name="description" content="Green Gain Hub กำแพงเพชร: ศูนย์กลางซื้อขายวัสดุเหลือใช้ทางการเกษตร ภาพรวมรายอำเภอ แปลงพร้อมขาย และจุดรับซื้อ">
+  <meta name="description" content="ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร จังหวัดกำแพงเพชร: พื้นที่จัดการเศษวัสดุ ปริมาณก๊าซเรือนกระจกที่ลดได้ สถานการณ์การเพาะปลูก และตลาดเศษวัสดุ รายอำเภอ">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=1.7.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.0.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -73,7 +73,7 @@
     <div class="container mx-auto px-3 sm:px-4 py-2 flex justify-between items-center gap-2 max-w-5xl" style="padding-top: max(.5rem, env(safe-area-inset-top));">
       <img src="https://doaenews.doae.go.th/wp-content/uploads/2021/03/DOAE-2.png" class="h-8 sm:h-10 w-auto shrink-0" alt="กรมส่งเสริมการเกษตร">
       <div class="text-center min-w-0">
-        <h1 class="text-green-800 font-bold text-sm sm:text-lg md:text-xl leading-tight truncate">Green Gain Hub: กำแพงเพชร</h1>
+        <h1 class="text-green-800 font-bold text-sm sm:text-lg md:text-xl leading-tight truncate">Green Gain Hub: <span data-province>กำแพงเพชร</span></h1>
         <!-- <p class="text-[10px] md:text-xs text-gray-500 font-medium">จังหวัดกำแพงเพชร</p> -->
       </div>
       <img src="https://upload.wikimedia.org/wikipedia/commons/f/fd/Seal_of_Kamphaeng_Phet_Province_%28color_version%2C_Thai_Fine_Art_Department%29.png" class="h-8 sm:h-10 w-auto shrink-0" alt="ตราจังหวัดกำแพงเพชร">
@@ -85,20 +85,27 @@
     <div id="loginPage" class="ggh-landing" data-tab="overview">
       <header class="ggh-intro">
         <div>
-          <h2 class="ggh-title">วัสดุเหลือใช้ทางการเกษตร จังหวัดกำแพงเพชร</h2>
-          <p class="ggh-lede">พื้นที่เพาะปลูกและเก็บเกี่ยวรายเดือน ผลการจัดการเศษวัสดุแทนการเผา และตลาดซื้อขายเศษวัสดุ ในแต่ละอำเภอ</p>
+          <h2 class="ggh-title">ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร จังหวัด<span data-province>กำแพงเพชร</span></h2>
+          <p class="ggh-lede">การสร้างมูลค่าจากเศษวัสดุทางการเกษตร การจัดการเศษวัสดุทางการเกษตร และการลดปริมาณก๊าซเรือนกระจกในภาคการเกษตร ในพื้นที่จังหวัด<span data-province>กำแพงเพชร</span></p>
         </div>
         <p class="ggh-updated" id="dashUpdated" aria-live="polite">กำลังโหลดข้อมูล…</p>
       </header>
 
       <nav class="ggh-tabs" role="tablist" aria-label="เลือกมุมมองข้อมูล">
-        <button type="button" role="tab" id="tab-overview" aria-controls="loginPage" aria-selected="true" data-tab="overview">ภาพรวม</button>
-        <button type="button" role="tab" id="tab-crops" aria-controls="loginPage" aria-selected="false" data-tab="crops">การเพาะปลูก</button>
+        <button type="button" role="tab" id="tab-overview" aria-controls="loginPage" aria-selected="true" data-tab="overview">การจัดการเศษวัสดุ</button>
+        <button type="button" role="tab" id="tab-crops" aria-controls="loginPage" aria-selected="false" data-tab="crops">สถานการณ์การเพาะปลูก</button>
         <button type="button" role="tab" id="tab-reports" aria-controls="loginPage" aria-selected="false" data-tab="reports">รายงานอำเภอ</button>
         <button type="button" role="tab" id="tab-market" aria-controls="loginPage" aria-selected="false" data-tab="market">ตลาดเศษวัสดุ</button>
       </nav>
 
-      <section class="ggh-toolbar" data-tabs="crops" aria-label="ตัวเลือกข้อมูลเพาะปลูก">
+      <section class="ggh-toolbar" data-tabs="overview" aria-label="ตัวเลือกข้อมูลการจัดการเศษวัสดุ">
+        <p class="ggh-res-scope" id="resScope">ปีงบประมาณ</p>
+        <label class="ggh-asof">ปีงบประมาณ
+          <select id="resFy"></select>
+        </label>
+      </section>
+
+      <section class="ggh-toolbar ggh-cropcards-wrap" data-tabs="crops" aria-label="ตัวเลือกข้อมูลเพาะปลูก">
         <div class="ggh-crop-chips" id="dashCropChips" role="radiogroup" aria-label="ชนิดพืช"></div>
         <label class="ggh-asof">ข้อมูล ณ สิ้นเดือน
           <select id="dashAsOf"></select>
@@ -111,6 +118,7 @@
       </section>
 
       <section class="ggh-mapcard" aria-label="แผนที่รายอำเภอ">
+        <div class="ggh-cropicons" id="resCropIcons" data-tabs="overview" role="radiogroup" aria-label="เลือกชนิดพืชเพื่อดูปริมาณ GHG ที่ลดได้"></div>
         <div class="ggh-mapbar">
           <div class="ggh-metric" id="dashMetrics" role="radiogroup" aria-label="ระบายสีแผนที่ตาม"></div>
           <label class="ggh-search">
@@ -146,7 +154,18 @@
         </div>
       </aside>
 
-      <section class="ggh-panel ggh-cropmonths" data-tabs="overview crops" aria-labelledby="dashCropMonthsTitle">
+      <section class="ggh-panel ggh-resmethods" data-tabs="overview" aria-labelledby="resMethodsTitle">
+        <h3 id="resMethodsTitle" class="ggh-panel-title">พื้นที่จัดการเศษวัสดุ แยกตามประเภท</h3>
+        <p class="ggh-panel-sub" id="resMethodsSub"></p>
+        <div class="ggh-target" id="resProgress"></div>
+        <div class="ggh-methods" id="resMethods"></div>
+        <details class="ggh-res-note">
+          <summary>วิธีคำนวณ GHG ที่ลดได้ และข้อจำกัด</summary>
+          <div id="resNote"></div>
+        </details>
+      </section>
+
+      <section class="ggh-panel ggh-cropmonths" data-tabs="crops" aria-labelledby="dashCropMonthsTitle">
         <h3 id="dashCropMonthsTitle" class="ggh-panel-title">พื้นที่เก็บเกี่ยวรายเดือน</h3>
         <p class="ggh-panel-sub" id="dashCropMonthsSub"></p>
         <div id="dashCropMonths" class="ggh-columns ggh-columns-crop"></div>
@@ -177,7 +196,7 @@
         <p class="ggh-footnote" id="dashResidueNote"></p>
       </section>
 
-      <section class="ggh-panel ggh-table" data-tabs="crops reports market" aria-labelledby="dashTableTitle">
+      <section class="ggh-panel ggh-table" data-tabs="overview crops reports market" aria-labelledby="dashTableTitle">
         <h3 id="dashTableTitle" class="ggh-panel-title">รายอำเภอ</h3>
         <p class="ggh-panel-sub" id="dashTableSub">เลือกแถวเพื่อดูอำเภอนั้นบนแผนที่</p>
         <div class="ggh-table-wrap">
@@ -188,7 +207,7 @@
         </div>
       </section>
 
-      <section class="ggh-panel ggh-goals hidden" id="dashGoalsWrap" data-tabs="overview" aria-labelledby="dashGoalsTitle">
+      <section class="ggh-panel ggh-goals hidden" id="dashGoalsWrap" data-tabs="market" aria-labelledby="dashGoalsTitle">
         <h3 id="dashGoalsTitle" class="ggh-panel-title">เป้าหมายโครงการ</h3>
         <ul id="dashGoals" class="ggh-goal-list"></ul>
       </section>
@@ -416,9 +435,9 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=1.7.0"></script>
-  <script src="assets/api-client.js?v=1.7.0"></script>
-  <script src="assets/dashboard.js?v=1.7.0" defer></script>
+  <script src="assets/config.js?v=2.0.0"></script>
+  <script src="assets/api-client.js?v=2.0.0"></script>
+  <script src="assets/dashboard.js?v=2.0.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({

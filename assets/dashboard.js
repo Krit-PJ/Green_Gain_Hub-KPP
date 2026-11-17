@@ -1,8 +1,8 @@
-/* Green Gain Hub 1.6.0 — public landing dashboard.
+/* Green Gain Hub 2.0.0 — public landing dashboard.
  *
- * One endpoint (?api=v1&endpoint=summary of the GGH backend) feeds four tabs:
- *   ภาพรวม        a short cross-source overview
- *   การเพาะปลูก    planted / harvested / remaining area by month and district
+ * ?api=v1&endpoint=summary and ?api=v1&endpoint=residue of the GGH backend feed four tabs:
+ *   การจัดการเศษวัสดุ   managed area by type, target %, GHG avoided by crop and district (residue records)
+ *   สถานการณ์การเพาะปลูก planted / harvested / remaining area by month and district
  *                  (DOAE farmer registry, imported by admins), sub-districts on demand
  *   รายงานอำเภอ    KPP Smart Agri-Materials district reports (proxied server-side)
  *   ตลาดเศษวัสดุ   Green Gain Hub plots for sale and buyers
@@ -24,7 +24,26 @@
   const TABS = ['overview', 'crops', 'reports', 'market'];
 
   const state = { summary: null, geo: null, tab: 'overview', metricByTab: {}, selected: null, map: null, layer: null, layers: {},
-    cropKey: '', asOf: null, detail: {} };
+    cropKey: '', asOf: null, detail: {}, residue: null, resFy: null, resCrop: 'all' };
+  const RES_CACHE_KEY = 'ggh_residue_v2';
+  const ICON = {
+    all: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>',
+    rice: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22V9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 9c0-3 1.6-5.4 4.5-6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="16.2" cy="6.3" rx="1.3" ry="2" transform="rotate(35 16.2 6.3)"/><ellipse cx="13.6" cy="9" rx="1.3" ry="2" transform="rotate(40 13.6 9)"/><ellipse cx="17.8" cy="9.6" rx="1.3" ry="2" transform="rotate(60 17.8 9.6)"/><ellipse cx="15" cy="12.4" rx="1.3" ry="2" transform="rotate(55 15 12.4)"/><path d="M12 17c-2.5-.6-4.6-2.4-5.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    sugarcane: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9.5" y="5" width="4" height="17" rx="1.6"/><path d="M9.5 10h4M9.5 15h4" stroke="#fff" stroke-width="1.2"/><path d="M11.5 6C10 3.6 7.4 2.6 4.5 3c1.6 2.3 4 3.6 7 3.4zM11.5 6c1.8-2.5 4.6-3.6 8-3.2-1.6 2.6-4.5 4-8 3.6z"/></svg>',
+    maize: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="10" rx="3.6" ry="7.5"/><path d="M10 6.5h4M9.2 9.5h5.6M9.2 12.5h5.6M10 15.5h4" stroke="#fff" stroke-width="1"/><path d="M12 22c-2-1.5-5.5-3-7-8 2.6.6 5 2.4 6.2 5M12 22c2-1.5 5.5-3 7-8-2.6.6-5 2.4-6.2 5"/></svg>',
+    cassava: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3v6M13 3.5v5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 9c-2 3.5-3.3 7.5-4.6 12 2.6-1.8 4.3-5.6 4.6-10.4zM12 9c1.6 3.7 3.6 7 6.3 10.6-2.9-.5-5.1-4.4-6.3-8.8zM12 9.5c.3 4 .1 8.2-.6 12.5 1.7-2.7 2.2-6.7.6-12.5z"/></svg>',
+    other: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19C5 10 10 4.5 20 4c0 9.5-5.6 15-15 15z"/><path d="M5 19l8-8" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>'
+  };
+  const icon = (k) => ICON[k] || ICON.other;
+  function cropGroupOf(name) {
+    name = String(name || '');
+    if (name.indexOf('ข้าวโพด') === 0) return 'maize';
+    if (name.indexOf('ข้าว') === 0) return 'rice';
+    if (name.includes('อ้อย')) return 'sugarcane';
+    if (name.includes('มันสำปะหลัง')) return 'cassava';
+    return 'other';
+  }
+  const fmtG = (n) => fmt(n, n !== null && Math.abs(n) < 10 ? 3 : 2);
   const $ = (id) => document.getElementById(id);
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[c]);
@@ -127,7 +146,30 @@
     return { total: d.totalRai, harvested, remaining: d.totalRai - harvested, next: months[String(addMonth(m, 1))] || 0, months };
   }
 
+  /* residue management (records by district recorders) */
+  function res() { const r = state.residue; return r && r.ok ? r : null; }
+  function resCells(o) {
+    o = o || {};
+    const r = res(); if (!r) return [];
+    const crop = o.crop || state.resCrop;
+    return r.cells.filter((c) => (crop === 'all' || c.c === crop) && (!o.d || c.d === o.d) && (!o.m || c.m === o.m));
+  }
+  function resSum(cells) {
+    return cells.reduce((a, c) => { ['a', 't', 'g', 'n', 'x', 'ch4e', 'n2oe'].forEach((k) => { a[k] += Number(c[k]) || 0; }); return a; },
+      { a: 0, t: 0, g: 0, n: 0, x: 0, ch4e: 0, n2oe: 0 });
+  }
+  function resTarget(code, method) {
+    const t = res() && res().targets; if (!t) return null;
+    if (method) return code ? (t.byDistrict[code]?.byMethod?.[method] ?? null) : (t.byMethod[method] ?? null);
+    return code ? (t.byDistrict[code]?.total ?? null) : t.total;
+  }
+  function resScopeCode() { return state.selected && state.selected !== 'OTHER' ? state.selected : ''; }
+  function resCropName(k) { const c = (res()?.crops || []).find((x) => x.key === k); return c ? c.name : 'ทุกชนิดพืช'; }
+
   const METRICS = {
+    resGhg: { label: 'GHG ที่ลดได้ (tCO₂e)', digits: 2, value: (c) => (res() ? resSum(resCells({ d: c })).g : null), needs: 'residue' },
+    resArea: { label: 'พื้นที่จัดการเศษวัสดุ (ไร่)', digits: 0, value: (c) => (res() ? resSum(resCells({ d: c })).a : null), needs: 'residue' },
+    resPct: { label: 'ร้อยละของเป้าหมาย (ทุกพืช)', digits: 1, value: (c) => { const t = resTarget(c); return t ? resSum(resCells({ d: c, crop: 'all' })).a / t * 100 : null; }, needs: 'residue' },
     cropRemaining: { label: 'คงเหลือยังไม่เก็บเกี่ยว (ไร่)', digits: 0, value: (c) => cropDistrict(c)?.remaining ?? null, needs: 'crop' },
     cropHarvested: { label: 'เก็บเกี่ยวแล้ว (ไร่)', digits: 0, value: (c) => cropDistrict(c)?.harvested ?? null, needs: 'crop' },
     cropTotal: { label: 'พื้นที่ปลูก (ไร่)', digits: 0, value: (c) => cropDistrict(c)?.total ?? null, needs: 'crop' },
@@ -139,7 +181,7 @@
     buyers: { label: 'จุดรับซื้อ', digits: 0, value: (c) => market(c).buyers }
   };
   const TAB_METRICS = {
-    overview: ['cropRemaining', 'R31', 'areaRai'],
+    overview: ['resGhg', 'resArea', 'resPct'],
     crops: ['cropRemaining', 'cropHarvested', 'cropTotal', 'cropNext'],
     reports: ['R31', 'R30', 'R29'],
     market: ['areaRai', 'buyers']
@@ -148,13 +190,11 @@
     const need = METRICS[id].needs;
     if (need === 'crop') return !!crop();
     if (need === 'reports') return !!reports();
+    if (need === 'residue') return !!res();
     return true;
   }
   function defaultMetric(tab) {
-    if (tab === 'overview') {
-      if (crop()) return 'cropRemaining';
-      return reports() && reports().reportedCount > 0 ? 'R31' : 'areaRai';
-    }
+    if (tab === 'overview') return 'resGhg';
     const list = TAB_METRICS[tab].filter(metricAvailable);
     if (tab === 'reports' && !(reports() && reports().reportedCount > 0)) return list[0] || 'R31';
     return list[0] || TAB_METRICS[tab][0];
@@ -194,15 +234,20 @@
     const c = crop(), m = asOf(), r = reports();
     const t = c ? cropTotals(c, m) : null;
     if (state.tab === 'overview') {
-      title = 'ภาพรวมจังหวัด';
-      meta = c ? `${esc(c.crop)} ปีการผลิต ${esc(c.season)}` : '';
-      html += c ? kpi(fmt(t.remaining), `ไร่ ${esc(c.crop)} ยังไม่เก็บเกี่ยว`, `ณ สิ้น${ymLabel(m, true)} จากทั้งหมด ${fmt(t.total)} ไร่`, 'ggh-kpi-hero')
-        : kpi('–', 'ไร่ ยังไม่เก็บเกี่ยว', 'ยังไม่มีข้อมูลเพาะปลูก', 'ggh-kpi-hero');
-      html += c ? kpi(fmt(t.next), `ไร่ คาดว่าจะเก็บเกี่ยว ${ymLabel(addMonth(m, 1), true)}`, c.residue ? `เศษวัสดุ ${esc(c.material)} ราว ${fmt(t.next * c.residue.bioRateTonPerRai)} ตัน` : `เศษวัสดุ: ${esc(c.material || '–')}`, 'ggh-kpi-harvest')
-        : kpi('–', 'ไร่ คาดว่าจะเก็บเกี่ยวเดือนถัดไป', '');
-      const r31 = reportItem('R31');
-      html += kpi(r && r31 && r31.cumulative !== null ? fmt(r31.cumulative) : '–', 'ไร่ ไถกลบตอซัง/ใช้สารย่อยสลาย', r ? `อำเภอส่งรายงาน ${fmt(r.reportedCount)}/${fmt(r.districtsTotal)}` : 'ยังโหลดรายงานอำเภอไม่ได้');
-      html += s ? kpi(fmt(s.totals.farmerPlots), 'แปลงพร้อมขายใน Green Gain Hub', `จุดรับซื้อ ${fmt(s.totals.buyers)} แห่ง`) : kpi('–', 'แปลงพร้อมขาย', '');
+      const R = res();
+      const fy = R ? R.fy : state.resFy;
+      title = `การจัดการเศษวัสดุ ปีงบประมาณ ${fy || ''}`;
+      if (!R) {
+        html = `<p class="ggh-kpi-empty">${state.residue && state.residue.error ? 'โหลดข้อมูลการจัดการเศษวัสดุไม่สำเร็จ' : 'กำลังโหลดข้อมูลการจัดการเศษวัสดุ…'}</p>`;
+      } else {
+        const code = resScopeCode();
+        meta = [state.resCrop === 'all' ? 'ทุกชนิดพืช' : resCropName(state.resCrop), code ? 'อำเภอ' + districtName(code) : 'ทั้งจังหวัด'].map(esc).join(' · ');
+        const sx = resSum(resCells({ d: code })), all = resSum(resCells({ d: code, crop: 'all' })), tg = resTarget(code);
+        html += kpi(fmtG(sx.g), 'tCO₂e ปริมาณ GHG ที่ลดได้ (ประมาณการ)', `CH₄ ${fmt(sx.ch4e, 2)} + N₂O ${fmt(sx.n2oe, 2)} tCO₂e`, 'ggh-kpi-hero');
+        html += kpi(fmt(sx.a, 2), 'ไร่ พื้นที่จัดการเศษวัสดุ', `${fmt(sx.n)} รายการ` + (sx.x ? `, ยังไม่คำนวณ GHG ${fmt(sx.x, 2)} ไร่` : ''));
+        html += kpi(tg ? fmt(all.a / tg * 100, 1) + '%' : '–', 'ร้อยละของเป้าหมาย', tg ? `${fmt(all.a)} จากเป้า ${fmt(tg)} ไร่ (ทุกประเภท ทุกพืช)` : 'ยังไม่กำหนดเป้าหมาย', 'ggh-kpi-harvest');
+        html += kpi(fmt(sx.t, 1), 'ตัน ปริมาณเศษวัสดุที่จัดการ', 'ประมาณจากอัตราชีวมวลต่อไร่');
+      }
     } else if (state.tab === 'crops') {
       if (!c) {
         title = 'การเพาะปลูก';
@@ -251,15 +296,29 @@
     const chips = $('dashCropChips'), sel = $('dashAsOf');
     if (!chips || !sel) return;
     const list = cropList();
-    const names = {};
-    list.forEach((c) => { names[c.crop] = (names[c.crop] || 0) + 1; });
     const cur = crop();
     chips.innerHTML = list.length ? list.map((c) => {
-      const k = cropKeyOf(c);
-      return `<button type="button" role="radio" aria-checked="${cur && k === cropKeyOf(cur)}" data-key="${esc(k)}">${esc(c.crop)}${names[c.crop] > 1 ? ` <small>${esc(c.season)}</small>` : ''}</button>`;
+      const k = cropKeyOf(c), g = cropGroupOf(c.crop);
+      const t = cropTotals(c, k === (cur && cropKeyOf(cur)) ? asOf() : c.asOfMonth);
+      const done = resSum(resCells({ crop: g }));
+      const p = pct(t.harvested, t.total);
+      return `<div class="ggh-cropcard" data-on="${cur && k === cropKeyOf(cur)}">
+        <button type="button" role="radio" aria-checked="${cur && k === cropKeyOf(cur)}" data-key="${esc(k)}">
+          <span class="ggh-cropcard-head"><span class="ggh-cropcard-icon">${icon(g)}</span><span><b>${esc(c.crop)}</b><small>ปีการผลิต ${esc(c.season)}</small></span></span>
+          <span class="ggh-cropcard-num">${fmt(t.total)} <small>ไร่ปลูก</small></span>
+          <span class="ggh-progress" aria-hidden="true"><i style="width:${p}%"></i></span>
+          <small>เก็บเกี่ยวแล้ว ${p}% · คงเหลือ ${fmt(t.remaining)} ไร่</small>
+        </button>
+        ${res() ? `<button type="button" class="ggh-cropcard-link" data-res="${esc(g)}">${done.a ? `จัดการเศษวัสดุแล้ว ${fmt(done.a)} ไร่ · ลด GHG ${fmtG(done.g)} tCO₂e` : 'ยังไม่มีการบันทึกการจัดการเศษวัสดุ'}</button>` : ''}
+      </div>`;
     }).join('') : '<span class="ggh-district-empty">ยังไม่มีข้อมูลเพาะปลูก</span>';
     chips.querySelectorAll('[data-key]').forEach((b) => b.addEventListener('click', () => {
       state.cropKey = b.dataset.key; state.asOf = null; state.detail = {}; renderAll();
+    }));
+    chips.querySelectorAll('[data-res]').forEach((b) => b.addEventListener('click', () => {
+      state.resCrop = (res()?.crops || []).some((c) => c.key === b.dataset.res) ? b.dataset.res : 'all';
+      setTab('overview');
+      $('dashKpis').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }));
     if (!cur) { sel.innerHTML = ''; sel.disabled = true; return; }
     sel.disabled = false;
@@ -269,6 +328,57 @@
     opts.sort((a, b) => a - b);
     const m = asOf();
     sel.innerHTML = opts.map((ym) => `<option value="${ym}" ${ym === m ? 'selected' : ''}>${ymLabel(ym, true)}${ym === cur.asOfMonth ? ' (เดือนที่ผ่านมา)' : ''}</option>`).join('');
+  }
+
+  /* ---------------- residue toolbar, crop icons, management types ---------------- */
+  function renderResToolbar() {
+    const R = res(), sel = $('resFy'), scope = $('resScope'), box = $('resCropIcons');
+    if (!sel || !box) return;
+    const years = R ? R.fiscalYears : (state.resFy ? [state.resFy] : []);
+    sel.innerHTML = years.map((y) => `<option value="${y}" ${R && y === R.fy ? 'selected' : ''}>${y}</option>`).join('');
+    scope.textContent = R ? `${R.fyRange} · ปริมาณ GHG ประมาณการด้วย ${R.params.label}` : '';
+    if (!R) { box.innerHTML = ''; return; }
+    const keys = ['rice', 'sugarcane', 'maize', 'cassava'];
+    const crops = R.crops.filter((c) => keys.includes(c.key) || R.cells.some((x) => x.c === c.key));
+    if (state.resCrop !== 'all' && !crops.some((c) => c.key === state.resCrop)) state.resCrop = 'all';
+    const code = resScopeCode();
+    box.innerHTML = [{ key: 'all', name: 'ทุกพืช' }].concat(crops).map((c) => {
+      const v = resSum(resCells({ crop: c.key, d: code })).g;
+      return `<button type="button" role="radio" aria-checked="${state.resCrop === c.key}" data-crop="${esc(c.key)}" title="${esc(c.name)}">
+        <span class="ggh-ci-icon">${icon(c.key)}</span><span class="ggh-ci-name">${esc(c.name)}</span><span class="ggh-ci-val">${fmtG(v)}</span></button>`;
+    }).join('');
+    const btns = [...box.querySelectorAll('[data-crop]')];
+    btns.forEach((b, i) => {
+      b.addEventListener('click', () => { state.resCrop = b.dataset.crop; renderAll(); });
+      b.addEventListener('keydown', (e) => {
+        const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!d) return;
+        e.preventDefault(); const n = btns[(i + d + btns.length) % btns.length]; n.click(); setTimeout(() => $('resCropIcons').querySelector(`[data-crop="${n.dataset.crop}"]`)?.focus(), 0);
+      });
+    });
+  }
+  function renderResMethods() {
+    const R = res(), el = $('resMethods'), prog = $('resProgress');
+    if (!el || !prog) return;
+    if (!R) { el.innerHTML = '<p class="ggh-district-empty">กำลังโหลด…</p>'; prog.innerHTML = ''; return; }
+    const code = resScopeCode();
+    $('resMethodsSub').textContent = `${code ? 'อำเภอ' + districtName(code) : 'ทั้งจังหวัด'} · ${state.resCrop === 'all' ? 'ทุกชนิดพืช' : resCropName(state.resCrop)} · ปีงบประมาณ ${R.fy}`;
+    const all = resSum(resCells({ d: code, crop: 'all' })), tg = resTarget(code);
+    const p = tg ? all.a / tg * 100 : null;
+    prog.innerHTML = `<div class="ggh-target-head"><span>รวมทุกประเภท <b>${fmt(all.a, 2)}</b> ไร่</span><span>${tg ? `เป้าหมาย ${fmt(tg)} ไร่ · <b>${fmt(p, 1)}%</b>` : 'ยังไม่กำหนดเป้าหมาย'}</span></div>
+      <div class="ggh-target-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p === null ? 0 : Math.min(100, p).toFixed(1)}" aria-label="ร้อยละของเป้าหมาย"><i style="width:${p === null ? 0 : Math.min(100, p).toFixed(1)}%"></i></div>`;
+    const methods = R.methods.filter((m) => m.active || R.cells.some((c) => c.m === m.method)).map((m) => m.method);
+    const rows = methods.map((m) => ({ m, s: resSum(resCells({ d: code, m })), t: resTarget(code, m) }));
+    const total = rows.reduce((a, r) => a + r.s.a, 0);
+    el.innerHTML = rows.map((r) => `<article class="ggh-method ${r.s.a ? '' : 'is-zero'}">
+        <h4>${esc(r.m)}</h4>
+        <p class="ggh-method-num">${fmt(r.s.a, 2)} <small>ไร่</small></p>
+        <div class="ggh-bar-track"><div class="ggh-bar-fill" style="width:${total ? (r.s.a / total * 100).toFixed(1) : 0}%"></div></div>
+        <p class="ggh-method-meta">${total ? fmt(r.s.a / total * 100, 1) + '% ของพื้นที่จัดการ' : '–'}${r.t ? ` · เป้า ${fmt(r.t)} ไร่ (${fmt(r.s.a / r.t * 100, 1)}%)` : ''}</p>
+        <p class="ggh-method-meta">GHG ลดได้ ${fmtG(r.s.g)} tCO₂e · ${fmt(r.s.t, 1)} ตัน${r.s.x ? ` · ยังไม่คำนวณ GHG ${fmt(r.s.x, 2)} ไร่` : ''}</p>
+      </article>`).join('');
+    $('resNote').innerHTML = `<p>ชุดค่า: ${esc(R.params.label)} ชุดที่ ${esc(R.params.version)} · โหมด ${R.params.mode === 'standard' ? 'Standard (IPCC 2006 Table 2.4)' : 'เศษวัสดุต่อไร่ × Cf'}</p>
+      <p>สูตร: GHG = พื้นที่ × ชีวมวลที่เผาไหม้ (กก./ไร่) × (EF_CH₄ × GWP_CH₄ + EF_N₂O × GWP_N₂O) ÷ 1,000,000</p>
+      <ul>${R.boundary.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`;
   }
 
   /* ---------------- map ---------------- */
@@ -326,6 +436,9 @@
       if (d) extra = `<br>ปลูก ${fmt(d.total)} ไร่, เก็บเกี่ยวแล้ว ${pct(d.harvested, d.total)}%`;
     } else if (METRICS[id].needs === 'reports') {
       extra = `<br>${esc(REPORT_STATUS[reportFor(p.code)?.status] || REPORT_STATUS.none)}`;
+    } else if (METRICS[id].needs === 'residue') {
+      const sx = resSum(resCells({ d: p.code })), tg = resTarget(p.code);
+      extra = `<br>${esc(state.resCrop === 'all' ? 'ทุกพืช' : resCropName(state.resCrop))}: ${fmt(sx.a, 2)} ไร่, GHG ${fmtG(sx.g)} tCO₂e` + (tg ? `<br>เป้าหมาย ${fmt(tg)} ไร่` : '');
     }
     return `<strong>อ.${esc(p.name)}</strong><br>${esc(METRICS[id].label)}: ${v === null ? 'ไม่มีข้อมูล' : fmt(v, METRICS[id].digits)}${extra}`;
   }
@@ -363,7 +476,7 @@
     });
   }
   function shortLabel(id) {
-    return { cropRemaining: 'คงเหลือ', cropHarvested: 'เก็บเกี่ยวแล้ว', cropTotal: 'พื้นที่ปลูก', cropNext: 'เดือนถัดไป',
+    return { resGhg: 'GHG ที่ลดได้', resArea: 'พื้นที่จัดการ', resPct: 'ร้อยละของเป้า', cropRemaining: 'คงเหลือ', cropHarvested: 'เก็บเกี่ยวแล้ว', cropTotal: 'พื้นที่ปลูก', cropNext: 'เดือนถัดไป',
       R31: 'ไถกลบ/ย่อยสลาย', R30: 'แปรรูป', R29: 'ส่งเสริม', areaRai: 'แปลงพร้อมขาย', buyers: 'จุดรับซื้อ' }[id] || METRICS[id].label;
   }
 
@@ -378,6 +491,7 @@
     restyleSelection();
     renderDistrictPanel();
     document.querySelectorAll('#dashTable tr').forEach((tr) => tr.classList.toggle('is-selected', tr.dataset.code === state.selected));
+    if (state.tab === 'overview') { renderKpis(); renderResToolbar(); renderResMethods(); }
     if (zoom && state.selected && state.layers[code] && state.map) state.map.fitBounds(state.layers[code].getBounds(), { padding: [30, 30], maxZoom: 11 });
   }
   const dl = (pairs) => `<dl>${pairs.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
@@ -412,6 +526,15 @@
     }).catch(() => { state.detail[key] = { error: true }; })
       .finally(() => { if (state.selected === code) renderDistrictPanel(); });
   }
+  function residueSection(code) {
+    const R = res(); if (!R) return '';
+    const sx = resSum(resCells({ d: code })), all = resSum(resCells({ d: code, crop: 'all' })), tg = resTarget(code);
+    const methods = R.methods.map((m) => m.method).map((m) => ({ m, a: resSum(resCells({ d: code, m })).a })).filter((x) => x.a);
+    return `<h4><span>การจัดการเศษวัสดุ</span><span class="ggh-kpi-group-meta">ปีงบ ${esc(R.fy)} · ${esc(state.resCrop === 'all' ? 'ทุกพืช' : resCropName(state.resCrop))}</span></h4>` +
+      dl([['พื้นที่จัดการ (ไร่)', fmt(sx.a, 2)], ['GHG ที่ลดได้ (tCO₂e)', fmtG(sx.g)], ['เป้าหมาย (ไร่)', tg ? fmt(tg) : '–'],
+        ['ร้อยละของเป้า', tg ? `${fmt(all.a / tg * 100, 1)}% <small>ทุกพืช</small>` : '–']]) +
+      (methods.length ? `<ul>${methods.map((x) => `<li><span>${esc(x.m)}</span><span>${fmt(x.a, 2)} ไร่</span></li>`).join('')}</ul>` : '<p class="ggh-district-empty">ยังไม่มีการบันทึก</p>');
+  }
   function reportSection(code) {
     if (!reports()) return '';
     const v = (id) => { const x = reportValue(code, id); return x === null ? '–' : fmt(x); };
@@ -434,7 +557,7 @@
     else if (state.tab === 'crops') body = cropSection(code, true);
     else if (state.tab === 'reports') body = reportSection(code);
     else if (state.tab === 'market') body = marketSection(code, true);
-    else body = cropSection(code, false) + reportSection(code) + marketSection(code, false);
+    else body = residueSection(code) + cropSection(code, false);
     el.innerHTML = `<h3><span>${code === 'OTHER' ? '' : 'อ.'}${esc(districtName(code))}</span><button type="button" data-clear>ล้างการเลือก</button></h3>${body}`;
     el.querySelector('[data-clear]').addEventListener('click', () => selectDistrict(code, false));
   }
@@ -442,11 +565,21 @@
   /* ---------------- district table ---------------- */
   function renderTable() {
     const head = $('dashTableHead'), body = $('dashTable');
-    if (!head || !body || state.tab === 'overview') return;
+    if (!head || !body) return;
     const codes = state.geo ? state.geo.features.map((f) => f.properties.code) : [];
     const dash = (v, d) => (v === null || v === undefined ? '–' : fmt(v, d || 0));
     let cols = [], rows = [];
-    if (state.tab === 'crops') {
+    if (state.tab === 'overview') {
+      const R = res();
+      $('dashTableSub').textContent = R ? `${state.resCrop === 'all' ? 'ทุกชนิดพืช' : resCropName(state.resCrop)} ปีงบประมาณ ${R.fy} · ร้อยละคิดจากพื้นที่จัดการทุกประเภททุกพืชเทียบกับเป้าหมายอำเภอ` : 'กำลังโหลด…';
+      cols = ['อำเภอ', ['พื้นที่จัดการ (ไร่)', 1], ['เป้าหมาย (ไร่)', 1], ['ร้อยละของเป้า', 2], ['GHG ที่ลดได้ (tCO₂e)', 1], ['เศษวัสดุ (ตัน)', 1]];
+      rows = codes.map((code) => ({ code, s: resSum(resCells({ d: code })), all: resSum(resCells({ d: code, crop: 'all' })), t: resTarget(code) }))
+        .sort((a, b) => b.s.g - a.s.g || b.all.a - a.all.a).map(({ code, s: sx, all, t }) => {
+          const p = t ? Math.round(all.a / t * 1000) / 10 : null;
+          return { code, empty: !sx.a, cells: [esc(districtName(code)), fmt(sx.a, 2), t ? fmt(t) : '–',
+            `<div class="ggh-progress" title="${p ?? 0}%"><i style="width:${Math.min(100, p || 0)}%"></i></div><small>${p === null ? '' : fmt(p, 1) + '%'}</small>`, fmtG(sx.g), fmt(sx.t, 1)] };
+        });
+    } else if (state.tab === 'crops') {
       const c = crop(), m = asOf();
       $('dashTableSub').textContent = c ? `${c.crop} ปี ${c.season} ณ สิ้น${ymLabel(m, true)} เลือกแถวเพื่อดูรายตำบล` : 'ยังไม่มีข้อมูลเพาะปลูก';
       cols = ['อำเภอ', ['พื้นที่ปลูก (ไร่)', 1], ['เก็บเกี่ยวแล้ว', 1], ['คงเหลือ', 1], ['สัดส่วนเก็บเกี่ยว', 2], [`คาดเก็บเกี่ยว ${ymLabel(addMonth(m || 0, 1))}`, 1]];
@@ -603,7 +736,7 @@
     const el = $('dashSourceNote'); if (!el) return;
     const base = 'ภาพรวมรายอำเภอ ไม่แสดงข้อมูลส่วนบุคคล';
     const src = {
-      overview: 'ข้อมูลจากทะเบียนเกษตรกร ระบบรายงานอำเภอ (KPP Smart Agri-Materials) และ Green Gain Hub',
+      overview: 'การบันทึกของเจ้าหน้าที่ผู้บันทึกข้อมูลรายอำเภอ ปริมาณ GHG ที่ลดได้ประมาณการตาม IPCC 2006 (ไม่ใช่คาร์บอนเครดิตที่รับรอง)',
       crops: `${(state.summary?.crops?.source) || 'ทะเบียนเกษตรกร'} พื้นที่เก็บเกี่ยวเป็นค่าคาดการณ์ตามวันที่คาดว่าจะเก็บเกี่ยว`,
       reports: 'KPP Smart Agri-Materials นับเฉพาะรายงานที่ส่งแล้วหรือตรวจรับแล้ว',
       market: 'แปลงและจุดรับซื้อที่ลงทะเบียนใน Green Gain Hub เข้าสู่ระบบเพื่อดูคู่ค้าบนแผนที่'
@@ -638,6 +771,8 @@
     });
     const sel = $('dashAsOf');
     if (sel) sel.addEventListener('change', () => { state.asOf = Number(sel.value); renderAll(); });
+    const fy = $('resFy');
+    if (fy) fy.addEventListener('change', () => { state.resFy = Number(fy.value); loadResidue(state.resFy); });
   }
 
   function renderAll() {
@@ -647,10 +782,11 @@
     renderMap();
     renderDistrictPanel();
     renderSourceNote();
-    if (state.tab === 'overview' || state.tab === 'crops') renderCropCharts();
+    if (state.tab === 'crops') renderCropCharts();
+    if (state.tab === 'overview') { renderResToolbar(); renderResMethods(); }
     if (state.tab === 'reports') renderTrend();
-    if (state.tab === 'market') { renderHarvest(); renderMaterials(); }
-    if (state.tab === 'overview') renderGoals();
+    if (state.tab === 'market') { renderHarvest(); renderMaterials(); renderGoals(); }
+    syncProvince();
     renderTable();
   }
 
@@ -691,8 +827,31 @@
     sync();
   }
 
+  function syncProvince() {
+    const name = (res() && res().province) || (state.summary && state.summary.province);
+    if (name) document.querySelectorAll('[data-province]').forEach((el) => { if (el.textContent !== name) el.textContent = name; });
+  }
+  function loadResidue(fy) {
+    if (!API_BASE || API_BASE.includes('PUT_YOUR')) return Promise.resolve();
+    const params = { api: 'v1', endpoint: 'residue' };
+    if (fy) params.fy = fy;
+    if (API_KEY) params.key = API_KEY;
+    const url = apiUrl(params);
+    return getJson(url).catch(() => jsonp(url)).then((p) => {
+      if (!p || !p.ok || !p.data) throw new Error((p && p.error) || 'residue API error');
+      state.residue = p.data; state.resFy = p.data.fy;
+      try { localStorage.setItem(RES_CACHE_KEY, JSON.stringify(p.data)); } catch (e) { /* ignore */ }
+      renderAll();
+    }).catch((err) => {
+      if (!res()) state.residue = { error: true };
+      renderAll();
+      console.warn('[GGH residue]', err);
+    });
+  }
+
   function refresh() {
     setStatus('กำลังโหลดข้อมูล…');
+    loadResidue(state.resFy);
     return loadSummary().then((data) => {
       state.summary = data; writeCache(data); renderAll();
       setStatus(`ข้อมูล ณ ${timeLabel(data.generatedAt)} น.`);
@@ -725,6 +884,7 @@
     watchLanding(); bindTabs(); bindSearch();
     const cached = readCache();
     if (cached && cached.totals) state.summary = cached;
+    try { const rc = JSON.parse(localStorage.getItem(RES_CACHE_KEY) || 'null'); if (rc && rc.ok) { state.residue = rc; state.resFy = rc.fy; } } catch (e) { /* ignore */ }
     const hashTab = (location.hash || '').replace('#', '');
     setTab(TABS.includes(hashTab) ? hashTab : 'overview');
     loadGeo().then((geo) => {

@@ -1,34 +1,55 @@
 /**
- * Green Gain Hub 1.7.0 — reports for Super Admin / Admin (print, PDF, Excel, CSV).
+ * Green Gain Hub 2.0.0 — reports (print, PDF, Excel, CSV).
  *
  * The server returns tables only; the admin page renders, prints and exports
  * them. Every request is checked against the role here and written to admin_log.
- * Sections with names or phone numbers are Super Admin only, and phones are
- * masked unless the Super Admin explicitly asks for full numbers.
+ *   Admin (district recorder): group ก. only, always limited to the district on the account.
+ *   Mini Super Admin / Super Admin: every group, province-wide or one district.
+ * Sections with farmers' / buyers' names or phone numbers need Mini Super Admin or
+ * Super Admin, and phones are masked unless full numbers are explicitly requested.
  */
 const REPORT_GROUPS = [
-  { key: 'crops', title: 'ก. สถานการณ์การเพาะปลูก', sections: [
+  { key: 'residue', title: 'ก. การจัดการเศษวัสดุและก๊าซเรือนกระจก', minRole: 'admin', sections: [
+    { key: 'residue.summary', title: 'สรุปภาพรวม (พื้นที่ เป้าหมาย GHG ที่ลดได้)' },
+    { key: 'residue.map', title: 'แผนที่ GHG ที่ลดได้รายอำเภอ' },
+    { key: 'residue.methods', title: 'พื้นที่จัดการแยกตามประเภท พร้อมเป้าหมายและร้อยละ' },
+    { key: 'residue.districts', title: 'รายอำเภอ: พื้นที่ เป้าหมาย ร้อยละ GHG' },
+    { key: 'residue.crops', title: 'GHG ที่ลดได้รายชนิดพืช (CH4, N2O, L_fire)' },
+    { key: 'residue.subdistricts', title: 'สรุปรายตำบล: ประเภท พื้นที่รวม ปริมาณรวม' },
+    { key: 'residue.admins', title: 'สรุปราย Admin: ร้อยละที่ดำเนินการ' },
+    { key: 'residue.records', title: 'รายการบันทึกข้อมูล' },
+    { key: 'residue.params', title: 'สูตร ค่าพารามิเตอร์ และแหล่งอ้างอิง' }] },
+  { key: 'crops', title: 'ข. สถานการณ์การเพาะปลูก', sections: [
     { key: 'crops.summary', title: 'สรุปภาพรวมจังหวัด' },
     { key: 'crops.monthly', title: 'พื้นที่เก็บเกี่ยวรายเดือน' },
     { key: 'crops.districts', title: 'รายอำเภอ' },
     { key: 'crops.subdistricts', title: 'รายตำบล' }] },
-  { key: 'reports', title: 'ข. รายงานอำเภอ (KPP Smart Agri-Materials)', sections: [
+  { key: 'reports', title: 'ค. รายงานอำเภอ (KPP Smart Agri-Materials)', sections: [
     { key: 'reports.status', title: 'สถานะการส่งรายงาน' },
     { key: 'reports.indicators', title: 'ผลการดำเนินงานรายอำเภอ (R29–R31)' },
     { key: 'reports.series', title: 'ยอดสะสมรายครั้ง' }] },
-  { key: 'market', title: 'ค. ตลาดเศษวัสดุ', sections: [
+  { key: 'market', title: 'ง. ตลาดเศษวัสดุ', sections: [
     { key: 'market.districts', title: 'สรุปรายอำเภอ' },
     { key: 'market.materials', title: 'สรุปตามชนิดเศษวัสดุ' },
-    { key: 'market.plots', title: 'รายการแปลงพร้อมขาย (มีชื่อและเบอร์โทร)', role: 'super' },
-    { key: 'market.buyers', title: 'รายการจุดรับซื้อ (มีชื่อและเบอร์โทร)', role: 'super' }] },
-  { key: 'visits', title: 'ง. สถิติผู้เข้าชม', sections: [
+    { key: 'market.plots', title: 'รายการแปลงพร้อมขาย (มีชื่อและเบอร์โทร)', role: 'mini' },
+    { key: 'market.buyers', title: 'รายการจุดรับซื้อ (มีชื่อและเบอร์โทร)', role: 'mini' }] },
+  { key: 'visits', title: 'จ. สถิติผู้เข้าชม', sections: [
     { key: 'visits.monthly', title: 'รายเดือน' },
     { key: 'visits.daily', title: 'รายวัน (90 วันล่าสุด)' }] },
-  { key: 'audit', title: 'จ. ประวัติการนำเข้าและบันทึกการใช้งาน', sections: [
+  { key: 'audit', title: 'ฉ. ประวัติการนำเข้าและบันทึกการใช้งาน', sections: [
     { key: 'audit.imports', title: 'ประวัติการนำเข้าข้อมูลเพาะปลูก' },
-    { key: 'audit.log', title: 'บันทึกการใช้งานผู้ดูแล (200 รายการล่าสุด)', role: 'super' }] }
+    { key: 'audit.log', title: 'บันทึกการใช้งานผู้ดูแล (200 รายการล่าสุด)', role: 'mini' }] }
 ];
 const REPORT_MAX_SECTIONS = 20;
+const REPORT_PRESETS = {
+  district: ['residue.summary', 'residue.methods', 'residue.subdistricts', 'residue.admins', 'residue.crops', 'residue.records'],
+  province: ['residue.summary', 'residue.map', 'residue.methods', 'residue.districts', 'residue.crops', 'residue.params']
+};
+
+function reportAllowed_(group, section, s) {
+  const need = section.role || group.minRole || 'mini';
+  return adminLevel_(s.role) >= adminLevel_(need);
+}
 
 function reportSectionDef_(key) {
   for (let g = 0; g < REPORT_GROUPS.length; g++) {
@@ -38,21 +59,29 @@ function reportSectionDef_(key) {
   return null;
 }
 
-/** What this admin may report on, plus the crop / month options. */
+/** What this admin may report on, plus the crop / month / fiscal-year / district options. */
 function reportCatalog_(s) {
-  const crops = (getCropSummary_(false).crops || []).map(function (c) {
+  const level = adminLevel_(s.role);
+  const crops = level >= 2 ? (getCropSummary_(false).crops || []).map(function (c) {
     return { key: c.crop + '|' + c.season, crop: c.crop, season: c.season, firstMonth: c.firstMonth, lastMonth: c.lastMonth, asOfMonth: c.asOfMonth };
-  });
+  }) : [];
+  const names = residueDistrictNames_();
   return {
     status: 'success',
     role: s.role,
-    groups: REPORT_GROUPS.map(function (g) {
+    groups: REPORT_GROUPS.filter(function (g) { return adminLevel_(s.role) >= adminLevel_(g.minRole || 'mini'); }).map(function (g) {
       return { key: g.key, title: g.title, sections: g.sections.map(function (x) {
-        return { key: x.key, title: x.title, allowed: !x.role || s.role === 'super', superOnly: x.role === 'super' };
+        return { key: x.key, title: x.title, allowed: reportAllowed_(g, x, s), superOnly: !!x.role };
       }) };
     }),
+    presets: REPORT_PRESETS,
     crops: crops,
-    office: 'สำนักงานเกษตรจังหวัดกำแพงเพชร'
+    fy: currentFiscalYear_(),
+    fiscalYears: residueFiscalYears_(),
+    district: s.role === 'admin' ? s.district : '',
+    districts: Object.keys(names).sort().filter(function (c) { return s.role !== 'admin' || c === s.district; }).map(function (c) { return { code: c, name: names[c] }; }),
+    province: provinceName_(),
+    office: officeName_()
   };
 }
 
@@ -75,10 +104,11 @@ function reportData_(input, s) {
   keys.forEach(function (k) {
     const def = reportSectionDef_(k);
     if (!def) throw new Error('ไม่รู้จักส่วนรายงาน ' + cleanText_(k, 40));
-    if (def.section.role === 'super' && s.role !== 'super') throw new Error('ส่วน "' + def.section.title + '" เฉพาะ Super Admin เท่านั้น');
+    if (!reportAllowed_(def.group, def.section, s)) throw new Error('ไม่มีสิทธิ์ดูส่วน "' + def.section.title + '"');
   });
-  const unmask = !!input.unmaskPhones && s.role === 'super';
-  const ctx = { input: input, s: s, unmask: unmask, crop: null, asOf: null };
+  const unmask = !!input.unmaskPhones && adminLevel_(s.role) >= 2;
+  const ctx = { input: input, s: s, unmask: unmask, crop: null, asOf: null, residue: null };
+  if (keys.some(function (k) { return k.indexOf('residue.') === 0; })) ctx.residue = residueReportCtx_(input, s);
 
   if (keys.some(function (k) { return k.indexOf('crops.') === 0; })) {
     const list = getCropSummary_(false).crops || [];
@@ -92,7 +122,7 @@ function reportData_(input, s) {
 
   const sections = keys.map(function (k) {
     const def = reportSectionDef_(k);
-    const out = REPORT_BUILDERS[k](ctx);
+    const out = k.indexOf('residue.') === 0 ? residueReportSection_(k, ctx.residue, s) : REPORT_BUILDERS[k](ctx);
     out.key = k;
     out.group = def.group.title;
     out.title = out.title || def.section.title;
@@ -100,14 +130,17 @@ function reportData_(input, s) {
   });
   const contacts = keys.filter(function (k) { return k === 'market.plots' || k === 'market.buyers'; });
   adminAudit_(s, 'report_view', keys.join(', ') + (contacts.length ? (unmask ? ' [เบอร์เต็ม]' : ' [ปิดบังเบอร์]') : '') +
-    (ctx.crop ? ' | ' + ctx.crop.crop + ' ' + ctx.crop.season + ' ณ ' + ctx.asOf : ''));
+    (ctx.crop ? ' | ' + ctx.crop.crop + ' ' + ctx.crop.season + ' ณ ' + ctx.asOf : '') +
+    (ctx.residue ? ' | ปีงบ ' + ctx.residue.fy + (ctx.residue.district ? ' อ.' + ctx.residue.districtName : ' ทั้งจังหวัด') : ''));
   return {
     status: 'success',
-    title: cleanText_(input.title, 150) || 'รายงาน Green Gain Hub จังหวัดกำแพงเพชร',
-    office: 'สำนักงานเกษตรจังหวัดกำแพงเพชร',
+    title: cleanText_(input.title, 150) || 'รายงานระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร จังหวัด' + provinceName_(),
+    office: officeName_(),
     generatedAt: dateTime_(new Date()),
-    generatedBy: s.name + ' (' + (s.role === 'super' ? 'Super Admin' : 'Admin') + ')',
+    generatedBy: s.name + ' (' + roleLabel_(s.role) + ')',
     crop: ctx.crop ? { crop: ctx.crop.crop, season: ctx.crop.season, asOf: ctx.asOf } : null,
+    residue: ctx.residue ? { fy: ctx.residue.fy, fyRange: fiscalRangeText_(ctx.residue.fy), district: ctx.residue.district, districtName: ctx.residue.districtName,
+      params: ctx.residue.ctx.label.label } : null,
     phonesMasked: !unmask,
     sections: sections
   };

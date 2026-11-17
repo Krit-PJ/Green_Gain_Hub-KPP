@@ -33,22 +33,27 @@ assert(get({ api: 'v1', endpoint: 'hit' }).data.today === 4, 'today must not inc
 
 /* ---------- import data to report on ---------- */
 const T = ok(post('adminLoginServer', [{ username: 'krit', password: '0812345678' }]), 'super login').token;
-ok(post('adminSaveServer', [{ username: 'admin1', name: 'Admin 1', role: 'admin', password: 'admin-pass-1' }], T), 'create admin');
+ok(post('adminSaveServer', [{ username: 'admin1', name: 'Admin 1', role: 'mini', password: 'admin-pass-1' }], T), 'create mini super admin');
+ok(post('adminSaveServer', [{ username: 'rec1', name: 'ผู้บันทึก 1', role: 'admin', district: '6204', password: 'rec-pass-11' }], T), 'create district admin');
+const D = ok(post('adminLoginServer', [{ username: 'rec1', password: 'rec-pass-11' }]), 'district login').token;
 const A = ok(post('adminLoginServer', [{ username: 'admin1', password: 'admin-pass-1' }]), 'admin login').token;
 const sample = parser.parse(require('./fixtures/rice-naphi-2569-70-harvest.json'));
 ok(post('cropImportCommitServer', [{ crop: 'ข้าวนาปี', season: '2569/70', monthType: 'harvest', fileName: 'rice.xlsx', rows: sample.rows }], A), 'import');
 
 /* ---------- catalog / roles ---------- */
-const catA = ok(post('reportCatalogServer', [], A), 'catalog admin');
+const catA = ok(post('reportCatalogServer', [], A), 'catalog mini');
 const flat = (c) => Object.fromEntries(c.groups.flatMap((g) => g.sections.map((s) => [s.key, s.allowed])));
-assert(flat(catA)['market.plots'] === false && flat(catA)['audit.log'] === false && flat(catA)['crops.districts'] === true, 'admin catalog must disable contact and audit-log sections');
+assert(Object.values(flat(catA)).every(Boolean), 'mini super admin sees every section like super');
+const catD = ok(post('reportCatalogServer', [], D), 'catalog district');
+assert(catD.groups.length === 1 && catD.groups[0].key === 'residue' && catD.district === '6204' && catD.districts.length === 1 && !catD.crops.length, 'district admin gets only the residue group of the own district');
 assert(catA.crops.length === 1 && catA.crops[0].key === 'ข้าวนาปี|2569/70', 'catalog must list imported crops');
 const catS = ok(post('reportCatalogServer', [], T), 'catalog super');
 assert(Object.values(flat(catS)).every(Boolean), 'super must see every section');
 assert(post('reportCatalogServer', [], 'f'.repeat(64)).error === 'ADMIN_SESSION_EXPIRED', 'reports require login');
 
-assert(/เฉพาะ Super Admin/.test(post('reportDataServer', [{ sections: ['market.plots'] }], A).error), 'admin must not get contact lists');
-assert(/เฉพาะ Super Admin/.test(post('reportDataServer', [{ sections: ['audit.log'] }], A).error), 'admin must not get the audit log');
+assert(/ไม่มีสิทธิ์/.test(post('reportDataServer', [{ sections: ['market.plots'] }], D).error), 'district admin must not get contact lists');
+assert(/ไม่มีสิทธิ์/.test(post('reportDataServer', [{ sections: ['audit.log'] }], D).error), 'district admin must not get the audit log');
+assert(/ไม่มีสิทธิ์/.test(post('reportDataServer', [{ sections: ['crops.summary'] }], D).error), 'district admin must not get province crop sections');
 assert(/อย่างน้อย 1/.test(post('reportDataServer', [{ sections: [] }], A).error), 'empty selection must be rejected');
 assert(/ไม่รู้จัก/.test(post('reportDataServer', [{ sections: ['x.y'] }], A).error), 'unknown section must be rejected');
 
@@ -74,8 +79,8 @@ assert(sec(m1, 'market.buyers').rows[0].phone === '062-xxx-9987' && m1.phonesMas
 assert(!JSON.stringify(m1).includes('0841157666'), 'masked report must not contain the full phone anywhere');
 const m2 = ok(post('reportDataServer', [{ sections: ['market.plots'], unmaskPhones: true }], T), 'market unmasked');
 assert(sec(m2, 'market.plots').rows[0].phone === '084-115-7666' && !m2.phonesMasked, 'super may unmask phones on request');
-const m3 = ok(post('reportDataServer', [{ sections: ['market.districts'], unmaskPhones: true }], A), 'admin unmask ignored');
-assert(m3.phonesMasked, 'unmask flag from an admin must be ignored');
+const m3 = ok(post('reportDataServer', [{ sections: ['residue.summary'], unmaskPhones: true }], D), 'district unmask ignored');
+assert(m3.phonesMasked, 'unmask flag from a district admin must be ignored');
 
 /* ---------- visits + audit sections ---------- */
 const vis = ok(post('reportDataServer', [{ sections: ['visits.monthly', 'visits.daily', 'audit.imports'] }], A), 'visits');
