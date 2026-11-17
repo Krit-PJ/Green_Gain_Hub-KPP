@@ -20,7 +20,7 @@ assert(html.includes('assets/staff-auth.js') && !/name="password"[^>]*type="pass
 assert(html.includes('admin.html#admin') && /sell: \['register', 'farmer'\]/.test(html), 'admin link and shareable #sell/#buy links');
 ['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashSearch"',
   'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="reports"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html#admin"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=2.2.1') && html.includes('assets/dashboard.css?v=2.2.1'), 'dashboard assets are not linked');
+assert(html.includes('assets/dashboard.js?v=2.2.2') && html.includes('assets/dashboard.css?v=2.2.2'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
@@ -48,8 +48,8 @@ assert(css.includes('prefers-reduced-motion'), 'reduced-motion rule missing');
 console.log('PASS: public dashboard markup, aggregate-only API use, boundaries and attribution');
 
 // 2.0.0: residue management tab, crop icons on the map, crop cards, recording form and roles.
-assert(html.includes('ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร') && html.includes('การลดปริมาณก๊าซเรือนกระจกในภาคการเกษตร'), 'new system name and lede missing');
-assert(/data-tab="overview">การจัดการเศษวัสดุ</.test(html) && /data-tab="crops">สถานการณ์การเพาะปลูก</.test(html), 'tab names must be renamed');
+assert(html.includes('ระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร') && html.includes('การลดปริมาณก๊าซเรือนกระจกในภาคการเกษตร'), 'new system name and lede missing');
+assert(/data-tab="overview">การจัดการวัสดุเหลือใช้ทางการเกษตร</.test(html) && /data-tab="crops">สถานการณ์การเพาะปลูก</.test(html), 'tab names must be renamed');
 assert(html.includes('id="resCropIcons"') && html.includes('id="resMethods"') && html.includes('id="resProgress"') && html.includes('id="resFy"'), 'residue tab markup missing');
 assert(!/ggh-cropmonths" data-tabs="overview/.test(html), 'old overview cards must be removed from the residue tab');
 assert(admin.includes('id="recForm"') && admin.includes('capture="environment"') && admin.includes('name="confirmed"') && admin.includes('id="recGpsBtn"'), 'recording form missing');
@@ -59,14 +59,14 @@ assert(dash.includes("endpoint: 'residue'") && dash.includes('resGhg') && dash.i
 // 2.1.0: top bar name, no hero title, Green Gain Hub brand in the sign-in card, officer sign-in/registration, value.
 // 2.2.0: short name on top, full official name in the footer; entry doors; sign-in card for farmers and buyers.
 assert(/ggh-topbar-title[^>]*>Green Gain Hub <span data-province>/.test(html) && html.includes('ggh-topbar-sub') && !html.includes('class="ggh-title"'), 'top bar title / hero title');
-assert(/<footer[\s\S]*ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร/.test(html), 'full official name in the footer');
+assert(/<footer[\s\S]*ระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร/.test(html), 'full official name in the footer');
 assert(/ggh-dialog-kicker">สำหรับเกษตรกรและผู้รับซื้อ</.test(html) && html.includes('STAFF_ACCOUNT') && html.includes('MARKET_ACCOUNT') && html.includes('data-to-staff') && html.includes('data-to-hub'), 'wrong-box numbers switch to the other popup');
 assert(js.includes('renderDistrictRanking'), 'side panel ranks districts when nothing is selected');
 assert(['data-role="farmer"', 'data-role="buyer"', 'data-door="staff"'].every((x) => html.includes(x)) && html.indexOf('ggh-doors') < html.indexOf('ggh-tabs"'), 'entry doors before the province data');
 assert(!/tCO₂e|tCO2e/.test(html + dash) && dash.includes('ตันคาร์บอนไดออกไซด์เทียบเท่า'), 'Thai GHG unit on the homepage');
 assert(dash.includes("endpoint: 'balance'") && html.includes('id="resBalance"'), 'residue balance on the homepage');
 assert(admin.includes('id="staffLoginForm"') && admin.includes('id="staffRegForm"') && admin.includes('id="regProvinces"') && admin.includes('id="regGroup"'), 'officer sign-in / registration');
-assert(admin.includes('name="priceBahtKg"') && admin.includes('name="useGlobalPrice"') && admin.includes('id="priceForm"') && admin.includes('name="countValue"') && dash.includes('มูลค่าเศษวัสดุ'), 'value settings and display');
+assert(admin.includes('name="priceBahtKg"') && admin.includes('name="useGlobalPrice"') && admin.includes('id="priceForm"') && admin.includes('name="countValue"') && dash.includes('มูลค่าวัสดุเหลือใช้ทางการเกษตร'), 'value settings and display');
 // 2.2.0 admin: task menus, overview, buyer link, print rules.
 const adminCss = fs.readFileSync(path.join(__dirname, '..', 'frontend', 'assets', 'admin.css'), 'utf8');
 assert(/admin: \[\{ key: 'record'[\s\S]*?\{ key: 'account'/.test(adminJs) && (adminJs.match(/\{ key: '(overview|data|reports|users|settings)', label/g) || []).length === 5, 'Admin 4 items, Mini/Super 5 groups');

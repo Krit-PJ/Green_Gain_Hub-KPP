@@ -1,5 +1,5 @@
 /**
- * Green Gain Hub 2.2.0 — residue balance (สมดุลเศษวัสดุ): links the two subsystems.
+ * Green Gain Hub 2.2.0 — residue balance (สมดุลวัสดุเหลือใช้ทางการเกษตร): links the two subsystems.
  *
  * Per district × crop for one fiscal year (1 Oct – 30 Sep):
  *   ① potential    = harvested rai in the fiscal year (farmer registry import) × residue (t/rai)
@@ -228,15 +228,15 @@ function residueBalanceSection_(R) {
   return {
     subtitle: residueScopeText_(R),
     landscape: true,
-    columns: [col_('name', 'อำเภอ'), col_('crop', 'พืช'), col_('harvested', '① เก็บเกี่ยว (ไร่)', 'number'), col_('potential', '① เศษวัสดุ (ตัน)', 'number'),
+    columns: [col_('name', 'อำเภอ'), col_('crop', 'พืช'), col_('harvested', '① เก็บเกี่ยว (ไร่)', 'number'), col_('potential', '① วัสดุเหลือใช้ทางการเกษตร (ตัน)', 'number'),
       col_('removable', '② นำออกได้ (ตัน)', 'number'), col_('listed', '③ ประกาศขาย (ไร่)', 'number'), col_('buyers', '④ ผู้รับซื้อ (ราย)', 'number'),
       col_('managed', '⑤ จัดการแล้ว (ไร่)', 'number'), col_('pct', '⑤ ÷ ① (%)', 'number'), col_('risk', '⑥ ยังไม่มีบันทึก (ไร่)', 'number'), col_('note', 'ข้อสังเกต')],
     rows: rows,
     totals: { name: 'รวม', harvested: t.harvestedRai, potential: t.potentialTon, removable: t.removableTon, listed: t.listedRai, buyers: t.buyers,
       managed: t.managedRai, pct: t.managedPct === null ? '' : t.managedPct, risk: t.atRiskRai },
     notes: [b.sources.note + (b.sources.registry.length ? ' (' + b.sources.registry.join(', ') + ')' : ' — ยังไม่มีข้อมูลนำเข้า'),
-      '① เศษวัสดุ = พื้นที่เก็บเกี่ยว × อัตราเศษวัสดุต่อไร่; ② = ① × สัดส่วนที่นำออกจากแปลงได้โดยไม่กระทบดิน (ไถกลบนับเป็นการจัดการด้วย)',
-      '③ ④ จากตลาดเศษวัสดุ (แปลงสถานะพร้อมขายที่เก็บเกี่ยวในปีงบประมาณ และผู้รับซื้อที่เปิดรับซื้อ) ⑤ จากการบันทึกของเจ้าหน้าที่เท่านั้น ไม่นำยอดตลาดมาบวกซ้ำ',
+      '① วัสดุเหลือใช้ทางการเกษตร = พื้นที่เก็บเกี่ยว × อัตราวัสดุเหลือใช้ทางการเกษตรต่อไร่; ② = ① × สัดส่วนที่นำออกจากแปลงได้โดยไม่กระทบดิน (ไถกลบนับเป็นการจัดการด้วย)',
+      '③ ④ จากตลาดวัสดุเหลือใช้ทางการเกษตร (แปลงสถานะพร้อมขายที่เก็บเกี่ยวในปีงบประมาณ และผู้รับซื้อที่เปิดรับซื้อ) ⑤ จากการบันทึกของเจ้าหน้าที่เท่านั้น ไม่นำยอดตลาดมาบวกซ้ำ',
       'จัดการแล้วที่ระบุผู้รับซื้อในระบบ ' + t.linkedRai + ' ไร่' + (t.linkedPct === null ? '' : ' (' + t.linkedPct + '% ของพื้นที่จัดการ)') + ', ขายหรือนำออกจริง ' + t.soldTon + ' ตัน']
   };
 }

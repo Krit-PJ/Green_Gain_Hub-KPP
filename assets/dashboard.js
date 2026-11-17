@@ -1,11 +1,11 @@
 /* Green Gain Hub 2.1.0 — public landing dashboard.
  *
  * ?api=v1&endpoint=summary, residue and balance (2.2.0) of the GGH backend feed four tabs:
- *   การจัดการเศษวัสดุ   managed area by type, target %, ก๊าซเรือนกระจก avoided by crop and district (residue records)
+ *   การจัดการวัสดุเหลือใช้ทางการเกษตร   managed area by type, target %, ก๊าซเรือนกระจก avoided by crop and district (residue records)
  *   สถานการณ์การเพาะปลูก planted / harvested / remaining area by month and district
  *                  (DOAE farmer registry, imported by admins), sub-districts on demand
  *   รายงานอำเภอ    KPP Smart Agri-Materials district reports (proxied server-side)
- *   ตลาดเศษวัสดุ   Green Gain Hub plots for sale and buyers
+ *   ตลาดวัสดุเหลือใช้ทางการเกษตร   Green Gain Hub plots for sale and buyers
  * Everything is aggregate data; no personal data is requested or rendered.
  */
 (function () {
@@ -174,7 +174,7 @@
 
   const METRICS = {
     resGhg: { label: 'ก๊าซเรือนกระจกที่ลดได้ (ตันคาร์บอนไดออกไซด์เทียบเท่า)', digits: 2, value: (c) => (res() ? resSum(resCells({ d: c })).g : null), needs: 'residue' },
-    resArea: { label: 'พื้นที่จัดการเศษวัสดุ (ไร่)', digits: 0, value: (c) => (res() ? resSum(resCells({ d: c })).a : null), needs: 'residue' },
+    resArea: { label: 'พื้นที่จัดการวัสดุเหลือใช้ทางการเกษตร (ไร่)', digits: 0, value: (c) => (res() ? resSum(resCells({ d: c })).a : null), needs: 'residue' },
     resPct: { label: 'ร้อยละของเป้าหมาย (ทุกพืช)', digits: 1, value: (c) => { const t = resTarget(c); return t ? resSum(resCells({ d: c, crop: 'all' })).a / t * 100 : null; }, needs: 'residue' },
     cropRemaining: { label: 'คงเหลือยังไม่เก็บเกี่ยว (ไร่)', digits: 0, value: (c) => cropDistrict(c)?.remaining ?? null, needs: 'crop' },
     cropHarvested: { label: 'เก็บเกี่ยวแล้ว (ไร่)', digits: 0, value: (c) => cropDistrict(c)?.harvested ?? null, needs: 'crop' },
@@ -242,18 +242,18 @@
     if (state.tab === 'overview') {
       const R = res();
       const fy = R ? R.fy : state.resFy;
-      title = `การจัดการเศษวัสดุ ปีงบประมาณ ${fy || ''}`;
+      title = `การจัดการวัสดุเหลือใช้ทางการเกษตร ปีงบประมาณ ${fy || ''}`;
       if (!R) {
-        html = `<p class="ggh-kpi-empty">${state.residue && state.residue.error ? 'โหลดข้อมูลการจัดการเศษวัสดุไม่สำเร็จ' : 'กำลังโหลดข้อมูลการจัดการเศษวัสดุ…'}</p>`;
+        html = `<p class="ggh-kpi-empty">${state.residue && state.residue.error ? 'โหลดข้อมูลการจัดการวัสดุเหลือใช้ทางการเกษตรไม่สำเร็จ' : 'กำลังโหลดข้อมูลการจัดการวัสดุเหลือใช้ทางการเกษตร…'}</p>`;
       } else {
         const code = resScopeCode();
         meta = [state.resCrop === 'all' ? 'ทุกชนิดพืช' : resCropName(state.resCrop), code ? 'อำเภอ' + districtName(code) : 'ทั้งจังหวัด'].map(esc).join(' · ');
         const sx = resSum(resCells({ d: code })), all = resSum(resCells({ d: code, crop: 'all' })), tg = resTarget(code);
         html += kpi(fmtG(sx.g), 'ตันคาร์บอนไดออกไซด์เทียบเท่า: ก๊าซเรือนกระจกที่ลดได้', `ประมาณการ จากมีเทน ${fmt(sx.ch4e, 2)} + ไนตรัสออกไซด์ ${fmt(sx.n2oe, 2)}`, 'ggh-kpi-hero');
-        html += kpi(fmt(sx.a, 2), 'ไร่ พื้นที่จัดการเศษวัสดุ', `${fmt(sx.n)} รายการ` + (sx.x ? `, ยังไม่คำนวณก๊าซเรือนกระจก ${fmt(sx.x, 2)} ไร่` : ''));
+        html += kpi(fmt(sx.a, 2), 'ไร่ พื้นที่จัดการวัสดุเหลือใช้ทางการเกษตร', `${fmt(sx.n)} รายการ` + (sx.x ? `, ยังไม่คำนวณก๊าซเรือนกระจก ${fmt(sx.x, 2)} ไร่` : ''));
         html += kpi(tg ? fmt(all.a / tg * 100, 1) + '%' : '–', 'ร้อยละของเป้าหมาย', tg ? `${fmt(all.a)} จากเป้า ${fmt(tg)} ไร่ (ทุกประเภท ทุกพืช)` : 'ยังไม่กำหนดเป้าหมาย', 'ggh-kpi-harvest');
-        html += kpi(fmt(sx.t, 1), 'ตัน ปริมาณเศษวัสดุที่จัดการ', 'ประมาณจากอัตราชีวมวลต่อไร่');
-        html += kpi(baht(sx.v), 'บาท มูลค่าเศษวัสดุ (ประมาณการ)', priceNote() + (R.methods.some((m) => m.countValue === false) ? ` · ไม่นับ${R.methods.filter((m) => m.countValue === false).map((m) => m.method).join(', ')}` : ''));
+        html += kpi(fmt(sx.t, 1), 'ตัน ปริมาณวัสดุเหลือใช้ทางการเกษตรที่จัดการ', 'ประมาณจากอัตราชีวมวลต่อไร่');
+        html += kpi(baht(sx.v), 'บาท มูลค่าวัสดุเหลือใช้ทางการเกษตร (ประมาณการ)', priceNote() + (R.methods.some((m) => m.countValue === false) ? ` · ไม่นับ${R.methods.filter((m) => m.countValue === false).map((m) => m.method).join(', ')}` : ''));
       }
     } else if (state.tab === 'crops') {
       if (!c) {
@@ -265,10 +265,10 @@
         html += kpi(fmt(t.total), 'ไร่ พื้นที่ปลูกทั้งหมด', `${ymLabel(c.firstMonth)} – ${ymLabel(c.lastMonth)} เก็บเกี่ยว ${(c.months || []).length} เดือน`);
         html += kpi(fmt(t.harvested), `ไร่ เก็บเกี่ยวแล้ว ถึงสิ้น${ymLabel(m, true)}`, `${pct(t.harvested, t.total)}% ของพื้นที่ปลูก`);
         html += kpi(fmt(t.remaining), 'ไร่ คงเหลือยังไม่เก็บเกี่ยว', `${pct(t.remaining, t.total)}% ของพื้นที่ปลูก` + (c.residue ? `, ${esc(c.material)} ราว ${fmt(t.remaining * c.residue.bioRateTonPerRai)} ตัน` : ''), 'ggh-kpi-hero');
-        html += kpi(fmt(t.next), `ไร่ คาดว่าจะเก็บเกี่ยว ${ymLabel(addMonth(m, 1), true)}`, `เศษวัสดุ: ${esc(c.material || '–')}`, 'ggh-kpi-harvest');
+        html += kpi(fmt(t.next), `ไร่ คาดว่าจะเก็บเกี่ยว ${ymLabel(addMonth(m, 1), true)}`, `วัสดุเหลือใช้ทางการเกษตร: ${esc(c.material || '–')}`, 'ggh-kpi-harvest');
       }
     } else if (state.tab === 'reports') {
-      title = 'ผลการจัดการเศษวัสดุ รายงานจากอำเภอ';
+      title = 'ผลการจัดการวัสดุเหลือใช้ทางการเกษตร รายงานจากอำเภอ';
       if (!r) {
         html = `<p class="ggh-kpi-empty">${s && s.reports && s.reports.configured === false ? 'กำลังเชื่อมต่อระบบรายงานอำเภอ' : 'ยังโหลดข้อมูลรายงานอำเภอไม่ได้'}</p>`;
       } else {
@@ -284,7 +284,7 @@
           none ? (r.round && r.round.due ? `ครบกำหนดส่ง ${dateRange(r.round.due)}` : '') : `ตรวจรับแล้ว ${fmt(sc.accepted || 0)}, รอตรวจ ${fmt(sc.submitted || 0)}`);
       }
     } else if (state.tab === 'market' && s) {
-      title = 'ตลาดเศษวัสดุ Green Gain Hub';
+      title = 'ตลาดวัสดุเหลือใช้ทางการเกษตร Green Gain Hub';
       const tt = s.totals;
       html += kpi(fmt(tt.farmerPlots), 'แปลงพร้อมขาย', `จากเกษตรกร ${fmt(tt.farmers)} ราย`);
       html += kpi(fmt(tt.areaRai, 1), 'ไร่ พื้นที่แปลงพร้อมขาย', `ครอบคลุม ${fmt(tt.districtsCovered)} จาก ${fmt(tt.districtsTotal)} อำเภอ`);
@@ -316,7 +316,7 @@
           <span class="ggh-progress" aria-hidden="true"><i style="width:${p}%"></i></span>
           <small>เก็บเกี่ยวแล้ว ${p}% · คงเหลือ ${fmt(t.remaining)} ไร่</small>
         </button>
-        ${res() ? `<button type="button" class="ggh-cropcard-link" data-res="${esc(g)}">${done.a ? `จัดการเศษวัสดุแล้ว ${fmt(done.a)} ไร่ · ลดก๊าซเรือนกระจก ${fmtG(done.g)} ตันคาร์บอนไดออกไซด์เทียบเท่า · มูลค่า ${baht(done.v)} บาท` : 'ยังไม่มีการบันทึกการจัดการเศษวัสดุ'}</button>` : ''}
+        ${res() ? `<button type="button" class="ggh-cropcard-link" data-res="${esc(g)}">${done.a ? `จัดการวัสดุเหลือใช้ทางการเกษตรแล้ว ${fmt(done.a)} ไร่ · ลดก๊าซเรือนกระจก ${fmtG(done.g)} ตันคาร์บอนไดออกไซด์เทียบเท่า · มูลค่า ${baht(done.v)} บาท` : 'ยังไม่มีการบันทึกการจัดการวัสดุเหลือใช้ทางการเกษตร'}</button>` : ''}
       </div>`;
     }).join('') : '<span class="ggh-district-empty">ยังไม่มีข้อมูลเพาะปลูก</span>';
     chips.querySelectorAll('[data-key]').forEach((b) => b.addEventListener('click', () => {
@@ -384,9 +384,9 @@
         <p class="ggh-method-meta">ลดก๊าซเรือนกระจกได้ ${fmtG(r.s.g)} ตันคาร์บอนไดออกไซด์เทียบเท่า · ${fmt(r.s.t, 1)} ตัน${r.s.x ? ` · ยังไม่คำนวณก๊าซเรือนกระจก ${fmt(r.s.x, 2)} ไร่` : ''}</p>
         <p class="ggh-method-meta">${(R.methods.find((m) => m.method === r.m) || {}).countValue === false ? 'ไม่นับมูลค่า' : `มูลค่า ≈ ${baht(r.s.v)} บาท`}</p>
       </article>`).join('');
-    $('resNote').innerHTML = `<p>ชุดค่า: ${esc(R.params.label)} ชุดที่ ${esc(R.params.version)} · โหมด ${R.params.mode === 'standard' ? 'Standard (IPCC 2006 Table 2.4)' : 'เศษวัสดุต่อไร่ × Cf'}</p>
+    $('resNote').innerHTML = `<p>ชุดค่า: ${esc(R.params.label)} ชุดที่ ${esc(R.params.version)} · โหมด ${R.params.mode === 'standard' ? 'Standard (IPCC 2006 Table 2.4)' : 'วัสดุเหลือใช้ทางการเกษตรต่อไร่ × Cf'}</p>
       <p>สูตร: ก๊าซเรือนกระจกที่ลดได้ = พื้นที่ × ชีวมวลที่เผาไหม้ (กก./ไร่) × (EF_CH₄ × GWP_CH₄ + EF_N₂O × GWP_N₂O) ÷ 1,000,000</p>
-      <p>มูลค่า (ประมาณการ) = ปริมาณเศษวัสดุ (ตัน) × 1,000 × ราคา (บาท/กก.) · ${esc(priceNote())} · ไม่ใช่ราคาซื้อขายจริงในตลาด</p>
+      <p>มูลค่า (ประมาณการ) = ปริมาณวัสดุเหลือใช้ทางการเกษตร (ตัน) × 1,000 × ราคา (บาท/กก.) · ${esc(priceNote())} · ไม่ใช่ราคาซื้อขายจริงในตลาด</p>
       <ul>${R.boundary.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`;
   }
 
@@ -539,7 +539,7 @@
     const R = res(); if (!R) return '';
     const sx = resSum(resCells({ d: code })), all = resSum(resCells({ d: code, crop: 'all' })), tg = resTarget(code);
     const methods = R.methods.map((m) => m.method).map((m) => ({ m, a: resSum(resCells({ d: code, m })).a })).filter((x) => x.a);
-    return `<h4><span>การจัดการเศษวัสดุ</span><span class="ggh-kpi-group-meta">ปีงบ ${esc(R.fy)} · ${esc(state.resCrop === 'all' ? 'ทุกพืช' : resCropName(state.resCrop))}</span></h4>` +
+    return `<h4><span>การจัดการวัสดุเหลือใช้ทางการเกษตร</span><span class="ggh-kpi-group-meta">ปีงบ ${esc(R.fy)} · ${esc(state.resCrop === 'all' ? 'ทุกพืช' : resCropName(state.resCrop))}</span></h4>` +
       dl([['พื้นที่จัดการ (ไร่)', fmt(sx.a, 2)], ['ก๊าซเรือนกระจกที่ลดได้ (ตันคาร์บอนไดออกไซด์เทียบเท่า)', fmtG(sx.g)], ['มูลค่า (บาท)', baht(sx.v)], ['เป้าหมาย (ไร่)', tg ? fmt(tg) : '–'],
         ['ร้อยละของเป้า', tg ? `${fmt(all.a / tg * 100, 1)}% <small>ทุกพืช</small>` : '–']]) +
       (methods.length ? `<ul>${methods.map((x) => `<li><span>${esc(x.m)}</span><span>${fmt(x.a, 2)} ไร่</span></li>`).join('')}</ul>` : '<p class="ggh-district-empty">ยังไม่มีการบันทึก</p>');
@@ -547,7 +547,7 @@
   function reportSection(code) {
     if (!reports()) return '';
     const v = (id) => { const x = reportValue(code, id); return x === null ? '–' : fmt(x); };
-    return `<h4><span>รายงานการจัดการเศษวัสดุ</span>${statusChip(reportFor(code)?.status)}</h4>` +
+    return `<h4><span>รายงานการจัดการวัสดุเหลือใช้ทางการเกษตร</span>${statusChip(reportFor(code)?.status)}</h4>` +
       dl([['ไถกลบ/ย่อยสลาย (ไร่)', v('R31')], ['แปรรูป (หมู่บ้าน/ชุมชน)', v('R30')], ['ส่งเสริม (ครั้ง)', v('R29')]]);
   }
   function marketSection(code, full) {
@@ -601,7 +601,7 @@
     if (state.tab === 'overview') {
       const R = res();
       $('dashTableSub').textContent = R ? `${state.resCrop === 'all' ? 'ทุกชนิดพืช' : resCropName(state.resCrop)} ปีงบประมาณ ${R.fy} · ร้อยละคิดจากพื้นที่จัดการทุกประเภททุกพืชเทียบกับเป้าหมายอำเภอ` : 'กำลังโหลด…';
-      cols = ['อำเภอ', ['พื้นที่จัดการ (ไร่)', 1], ['เป้าหมาย (ไร่)', 1], ['ร้อยละของเป้า', 2], ['ก๊าซเรือนกระจกที่ลดได้ (ตันคาร์บอนไดออกไซด์เทียบเท่า)', 1], ['เศษวัสดุ (ตัน)', 1], ['มูลค่า (บาท)', 1]];
+      cols = ['อำเภอ', ['พื้นที่จัดการ (ไร่)', 1], ['เป้าหมาย (ไร่)', 1], ['ร้อยละของเป้า', 2], ['ก๊าซเรือนกระจกที่ลดได้ (ตันคาร์บอนไดออกไซด์เทียบเท่า)', 1], ['วัสดุเหลือใช้ทางการเกษตร (ตัน)', 1], ['มูลค่า (บาท)', 1]];
       rows = codes.map((code) => ({ code, s: resSum(resCells({ d: code })), all: resSum(resCells({ d: code, crop: 'all' })), t: resTarget(code) }))
         .sort((a, b) => b.s.g - a.s.g || b.all.a - a.all.a).map(({ code, s: sx, all, t }) => {
           const p = t ? Math.round(all.a / t * 1000) / 10 : null;
@@ -839,7 +839,7 @@
       <dl class="ggh-bal-facts">
         <div><dt><span class="ggh-bal-key is-done"></span>จัดการแล้ว</dt><dd>${fmt(t.managedRai, 0)} ไร่ <small>(${fmt(pct, 1)}%)</small></dd></div>
         <div><dt><span class="ggh-bal-key is-left"></span>ยังไม่มีบันทึกการจัดการ</dt><dd>${fmt(t.atRiskRai, 0)} ไร่</dd></div>
-        <div><dt>พื้นที่เก็บเกี่ยว</dt><dd>${fmt(t.harvestedRai, 0)} ไร่${t.potentialTon ? ` <small>(เศษวัสดุ ≈ ${fmt(t.potentialTon, 0)} ตัน)</small>` : ''}</dd></div>
+        <div><dt>พื้นที่เก็บเกี่ยว</dt><dd>${fmt(t.harvestedRai, 0)} ไร่${t.potentialTon ? ` <small>(วัสดุเหลือใช้ทางการเกษตร ≈ ${fmt(t.potentialTon, 0)} ตัน)</small>` : ''}</dd></div>
         <div><dt>ประกาศขายในตลาด</dt><dd>${fmt(t.listedRai, 0)} ไร่ · ผู้รับซื้อ ${fmt(t.buyers)} ราย</dd></div>
       </dl>
       <p class="ggh-footnote">"ยังไม่มีบันทึก" ไม่ได้แปลว่าถูกเผา เป็นพื้นที่ที่ควรติดตาม ส่วนที่นำออกจากแปลงได้โดยไม่กระทบดินประมาณ ${t.removableTon ? fmt(t.removableTon, 0) + ' ตัน' : '–'} ส่วนที่เหลือควรไถกลบหรือคลุมดิน</p>`;

@@ -13,9 +13,9 @@
  * Super Admin, and phones are masked unless full numbers are explicitly requested.
  */
 const REPORT_GROUPS = [
-  { key: 'residue', title: 'ก. การจัดการเศษวัสดุและก๊าซเรือนกระจก', minRole: 'admin', sections: [
+  { key: 'residue', title: 'ก. การจัดการวัสดุเหลือใช้ทางการเกษตรและก๊าซเรือนกระจก', minRole: 'admin', sections: [
     { key: 'residue.summary', title: 'สรุปภาพรวม (พื้นที่ เป้าหมาย ก๊าซเรือนกระจกที่ลดได้ มูลค่า)' },
-    { key: 'residue.balance', title: 'สมดุลเศษวัสดุ: เก็บเกี่ยว ประกาศขาย ผู้รับซื้อ จัดการแล้ว คงเหลือ' },
+    { key: 'residue.balance', title: 'สมดุลวัสดุเหลือใช้ทางการเกษตร: เก็บเกี่ยว ประกาศขาย ผู้รับซื้อ จัดการแล้ว คงเหลือ' },
     { key: 'residue.map', title: 'แผนที่ก๊าซเรือนกระจกที่ลดได้รายอำเภอ' },
     { key: 'residue.methods', title: 'พื้นที่จัดการแยกตามประเภท พร้อมเป้าหมายและร้อยละ' },
     { key: 'residue.districts', title: 'รายอำเภอ: พื้นที่ เป้าหมาย ร้อยละ มูลค่า ก๊าซเรือนกระจก' },
@@ -34,9 +34,9 @@ const REPORT_GROUPS = [
     { key: 'reports.status', title: 'สถานะการส่งรายงาน' },
     { key: 'reports.indicators', title: 'ผลการดำเนินงานรายอำเภอ (R29–R31)' },
     { key: 'reports.series', title: 'ยอดสะสมรายครั้ง' }] },
-  { key: 'market', title: 'ง. ตลาดเศษวัสดุ', sections: [
+  { key: 'market', title: 'ง. ตลาดวัสดุเหลือใช้ทางการเกษตร', sections: [
     { key: 'market.districts', title: 'สรุปรายอำเภอ' },
-    { key: 'market.materials', title: 'สรุปตามชนิดเศษวัสดุ' },
+    { key: 'market.materials', title: 'สรุปตามชนิดวัสดุเหลือใช้ทางการเกษตร' },
     { key: 'market.plots', title: 'รายการแปลงพร้อมขาย (มีชื่อและเบอร์โทร)', role: 'mini' },
     { key: 'market.buyers', title: 'รายการจุดรับซื้อ (มีชื่อและเบอร์โทร)', role: 'mini' }] },
   { key: 'visits', title: 'จ. สถิติผู้เข้าชม', sections: [
@@ -49,9 +49,9 @@ const REPORT_GROUPS = [
 const REPORT_MAX_SECTIONS = 20;
 // Four report types (2.2.0). scope: 'district' needs a district; 'any' follows the chosen scope.
 const REPORT_TYPES = [
-  { key: 'district', title: 'รายงานอำเภอ', desc: 'ผลการจัดการ เป้าหมาย สมดุลเศษวัสดุ รายตำบล และรายเจ้าหน้าที่ ของอำเภอเดียว', scope: 'district',
+  { key: 'district', title: 'รายงานอำเภอ', desc: 'ผลการจัดการ เป้าหมาย สมดุลวัสดุเหลือใช้ทางการเกษตร รายตำบล และรายเจ้าหน้าที่ ของอำเภอเดียว', scope: 'district',
     sections: ['residue.summary', 'residue.balance', 'residue.methods', 'residue.subdistricts', 'residue.admins'] },
-  { key: 'province', title: 'รายงานจังหวัด', desc: 'ภาพรวมทั้งจังหวัด แผนที่ รายอำเภอ สมดุลเศษวัสดุ และรายชนิดพืช', scope: 'province', minRole: 'mini',
+  { key: 'province', title: 'รายงานจังหวัด', desc: 'ภาพรวมทั้งจังหวัด แผนที่ รายอำเภอ สมดุลวัสดุเหลือใช้ทางการเกษตร และรายชนิดพืช', scope: 'province', minRole: 'mini',
     sections: ['residue.summary', 'residue.map', 'residue.districts', 'residue.balance', 'residue.methods', 'residue.crops'] },
   { key: 'ghg', title: 'ภาคผนวกการคำนวณก๊าซเรือนกระจก', desc: 'สูตร ค่าพารามิเตอร์ แหล่งอ้างอิง และผลคำนวณรายชนิดพืช สำหรับผู้ตรวจสอบ', scope: 'any',
     sections: ['residue.ghgcrops', 'residue.params'] },
@@ -157,7 +157,7 @@ function reportData_(input, s) {
     (ctx.residue ? ' | ปีงบ ' + ctx.residue.fy + (ctx.residue.district ? ' อ.' + ctx.residue.districtName : ' ทั้งจังหวัด') : ''));
   return {
     status: 'success',
-    title: cleanText_(input.title, 150) || 'รายงานระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร จังหวัด' + provinceName_(),
+    title: cleanText_(input.title, 150) || 'รายงานระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร จังหวัด' + provinceName_(),
     office: officeName_(),
     generatedAt: dateTime_(new Date()),
     generatedBy: s.name + ' (' + roleLabel_(s.role) + ')',
@@ -206,7 +206,7 @@ const REPORT_BUILDERS = {
         { item: 'คงเหลือยังไม่เก็บเกี่ยว', value: round_(total - harvested, 2), unit: 'ไร่' },
         { item: 'คาดว่าจะเก็บเกี่ยว ' + ymText_(addMonth_(m, 1)), value: round_(next, 2), unit: 'ไร่' },
         { item: 'ช่วงเดือนเก็บเกี่ยว', value: '', unit: ymText_(c.firstMonth) + ' – ' + ymText_(c.lastMonth) },
-        { item: 'ชนิดเศษวัสดุ', value: '', unit: c.material || '–' }
+        { item: 'ชนิดวัสดุเหลือใช้ทางการเกษตร', value: '', unit: c.material || '–' }
       ],
       notes: ['ที่มา: ' + (getCropSummary_(false).source || 'ทะเบียนเกษตรกร') + ' นำเข้าเมื่อ ' + c.importedAt,
         'พื้นที่เก็บเกี่ยวเป็นค่าคาดการณ์ตามวันที่คาดว่าจะเก็บเกี่ยวในทะเบียนเกษตรกร']
@@ -314,7 +314,7 @@ const REPORT_BUILDERS = {
   'market.materials': function () {
     const p = getPublicSummary_(false);
     return {
-      columns: [col_('material', 'ชนิดเศษวัสดุ'), col_('plots', 'แปลง', 'number'), col_('area', 'พื้นที่ (ไร่)', 'number'), col_('buyers', 'จุดรับซื้อ', 'number'),
+      columns: [col_('material', 'ชนิดวัสดุเหลือใช้ทางการเกษตร'), col_('plots', 'แปลง', 'number'), col_('area', 'พื้นที่ (ไร่)', 'number'), col_('buyers', 'จุดรับซื้อ', 'number'),
         col_('capacity', 'รับซื้อได้ (ตัน/วัน)', 'number'), col_('price', 'ราคาเฉลี่ย (บาท/ไร่)', 'number')],
       rows: p.byMaterial.map(function (m) { return { material: m.material, plots: m.plots, area: m.areaRai, buyers: m.buyers, capacity: m.capacityTonPerDay, price: m.avgBuyerPriceBahtPerRai === null ? '' : m.avgBuyerPriceBahtPerRai }; })
     };
@@ -328,7 +328,7 @@ const REPORT_BUILDERS = {
         harvest: dateInput_(r[7]), lat: maybeNumber_(r[9]), lng: maybeNumber_(r[10]) };
     }).sort(function (a, b) { return a.district.localeCompare(b.district, 'th') || (a.harvest < b.harvest ? -1 : 1); });
     return {
-      columns: [col_('district', 'อำเภอ'), col_('name', 'ชื่อ-สกุล'), col_('phone', 'โทรศัพท์'), col_('crop', 'พืช'), col_('material', 'เศษวัสดุ'),
+      columns: [col_('district', 'อำเภอ'), col_('name', 'ชื่อ-สกุล'), col_('phone', 'โทรศัพท์'), col_('crop', 'พืช'), col_('material', 'วัสดุเหลือใช้ทางการเกษตร'),
         col_('area', 'พื้นที่'), col_('areaRai', 'ไร่', 'number'), col_('harvest', 'วันเก็บเกี่ยว'), col_('lat', 'ละติจูด', 'number', true), col_('lng', 'ลองจิจูด', 'number', true)],
       rows: rows,
       notes: ['ข้อมูลส่วนบุคคล ใช้ตามวัตถุประสงค์ที่เกษตรกรให้ความยินยอมเท่านั้น' + (ctx.unmask ? '' : ' (ปิดบังเบอร์โทร)')]

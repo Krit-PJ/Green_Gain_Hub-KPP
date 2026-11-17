@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1a7f37">
-  <meta name="description" content="Green Gain Hub กำแพงเพชร ตลาดและศูนย์จัดการเศษวัสดุการเกษตร: เกษตรกรประกาศขายฟางและใบอ้อย ผู้รับซื้อหาแปลงใกล้ตัว และข้อมูลการจัดการเศษวัสดุรายอำเภอ (ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร จังหวัดกำแพงเพชร)">
+  <meta name="description" content="Green Gain Hub กำแพงเพชร ตลาดและศูนย์จัดการวัสดุเหลือใช้ทางการเกษตร: เกษตรกรประกาศขายฟางและใบอ้อย ผู้รับซื้อหาแปลงใกล้ตัว และข้อมูลการจัดการวัสดุเหลือใช้ทางการเกษตรรายอำเภอ (ระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร จังหวัดกำแพงเพชร)">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.2.1">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.2.2">
 
   <style>
     * { box-sizing: border-box; }
@@ -63,7 +63,7 @@
       <img src="https://doaenews.doae.go.th/wp-content/uploads/2021/03/DOAE-2.png" class="h-8 sm:h-10 w-auto shrink-0" alt="กรมส่งเสริมการเกษตร">
       <div class="text-center min-w-0">
         <h1 class="ggh-topbar-title text-green-800 font-bold leading-tight">Green Gain Hub <span data-province>กำแพงเพชร</span></h1>
-        <p class="ggh-topbar-sub">ตลาดและศูนย์จัดการเศษวัสดุการเกษตร</p>
+        <p class="ggh-topbar-sub">ตลาดและศูนย์จัดการวัสดุเหลือใช้ทางการเกษตร</p>
         <!-- <p class="text-[10px] md:text-xs text-gray-500 font-medium">จังหวัดกำแพงเพชร</p> -->
       </div>
       <img src="https://upload.wikimedia.org/wikipedia/commons/f/fd/Seal_of_Kamphaeng_Phet_Province_%28color_version%2C_Thai_Fine_Art_Department%29.png" class="h-8 sm:h-10 w-auto shrink-0" alt="ตราจังหวัดกำแพงเพชร">
@@ -75,7 +75,7 @@
     <div id="loginPage" class="ggh-landing" data-tab="overview">
       <header class="ggh-intro">
         <div>
-          <p class="ggh-lede ggh-lede-lead">การสร้างมูลค่าจากเศษวัสดุทางการเกษตร การจัดการเศษวัสดุทางการเกษตร และการลดปริมาณก๊าซเรือนกระจกในภาคการเกษตร ในพื้นที่จังหวัด<span data-province>กำแพงเพชร</span></p>
+          <p class="ggh-lede ggh-lede-lead">การสร้างมูลค่าจากวัสดุเหลือใช้ทางการเกษตร การจัดการวัสดุเหลือใช้ทางการเกษตร และการลดปริมาณก๊าซเรือนกระจกในภาคการเกษตร ในพื้นที่จังหวัด<span data-province>กำแพงเพชร</span></p>
         </div>
         <p class="ggh-updated" id="dashUpdated" aria-live="polite">กำลังโหลดข้อมูล…</p>
       </header>
@@ -84,7 +84,7 @@
       <section class="ggh-doors" aria-labelledby="doorsTitle">
         <h2 id="doorsTitle" class="sr-only">คุณต้องการทำอะไร</h2>
         <article class="ggh-door ggh-door-sell">
-          <h3><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i> ขายเศษวัสดุ</h3>
+          <h3><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i> ขายวัสดุเหลือใช้ทางการเกษตร</h3>
           <p>สำหรับเกษตรกร ประกาศแปลงที่จะเก็บเกี่ยว ให้ผู้รับซื้อในพื้นที่เห็นและโทรหา ไม่ต้องเผา</p>
           <p class="ggh-door-fact" id="doorFactSell" hidden></p>
           <div class="ggh-door-actions">
@@ -93,7 +93,7 @@
           </div>
         </article>
         <article class="ggh-door ggh-door-buy">
-          <h3><i class="fa-solid fa-truck" aria-hidden="true"></i> รับซื้อเศษวัสดุ</h3>
+          <h3><i class="fa-solid fa-truck" aria-hidden="true"></i> รับซื้อวัสดุเหลือใช้ทางการเกษตร</h3>
           <p>สำหรับผู้ประกอบการ ดูแปลงพร้อมขาย วันเก็บเกี่ยว และระยะทางจากจุดรับซื้อของคุณ</p>
           <p class="ggh-door-fact" id="doorFactBuy" hidden></p>
           <div class="ggh-door-actions">
@@ -103,7 +103,7 @@
         </article>
         <article class="ggh-door ggh-door-staff">
           <h3><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> สำหรับเจ้าหน้าที่</h3>
-          <p>บันทึกการจัดการเศษวัสดุ ดูภาพรวมรายอำเภอ และออกรายงาน</p>
+          <p>บันทึกการจัดการวัสดุเหลือใช้ทางการเกษตร ดูภาพรวมรายอำเภอ และออกรายงาน</p>
           <p class="ggh-door-fact" id="doorFactStaff" hidden></p>
           <div class="ggh-door-actions">
             <button type="button" data-door="staff" class="is-main">เข้าสู่ระบบ / ลงทะเบียนเจ้าหน้าที่</button>
@@ -113,13 +113,13 @@
 
       <h2 class="ggh-data-title">ข้อมูลจังหวัด<span data-province>กำแพงเพชร</span></h2>
       <nav class="ggh-tabs" role="tablist" aria-label="เลือกมุมมองข้อมูล">
-        <button type="button" role="tab" id="tab-overview" aria-controls="loginPage" aria-selected="true" data-tab="overview">การจัดการเศษวัสดุ</button>
-        <button type="button" role="tab" id="tab-market" aria-controls="loginPage" aria-selected="false" data-tab="market">ตลาดเศษวัสดุ</button>
+        <button type="button" role="tab" id="tab-overview" aria-controls="loginPage" aria-selected="true" data-tab="overview">การจัดการวัสดุเหลือใช้ทางการเกษตร</button>
+        <button type="button" role="tab" id="tab-market" aria-controls="loginPage" aria-selected="false" data-tab="market">ตลาดวัสดุเหลือใช้ทางการเกษตร</button>
         <button type="button" role="tab" id="tab-crops" aria-controls="loginPage" aria-selected="false" data-tab="crops">สถานการณ์การเพาะปลูก</button>
         <button type="button" role="tab" id="tab-reports" aria-controls="loginPage" aria-selected="false" data-tab="reports">รายงานอำเภอ</button>
       </nav>
 
-      <section class="ggh-toolbar" data-tabs="overview" aria-label="ตัวเลือกข้อมูลการจัดการเศษวัสดุ">
+      <section class="ggh-toolbar" data-tabs="overview" aria-label="ตัวเลือกข้อมูลการจัดการวัสดุเหลือใช้ทางการเกษตร">
         <p class="ggh-res-scope" id="resScope">ปีงบประมาณ</p>
         <label class="ggh-asof">ปีงบประมาณ
           <select id="resFy"></select>
@@ -162,13 +162,13 @@
       </aside>
 
       <section class="ggh-panel ggh-balance hidden" id="resBalanceWrap" data-tabs="overview" aria-labelledby="resBalanceTitle">
-        <h3 id="resBalanceTitle" class="ggh-panel-title">เศษวัสดุที่จัดการได้ เทียบกับพื้นที่เก็บเกี่ยว</h3>
+        <h3 id="resBalanceTitle" class="ggh-panel-title">วัสดุเหลือใช้ทางการเกษตรที่จัดการได้ เทียบกับพื้นที่เก็บเกี่ยว</h3>
         <p class="ggh-panel-sub" id="resBalanceSub"></p>
         <div id="resBalance"></div>
       </section>
 
       <section class="ggh-panel ggh-resmethods" data-tabs="overview" aria-labelledby="resMethodsTitle">
-        <h3 id="resMethodsTitle" class="ggh-panel-title">พื้นที่จัดการเศษวัสดุ แยกตามประเภท</h3>
+        <h3 id="resMethodsTitle" class="ggh-panel-title">พื้นที่จัดการวัสดุเหลือใช้ทางการเกษตร แยกตามประเภท</h3>
         <p class="ggh-panel-sub" id="resMethodsSub"></p>
         <div class="ggh-target" id="resProgress"></div>
         <div class="ggh-methods" id="resMethods"></div>
@@ -203,7 +203,7 @@
       </section>
 
       <section class="ggh-panel ggh-materials" data-tabs="market" aria-labelledby="dashMaterialTitle">
-        <h3 id="dashMaterialTitle" class="ggh-panel-title">ตามชนิดเศษวัสดุ</h3>
+        <h3 id="dashMaterialTitle" class="ggh-panel-title">ตามชนิดวัสดุเหลือใช้ทางการเกษตร</h3>
         <p class="ggh-panel-sub">พื้นที่แปลงพร้อมขาย และจำนวนจุดรับซื้อของวัสดุแต่ละชนิด</p>
         <div id="dashMaterials" class="ggh-bars"></div>
         <p class="ggh-footnote" id="dashResidueNote"></p>
@@ -400,7 +400,7 @@
         <form class="ggh-dpanel hidden" id="hubPanelRegister" data-hubpanel="register" role="tabpanel" aria-labelledby="hubTabRegister" novalidate>
           <fieldset class="ggh-roles">
             <legend class="label-text">ลงทะเบียนเป็น</legend>
-            <label><input type="radio" name="role" value="farmer" checked><span><b>เกษตรกร</b> ขายเศษวัสดุ</span></label>
+            <label><input type="radio" name="role" value="farmer" checked><span><b>เกษตรกร</b> ขายวัสดุเหลือใช้ทางการเกษตร</span></label>
             <label><input type="radio" name="role" value="buyer"><span><b>ผู้รับซื้อ</b> ผู้ประกอบการ</span></label>
           </fieldset>
           <label class="label-text" for="regName">ชื่อ-นามสกุล / ชื่อบริษัท</label>
@@ -467,7 +467,7 @@
 
   <footer class="bg-green-900 text-white text-center py-6 mt-auto">
     <div class="container mx-auto px-4">
-      <p class="text-xs md:text-sm opacity-90 mb-2">ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร จังหวัดกำแพงเพชร</p>
+      <p class="text-xs md:text-sm opacity-90 mb-2">ระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร จังหวัดกำแพงเพชร</p>
       <h4 class="font-bold text-sm md:text-base mb-1">สำนักงานเกษตรจังหวัดกำแพงเพชร</h4>
       <p class="text-xs md:text-sm opacity-80 mb-3">กรมส่งเสริมการเกษตร กระทรวงเกษตรและสหกรณ์</p>
       <p class="ggh-counter" id="visitCounter" aria-live="polite" hidden>
@@ -482,10 +482,10 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=2.2.1"></script>
-  <script src="assets/api-client.js?v=2.2.1"></script>
-  <script src="assets/staff-auth.js?v=2.2.1"></script>
-  <script src="assets/dashboard.js?v=2.2.1" defer></script>
+  <script src="assets/config.js?v=2.2.2"></script>
+  <script src="assets/api-client.js?v=2.2.2"></script>
+  <script src="assets/staff-auth.js?v=2.2.2"></script>
+  <script src="assets/dashboard.js?v=2.2.2" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -1052,14 +1052,14 @@
           </div>
 
           <div>
-            <label class="label-text">ชนิดเศษวัสดุ <span class="required-mark">*</span></label>
-            <select class="input-field bg-gray-100 text-gray-700" name="materialType" disabled aria-label="ชนิดเศษวัสดุที่ระบบกำหนดอัตโนมัติ">
+            <label class="label-text">ชนิดวัสดุเหลือใช้ทางการเกษตร <span class="required-mark">*</span></label>
+            <select class="input-field bg-gray-100 text-gray-700" name="materialType" disabled aria-label="ชนิดวัสดุเหลือใช้ทางการเกษตรที่ระบบกำหนดอัตโนมัติ">
               ${MATERIAL_TYPES.map(opt => `<option value="${opt}" ${opt === automaticMaterial ? 'selected' : ''}>${opt}</option>`).join('')}
             </select>
             <input type="text" name="materialOther"
               value="${escapeHtml(f?.materialOther || '')}"
               class="input-field mt-2 ${(automaticMaterial === 'อื่นๆ') ? '' : 'hidden'}"
-              placeholder="ระบุชนิดเศษวัสดุ">
+              placeholder="ระบุชนิดวัสดุเหลือใช้ทางการเกษตร">
             <p class="text-xs text-gray-500 mt-1">ระบบกำหนดอัตโนมัติตามชนิดพืช</p>
           </div>
 
@@ -1130,7 +1130,7 @@
               <input type="text" name="materialOther"
                 value="${escapeHtml(b?.materialOther || '')}"
                 class="input-field mt-2 ${(b?.materialType === 'อื่นๆ') ? '' : 'hidden'}"
-                placeholder="ระบุชนิดเศษวัสดุ">
+                placeholder="ระบุชนิดวัสดุเหลือใช้ทางการเกษตร">
             </div>
             
             <div>
@@ -1343,7 +1343,7 @@
       if (role === 'buyer') {
         return `<b>${escapeHtml(item.name)}</b><br>ประเภท: ผู้รับซื้อ<br>รับซื้อ: ${escapeHtml(item.material)}<br>ความชื้น: ${escapeHtml(item.quality)}<br>ราคารับซื้อ: ${escapeHtml(item.price)} บ./ไร่`;
       }
-      return `<b>${escapeHtml(item.name)}</b><br>ประเภท: แปลงเกษตรกร<br>พืช: ${escapeHtml(item.crop)}<br>เศษวัสดุ: ${escapeHtml(item.material || '-')}<br>พื้นที่: ${escapeHtml(item.area)}<br>เก็บเกี่ยว: ${escapeHtml(item.harvest || '-')}`;
+      return `<b>${escapeHtml(item.name)}</b><br>ประเภท: แปลงเกษตรกร<br>พืช: ${escapeHtml(item.crop)}<br>วัสดุเหลือใช้ทางการเกษตร: ${escapeHtml(item.material || '-')}<br>พื้นที่: ${escapeHtml(item.area)}<br>เก็บเกี่ยว: ${escapeHtml(item.harvest || '-')}`;
     }
 
     function mobileActionLinks(item, role, compact) {
@@ -1584,7 +1584,7 @@
             return Swal.fire('แจ้งเตือน','กรุณาระบุวันปลูกและวันเก็บเกี่ยว','warning');
           }
           if (materialType === 'อื่นๆ' && !materialOther) {
-            return Swal.fire('แจ้งเตือน','กรุณาระบุชนิดเศษวัสดุอื่นๆ','warning');
+            return Swal.fire('แจ้งเตือน','กรุณาระบุชนิดวัสดุเหลือใช้ทางการเกษตรอื่นๆ','warning');
           }
 
           payload.crop = crop;
@@ -1606,7 +1606,7 @@
             return Swal.fire('แจ้งเตือน','กรุณากรอกข้อมูลรับซื้อให้ครบถ้วน','warning');
           }
           if (materialType === 'อื่นๆ' && !materialOther) {
-            return Swal.fire('แจ้งเตือน','กรุณาระบุชนิดเศษวัสดุอื่นๆ','warning');
+            return Swal.fire('แจ้งเตือน','กรุณาระบุชนิดวัสดุเหลือใช้ทางการเกษตรอื่นๆ','warning');
           }
 
           payload.materialType = materialType;
