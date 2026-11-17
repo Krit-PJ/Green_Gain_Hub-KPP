@@ -1,14 +1,15 @@
 /**
- * Green Gain Hub 1.6.0 — Super Admin / Admin.
+ * Green Gain Hub 2.0.0 — Super Admin / Mini Super Admin / Admin.
  *
  * Admin accounts are separate from farmer/buyer users and always need a
  * password (salted, iterated SHA-256). Admin calls go through doPost (JSON in a
  * text/plain body, so the browser sends no CORS preflight) because imports are
  * too large for the JSONP GET used by the public app.
  *
- * Roles
- *   super — everything below + API links, admin accounts, audit log
- *   admin — import crop data, manage import history and crop types
+ * Roles (level)
+ *   super (3) — everything
+ *   mini  (2) — same as super, but cannot create, edit, reset or promote to a Super Admin account
+ *   admin (1) — district recorder: records residue management and sees only the district on the account
  *
  * Admins sign in with a username (3–32 chars: a–z, 0–9, . _ -) and password.
  *
@@ -18,10 +19,13 @@
  */
 
 const ADMIN_SHEETS = {
-  admins: ['Username', 'Name', 'Role', 'Status', 'Pass_Hash', 'Salt', 'Created_At', 'Created_By', 'Last_Login', 'Updated_At', 'Telephone'],
+  admins: ['Username', 'Name', 'Role', 'Status', 'Pass_Hash', 'Salt', 'Created_At', 'Created_By', 'Last_Login', 'Updated_At', 'Telephone', 'District_Code'],
   admin_log: ['Time', 'Username', 'Name', 'Role', 'Action', 'Detail']
 };
-const ADMIN_ROLES = ['super', 'admin'];
+const ADMIN_ROLES = ['super', 'mini', 'admin'];
+const ADMIN_LEVEL = { admin: 1, mini: 2, super: 3 };
+function adminLevel_(role) { return ADMIN_LEVEL[role] || 0; }
+function roleLabel_(role) { return { super: 'Super Admin', mini: 'Mini Super Admin', admin: 'Admin' }[role] || role; }
 const ADMIN_SESSION_SECONDS = 7200; // 2 hours, refreshed on use
 const ADMIN_MAX_FAILS = 5;
 const ADMIN_LOCK_SECONDS = 900;
@@ -32,23 +36,39 @@ const ADMIN_METHODS = {
   adminLogoutServer: { role: 'admin', fn: function (a, s, t) { return adminLogoutServer(t); } },
   adminMeServer: { role: 'admin', fn: function (a, s) { return adminMeServer(s); } },
   adminChangePasswordServer: { role: 'admin', fn: function (a, s) { return adminChangePasswordServer(a[0], s); } },
-  cropTypesListServer: { role: 'admin', fn: function () { return cropTypesList_(true); } },
-  cropTypeSaveServer: { role: 'admin', fn: function (a, s) { return cropTypeSave_(a[0], s); } },
-  cropImportCheckServer: { role: 'admin', fn: function (a) { return cropImportCheck_(a[0]); } },
-  cropImportCommitServer: { role: 'admin', fn: function (a, s) { return cropImportCommit_(a[0], s); } },
-  cropImportsListServer: { role: 'admin', fn: function () { return cropImportsList_(); } },
-  cropImportDeleteServer: { role: 'admin', fn: function (a, s) { return cropImportDelete_(a[0], s); } },
-  cacheClearServer: { role: 'admin', fn: function (a, s) { return adminCacheClear_(s); } },
-  settingsGetServer: { role: 'super', fn: function () { return settingsGet_(); } },
-  settingsSaveServer: { role: 'super', fn: function (a, s) { return settingsSave_(a[0], s); } },
-  smartAgriTestServer: { role: 'super', fn: function () { return smartAgriTest_(); } },
-  adminsListServer: { role: 'super', fn: function () { return adminsList_(); } },
-  adminSaveServer: { role: 'super', fn: function (a, s) { return adminSave_(a[0], s); } },
-  adminResetPasswordServer: { role: 'super', fn: function (a, s) { return adminResetPassword_(a[0], s); } },
-  adminLogServer: { role: 'super', fn: function () { return adminLogList_(); } },
+  // residue records (Admin: own district only)
+  residueMetaServer: { role: 'admin', fn: function (a, s) { return residueMeta_(s); } },
+  residueSaveServer: { role: 'admin', fn: function (a, s) { return residueSave_(a[0], s); } },
+  residueListServer: { role: 'admin', fn: function (a, s) { return residueList_(a[0], s); } },
+  residueDeleteServer: { role: 'admin', fn: function (a, s) { return residueDelete_(a[0], s); } },
+  residuePhotoServer: { role: 'admin', fn: function (a, s) { return residuePhoto_(a[0], s); } },
   reportCatalogServer: { role: 'admin', fn: function (a, s) { return reportCatalog_(s); } },
   reportDataServer: { role: 'admin', fn: function (a, s) { return reportData_(a[0], s); } },
-  reportExportLogServer: { role: 'admin', fn: function (a, s) { return reportExportLog_(a[0], s); } }
+  reportExportLogServer: { role: 'admin', fn: function (a, s) { return reportExportLog_(a[0], s); } },
+  ghgValidationServer: { role: 'admin', fn: function () { return ghgValidationSuite_(); } },
+  // province-wide management (Mini Super Admin and Super Admin)
+  cropTypesListServer: { role: 'mini', fn: function () { return cropTypesList_(true); } },
+  cropTypeSaveServer: { role: 'mini', fn: function (a, s) { return cropTypeSave_(a[0], s); } },
+  cropImportCheckServer: { role: 'mini', fn: function (a) { return cropImportCheck_(a[0]); } },
+  cropImportCommitServer: { role: 'mini', fn: function (a, s) { return cropImportCommit_(a[0], s); } },
+  cropImportsListServer: { role: 'mini', fn: function () { return cropImportsList_(); } },
+  cropImportDeleteServer: { role: 'mini', fn: function (a, s) { return cropImportDelete_(a[0], s); } },
+  cacheClearServer: { role: 'mini', fn: function (a, s) { return adminCacheClear_(s); } },
+  ghgSettingsServer: { role: 'mini', fn: function () { return ghgSettingsGet_(); } },
+  ghgParamsSaveServer: { role: 'mini', fn: function (a, s) { return ghgParamsSave_(a[0], s); } },
+  ghgCropSaveServer: { role: 'mini', fn: function (a, s) { return ghgCropSave_(a[0], s); } },
+  ghgCalculateServer: { role: 'mini', fn: function (a) { return ghgCalculateServer_(a[0]); } },
+  residueSettingsServer: { role: 'mini', fn: function (a) { return residueSettingsGet_(a[0]); } },
+  residueTargetsSaveServer: { role: 'mini', fn: function (a, s) { return residueTargetsSave_(a[0], s); } },
+  residueMethodSaveServer: { role: 'mini', fn: function (a, s) { return residueMethodSave_(a[0], s); } },
+  siteSaveServer: { role: 'mini', fn: function (a, s) { return residueSiteSave_(a[0], s); } },
+  settingsGetServer: { role: 'mini', fn: function () { return settingsGet_(); } },
+  settingsSaveServer: { role: 'mini', fn: function (a, s) { return settingsSave_(a[0], s); } },
+  smartAgriTestServer: { role: 'mini', fn: function () { return smartAgriTest_(); } },
+  adminsListServer: { role: 'mini', fn: function () { return adminsList_(); } },
+  adminSaveServer: { role: 'mini', fn: function (a, s) { return adminSave_(a[0], s); } },
+  adminResetPasswordServer: { role: 'mini', fn: function (a, s) { return adminResetPassword_(a[0], s); } },
+  adminLogServer: { role: 'mini', fn: function () { return adminLogList_(); } }
 };
 
 /** JSON POST endpoint for the admin page. Body: {"method": "...", "args": [...], "token": "..."} */
@@ -98,8 +118,23 @@ function ensureAdminSchema_() {
   });
   Object.keys(ADMIN_SHEETS).forEach(function (n) { ensureSheet_(n, ADMIN_SHEETS[n]); });
   sheetByName_('admins').getRange('A:A').setNumberFormat('@');
-  sheetByName_('admins').getRange('K:K').setNumberFormat('@');
-  return 'PASS: admins and admin_log sheets are ready';
+  sheetByName_('admins').getRange('K:L').setNumberFormat('@');
+  return 'PASS: admins and admin_log sheets are ready' + migrateAdminRoles_();
+}
+
+/** 2.0.0: an "admin" without a district was a province-level importer in 1.6–1.7 → Mini Super Admin. */
+function migrateAdminRoles_() {
+  const sh = sheetByName_('admins');
+  const moved = [];
+  dataRows_(sh).forEach(function (r, i) {
+    if (text_(r[2]) === 'admin' && !text_(r[11])) {
+      sh.getRange(i + 2, 3).setValue('mini');
+      sh.getRange(i + 2, 10).setValue(new Date());
+      moved.push(normalizeUsername_(r[0]));
+    }
+  });
+  if (moved.length) adminAudit_({ username: 'setupSystem', name: 'setupSystem', role: 'super' }, 'admin_update', 'ย้าย Admin เดิม (ไม่มีอำเภอ) เป็น Mini Super Admin: ' + moved.join(', '));
+  return moved.length ? '\nINFO: ' + moved.length + ' admin account(s) without a district became Mini Super Admin: ' + moved.join(', ') : '';
 }
 
 function sheetByName_(name) {
@@ -168,7 +203,7 @@ function adminRecord_(username) {
   if (!row) return null;
   const r = sheetByName_('admins').getRange(row, 1, 1, ADMIN_SHEETS.admins.length).getValues()[0];
   return { row: row, username: normalizeUsername_(r[0]), name: text_(r[1]), role: text_(r[2]), status: text_(r[3]) || 'active',
-    hash: String(r[4] || ''), salt: String(r[5] || ''), phone: text_(r[10]) };
+    hash: String(r[4] || ''), salt: String(r[5] || ''), phone: text_(r[10]), district: text_(r[11]) };
 }
 
 function adminLoginServer(input) {
@@ -188,11 +223,12 @@ function adminLoginServer(input) {
   }
   cache.remove(failKey);
   const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-  const session = { username: a.username, role: a.role, name: a.name };
+  if (a.role === 'admin' && !a.district) throw new Error('บัญชีนี้ยังไม่ได้กำหนดอำเภอ กรุณาติดต่อผู้ดูแลระบบ');
+  const session = { username: a.username, role: a.role, name: a.name, district: a.role === 'admin' ? a.district : '' };
   cache.put('admin:' + token, JSON.stringify(session), ADMIN_SESSION_SECONDS);
   sheetByName_('admins').getRange(a.row, 9).setValue(new Date());
   adminAudit_(session, 'login', 'เข้าสู่ระบบผู้ดูแล');
-  return { status: 'success', token: token, username: a.username, name: a.name, role: a.role, expiresIn: ADMIN_SESSION_SECONDS };
+  return Object.assign({ status: 'success', token: token, expiresIn: ADMIN_SESSION_SECONDS }, adminMeServer(session));
 }
 
 function adminLogoutServer(token) {
@@ -213,14 +249,17 @@ function requireAdmin_(token, minRole) {
     cache.remove('admin:' + token);
     throw new Error('บัญชีผู้ดูแลถูกระงับหรือถูกลบ');
   }
-  if (minRole === 'super' && a.role !== 'super') throw new Error('เฉพาะ Super Admin เท่านั้น');
-  const session = { username: a.username, role: a.role, name: a.name };
+  if (adminLevel_(a.role) < adminLevel_(minRole || 'admin')) throw new Error(minRole === 'super' ? 'เฉพาะ Super Admin เท่านั้น' : 'เฉพาะ Super Admin และ Mini Super Admin เท่านั้น');
+  if (a.role === 'admin' && !a.district) throw new Error('บัญชีนี้ยังไม่ได้กำหนดอำเภอ กรุณาติดต่อผู้ดูแลระบบ');
+  const session = { username: a.username, role: a.role, name: a.name, district: a.role === 'admin' ? a.district : '' };
   cache.put('admin:' + token, JSON.stringify(session), ADMIN_SESSION_SECONDS);
   return session;
 }
 
 function adminMeServer(s) {
-  return { status: 'success', username: s.username, name: s.name, role: s.role, apiVersion: APP_VERSION };
+  const names = residueDistrictNames_();
+  return { status: 'success', username: s.username, name: s.name, role: s.role, roleLabel: roleLabel_(s.role), district: s.district || '',
+    districtName: names[s.district] || '', province: provinceName_(), apiVersion: APP_VERSION };
 }
 
 function adminChangePasswordServer(input, s) {
@@ -241,7 +280,7 @@ function adminChangePasswordServer(input, s) {
 function adminsList_() {
   return dataRows_(sheetByName_('admins')).map(function (r) {
     return { username: normalizeUsername_(r[0]), name: text_(r[1]), role: text_(r[2]), status: text_(r[3]) || 'active',
-      phone: displayPhone_(r[10]), createdAt: dateTime_(r[6]), createdBy: text_(r[7]), lastLogin: dateTime_(r[8]) };
+      phone: displayPhone_(r[10]), district: text_(r[11]), createdAt: dateTime_(r[6]), createdBy: text_(r[7]), lastLogin: dateTime_(r[8]) };
   });
 }
 
@@ -257,6 +296,9 @@ function adminSave_(input, s) {
   if (!name) throw new Error('กรุณากรอกชื่อ');
   if (ADMIN_ROLES.indexOf(role) < 0) throw new Error('บทบาทไม่ถูกต้อง');
   if (['active', 'disabled'].indexOf(status) < 0) throw new Error('สถานะไม่ถูกต้อง');
+  if (role === 'super' && s.role !== 'super') throw new Error('Mini Super Admin กำหนดบทบาท Super Admin ไม่ได้');
+  const district = role === 'admin' ? String(input.district || '') : '';
+  if (role === 'admin' && !residueDistrictNames_()[district]) throw new Error('Admin (ผู้บันทึกข้อมูล) ต้องเลือกอำเภอที่ลงทะเบียน');
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -264,20 +306,21 @@ function adminSave_(input, s) {
     const existing = adminRecord_(username);
     const now = new Date();
     if (existing) {
-      if (username === s.username && (role !== 'super' || status !== 'active')) throw new Error('ไม่สามารถลดสิทธิ์หรือระงับบัญชีของตนเองได้');
+      if (existing.role === 'super' && s.role !== 'super') throw new Error('Mini Super Admin จัดการบัญชี Super Admin ไม่ได้');
+      if (username === s.username && (role !== s.role || status !== 'active')) throw new Error('ไม่สามารถเปลี่ยนบทบาทหรือระงับบัญชีของตนเองได้');
       if (existing.role === 'super' && (role !== 'super' || status !== 'active') && activeSuperCount_() <= 1) {
         throw new Error('ต้องมี Super Admin ที่ใช้งานได้อย่างน้อย 1 คน');
       }
       sh.getRange(existing.row, 2, 1, 3).setValues([[name, role, status]]);
-      sh.getRange(existing.row, 10, 1, 2).setValues([[now, phone]]);
-      adminAudit_(s, 'admin_update', username + ' → ' + role + '/' + status);
+      sh.getRange(existing.row, 10, 1, 3).setValues([[now, phone, district]]);
+      adminAudit_(s, 'admin_update', username + ' → ' + role + '/' + status + (district ? ' อ.' + residueDistrictNames_()[district] : ''));
       return { status: 'success', message: 'บันทึกผู้ดูแลแล้ว' };
     }
     const password = validatePassword_(input.password);
     const salt = Utilities.getUuid();
-    sh.appendRow([username, name, role, status, hashPassword_(salt, password), salt, now, s.name + ' (' + s.username + ')', '', now, phone]);
+    sh.appendRow([username, name, role, status, hashPassword_(salt, password), salt, now, s.name + ' (' + s.username + ')', '', now, phone, district]);
     sh.getRange(sh.getLastRow(), 1).setNumberFormat('@');
-    adminAudit_(s, 'admin_create', username + ' (' + role + ')');
+    adminAudit_(s, 'admin_create', username + ' (' + role + (district ? ' อ.' + residueDistrictNames_()[district] : '') + ')');
     return { status: 'success', message: 'เพิ่มผู้ดูแลแล้ว ส่งรหัสผ่านเริ่มต้นให้ผู้ใช้ทางช่องทางที่ปลอดภัย' };
   } finally {
     lock.releaseLock();
@@ -292,6 +335,7 @@ function adminResetPassword_(input, s) {
   input = input || {};
   const a = adminRecord_(normalizeUsername_(input.username));
   if (!a) throw new Error('ไม่พบผู้ดูแล');
+  if (a.role === 'super' && s.role !== 'super') throw new Error('Mini Super Admin ตั้งรหัสผ่านให้ Super Admin ไม่ได้');
   const pw = validatePassword_(input.password);
   const salt = Utilities.getUuid();
   const sh = sheetByName_('admins');
@@ -322,7 +366,7 @@ function settingsGet_() {
       keyHint: keyHint_(p.getProperty('SMART_AGRI_API_KEY'))
     },
     summaryKeySet: !!p.getProperty('SUMMARY_API_KEY'),
-    publicEndpoints: ['?api=v1&endpoint=summary', '?api=v1&endpoint=crop&crop=…&season=…&district=…', '?api=v1&endpoint=health']
+    publicEndpoints: ['?api=v1&endpoint=summary', '?api=v1&endpoint=residue&fy=…', '?api=v1&endpoint=crop&crop=…&season=…&district=…', '?api=v1&endpoint=health']
   };
 }
 
@@ -365,6 +409,7 @@ function smartAgriTest_() {
 function adminCacheClear_(s) {
   const c = CacheService.getScriptCache();
   [SUMMARY_CACHE_KEY, SMART_AGRI_CACHE_KEY, CROP_SUMMARY_CACHE_KEY].forEach(function (k) { try { c.remove(k); } catch (err) { /* ignore */ } });
+  invalidateResidue_();
   adminAudit_(s, 'cache_clear', 'ล้าง cache ข้อมูลหน้าแรก');
   return { status: 'success', message: 'ล้าง cache แล้ว หน้าแรกจะแสดงข้อมูลล่าสุด' };
 }

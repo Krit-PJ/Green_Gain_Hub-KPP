@@ -42,7 +42,9 @@ const sheets = {
   admins: new Sheet('admins', [['Telephone', 'Name', 'Role', 'Status', 'Pass_Hash', 'Salt', 'Created_At', 'Created_By', 'Last_Login', 'Updated_At']]),
   Research_Refs: new Sheet('Research_Refs', [['ID', 'Type', 'SubType', 'BioRate', 'PriceMin', 'PriceMax', 'PriceAvg', 'Source'], ['r1', 'ฟางข้าว', '', 0.5, '', '', '', 'test']])
 };
-global.SpreadsheetApp = { openById: () => ({ getSheetByName: (n) => sheets[n] || null, insertSheet: (n) => (sheets[n] = new Sheet(n)) }) };
+global.SpreadsheetApp = { openById: () => ({ getId: () => 'SS', getSheetByName: (n) => sheets[n] || null, insertSheet: (n) => (sheets[n] = new Sheet(n)) }) };
+const photoFolder = { getId: () => 'fo1', getName: () => 'photos', getFoldersByName: () => ({ hasNext: () => false }), createFolder() { return photoFolder; }, createFile: () => ({ getId: () => 'fi1' }) };
+global.DriveApp = { getFileById: () => ({ getParents: () => ({ hasNext: () => true, next: () => photoFolder }) }), getFolderById: () => photoFolder, getRootFolder: () => photoFolder };
 let props = { SUPER_ADMIN_PHONE: 'Krit', SUPER_ADMIN_PASSWORD: 'Start1234' }; // legacy property name, read as a username
 global.PropertiesService = { getScriptProperties: () => ({
   getProperty: (k) => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = String(v); }, deleteProperty: (k) => { delete props[k]; } }) };
@@ -69,7 +71,7 @@ global.UrlFetchApp = { fetchAll: () => { throw new Error('no network in tests');
 console.log = () => {}; // setupSystem() logs its report; keep test output short
 
 const dir = path.join(__dirname, '..', 'apps-script');
-const src = ['Districts.gs', 'Code.gs', 'Admin.gs', 'Crops.gs', 'Counter.gs', 'Reports.gs'].map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
+const src = ['Districts.gs', 'Code.gs', 'Admin.gs', 'Crops.gs', 'Counter.gs', 'Reports.gs', 'Ghg.gs', 'Residue.gs'].map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
 const api = new Function(src + '; return { doGet, doPost, setupSystem, buildCropSummary_, getCropDetail_, validateCropImport_, hashPassword_, requireAdmin_ };')();
 const parser = require('../frontend/assets/crop-import.js');
 const sample = parser.parse(require('./fixtures/rice-naphi-2569-70-harvest.json'));
@@ -100,15 +102,23 @@ assert(post('getUserProfileServer', [], T).error === 'Method not allowed', 'doPo
 for (let i = 0; i < 5; i++) post('adminLoginServer', [{ username: 'somchai', password: 'bad' + i + 'aaaa' }]);
 assert(/15 นาที/.test(post('adminLoginServer', [{ username: 'somchai', password: 'x' }]).error), 'account must lock after 5 failed attempts');
 
-ok(post('adminSaveServer', [{ username: 'admin.khanu', phone: '0899000003', name: 'Admin อำเภอ', role: 'admin', password: 'Admin1234' }], T), 'create admin');
-assert(/8–128/.test(post('adminSaveServer', [{ username: 'weakpw', name: 'x', role: 'admin', password: 'short' }], T).error), 'weak password must be rejected');
+ok(post('adminSaveServer', [{ username: 'admin.khanu', phone: '0899000003', name: 'Mini อำเภอ', role: 'mini', password: 'Admin1234' }], T), 'create mini super admin');
+assert(/เลือกอำเภอ/.test(post('adminSaveServer', [{ username: 'rec.nodist', name: 'x', role: 'admin', password: 'Admin1234' }], T).error), 'district admin must have a district');
+ok(post('adminSaveServer', [{ username: 'rec.khanu', name: 'ผู้บันทึก ขาณุ', role: 'admin', district: '6204', password: 'Admin1234' }], T), 'create district admin');
+const D = ok(post('adminLoginServer', [{ username: 'rec.khanu', password: 'Admin1234' }]), 'district admin login');
+assert(D.district === '6204' && D.districtName === 'ขาณุวรลักษบุรี' && D.roleLabel === 'Admin', 'district admin session must carry the district');
+['settingsGetServer', 'adminsListServer', 'cropImportsListServer', 'ghgSettingsServer', 'adminLogServer'].forEach((m) => assert(/Mini Super Admin/.test(post(m, [{}], D.token).error), 'district admin must not call ' + m));
+assert(/8–128/.test(post('adminSaveServer', [{ username: 'weakpw', name: 'x', role: 'mini', password: 'short' }], T).error), 'weak password must be rejected');
 const A = ok(post('adminLoginServer', [{ username: 'admin.khanu', password: 'Admin1234' }]), 'admin login').token;
-assert(/เฉพาะ Super Admin/.test(post('settingsGetServer', [], A).error), 'admin must not read settings');
-assert(/เฉพาะ Super Admin/.test(post('adminsListServer', [], A).error), 'admin must not manage admins');
-assert(/ไม่สามารถลดสิทธิ์/.test(post('adminSaveServer', [{ username: 'krit', name: 'Super', role: 'admin', status: 'active' }], T).error), 'super must not demote self');
+assert(post('settingsGetServer', [], A).ok, 'mini super admin may read settings');
+assert(/Super Admin/.test(post('adminSaveServer', [{ username: 'krit', name: 'x', role: 'super', status: 'disabled' }], A).error), 'mini must not touch a Super Admin');
+assert(/Super Admin/.test(post('adminSaveServer', [{ username: 'new.super', name: 'x', role: 'super', password: 'Admin1234' }], A).error), 'mini must not create a Super Admin');
+assert(/Super Admin/.test(post('adminResetPasswordServer', [{ username: 'krit', password: 'Other1234' }], A).error), 'mini must not reset a Super Admin password');
+ok(post('adminSaveServer', [{ username: 'rec.khanu', name: 'ผู้บันทึก ขาณุ', role: 'admin', district: '6204' }], A), 'mini may edit a district admin');
+assert(/ไม่สามารถเปลี่ยนบทบาท/.test(post('adminSaveServer', [{ username: 'krit', name: 'Super', role: 'mini', status: 'active' }], T).error), 'super must not demote self');
 const admins = ok(post('adminsListServer', [], T), 'list admins');
-assert(admins.length === 2 && admins[1].username === 'admin.khanu' && admins[1].phone === '0899000003' && !JSON.stringify(admins).includes(superRow[4]), 'admin list wrong or leaks password hashes');
-assert(/ชื่อผู้ใช้ต้องยาว/.test(post('adminSaveServer', [{ username: 'a b', name: 'x', role: 'admin', password: 'Admin1234' }], T).error), 'invalid usernames must be rejected');
+assert(admins.length === 3 && admins[1].username === 'admin.khanu' && admins[2].district === '6204' && admins[1].phone === '0899000003' && !JSON.stringify(admins).includes(superRow[4]), 'admin list wrong or leaks password hashes');
+assert(/ชื่อผู้ใช้ต้องยาว/.test(post('adminSaveServer', [{ username: 'a b', name: 'x', role: 'mini', password: 'Admin1234' }], T).error), 'invalid usernames must be rejected');
 
 /* ---------- settings: keys are write-only ---------- */
 ok(post('settingsSaveServer', [{ smartAgriKey: 'kpp_secretvalue1234567890' }], T), 'save smart agri key');
@@ -171,7 +181,7 @@ assert(ok(post('cropTypesListServer', [], A), 'types').some((t) => t.crop === '�
 /* ---------- public API ---------- */
 api.doGet({ parameter: { api: 'v1', endpoint: 'summary', refresh: '1' } });
 const pub = JSON.parse(lastOut.body);
-assert(pub.ok && pub.apiVersion === '1.7.0' && pub.data.crops.ok && pub.data.crops.crops[0].crop === 'ข้าวนาปี', 'summary must include crops');
+assert(pub.ok && pub.apiVersion === '2.0.0' && pub.data.crops.ok && pub.data.crops.crops[0].crop === 'ข้าวนาปี', 'summary must include crops');
 assert(!lastOut.body.includes(superRow[4]) && !lastOut.body.includes('0899000003') && !lastOut.body.includes('admin.khanu'), 'public summary must not leak admin data');
 api.doGet({ parameter: { api: 'v1', endpoint: 'crop', crop: 'ข้าวนาปี', district: '6204' } });
 const det = JSON.parse(lastOut.body);

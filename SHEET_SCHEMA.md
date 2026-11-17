@@ -22,4 +22,12 @@
 
 | `visit_stats` (1.7.0) | Date, Visits, Updated_At | 1 แถว = 1 วัน (yyyy-MM-dd เวลาไทย) ยอดรวมทั้งหมดอยู่ที่ `Config!visit_count` |
 
+| `admins` (2.0.0) | + District_Code (คอลัมน์ L) | Role = `super` / `mini` / `admin` (Admin ต้องมีอำเภอ) |
+| `residue_records` (2.0.0) | Record_ID, Record_Date, Fiscal_Year, District_Code, District_Name, Subdistrict_Code, Subdistrict_Name, Crop_Key, Crop_Name, Crop_Other, Method, Method_Other, Area_Rai, Lat, Lng, Photo_IDs, Biomass_Mode, MB_kg_rai, Cf, Fresh_kg_rai, DMF, Data_Status, Reference, Note, Recorded_By, Recorder_Name, Confirmed_At, Status, Created_At, Updated_At, Updated_By | Status = `active`/`deleted` (ลบแบบเก็บประวัติ) ภาพอยู่ในโฟลเดอร์ Drive `GGH ภาพการจัดการเศษวัสดุ` |
+| `residue_methods` (2.0.0) | Method, Crop_Key, Needs_Detail, Active, Sort_Order, Updated_At | Crop_Key ว่าง = ทุกพืช |
+| `residue_targets` (2.0.0) | Fiscal_Year, District_Code, District_Name, Method, Target_Rai, Officers, Note, Updated_At, Updated_By | Method ว่าง = เป้ารวมอำเภอ |
+| `ghg_params` (2.0.0) | Key, Value, Unit, Description | EF, GWP, ชุดค่า, โหมด, เลขชุดค่า |
+| `ghg_crops` (2.0.0) | Crop_Key, Crop_Name, Consumed_t_ha, Cf, Residue_t_rai, Residue_Name, Residue_Reference, IPCC_Reference, Active, Sort_Order, Updated_At, Updated_By | ค่าว่าง = ไม่มีค่ามาตรฐาน |
+| `Config` (2.0.0) | + province_name, office_name | |
+
 ห้ามแก้ไขชีตเหล่านี้ด้วยมือระหว่างใช้งาน ให้จัดการผ่านหน้า `admin.html`

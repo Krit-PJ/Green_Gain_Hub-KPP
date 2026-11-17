@@ -1,4 +1,4 @@
-/* Green Gain Hub 1.6.0 — admin pages. Uses the colour tokens from dashboard.css. */
+/* Green Gain Hub 2.0.0 — admin pages. Uses the colour tokens from dashboard.css. */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 .hidden { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -147,4 +147,68 @@ input:focus, select:focus { outline: none; border-color: var(--ggh-green); box-s
   body.is-printing-report .adm-report-sec tr { break-inside: avoid; }
   body.is-printing-report .adm-report-sec h2 { break-after: avoid; }
   body.is-printing-report .adm-report-sec th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* ---------- 2.0.0 residue records ---------- */
+.adm-rec { max-width: 46rem; }
+.adm-rec-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+.adm-rec-grid label { display: grid; gap: .25rem; font-weight: 600; font-size: .9rem; }
+.adm-rec-set { border: 0; display: grid; gap: .5rem; }
+.adm-rec-set legend { font-weight: 600; font-size: .9rem; margin-bottom: .35rem; }
+.adm-chips button { display: inline-flex; align-items: center; gap: .3rem; }
+.adm-chips button[disabled] { opacity: .4; cursor: not-allowed; text-decoration: line-through; }
+.adm-rec-estimate { min-height: 1.4em; font-size: .92rem; background: #eef6ef; border-radius: 8px; padding: .45rem .7rem; }
+.adm-rec-estimate:empty { display: none; }
+.adm-gps { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.adm-gps-text { flex: 1 1 14rem; font-variant-numeric: tabular-nums; font-size: .92rem; }
+.adm-photo-pick { display: flex !important; align-items: center; justify-content: center; min-height: 52px; border: 2px dashed #b9cbbf; border-radius: 10px; background: #f9fbf9; cursor: pointer; font-weight: 600; }
+.adm-photo-pick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.adm-photo-pick:focus-within { outline: 2px solid var(--ggh-green-dark); outline-offset: 2px; }
+.adm-photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+.adm-photos:empty { display: none; }
+.adm-photos figure { position: relative; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; background: var(--ggh-zero); }
+.adm-photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.adm-photo-wait { display: grid; place-items: center; height: 100%; font-size: .8rem; color: var(--ggh-muted); }
+.adm-photos button { position: absolute; top: .25rem; right: .25rem; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: 1.1rem; line-height: 1; }
+.adm-rec-more { border: 1px solid var(--ggh-line); border-radius: 10px; padding: .6rem .85rem; display: grid; gap: .6rem; }
+.adm-rec-more[open] { padding-bottom: .9rem; }
+.adm-rec-more summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; gap: .35rem; }
+.adm-rec-more label { display: grid; gap: .25rem; font-weight: 600; font-size: .9rem; }
+.adm-confirm-check { background: #fffaf0; border-left: 4px solid var(--ggh-straw); padding: .55rem .75rem; border-radius: 0 8px 8px 0; }
+.adm-result .adm-note { margin-top: .5rem; font-weight: 400; color: var(--ggh-ink); }
+
+.adm-filters { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); align-items: end; background: var(--ggh-surface); border: 1px solid var(--ggh-line); border-radius: var(--ggh-radius-lg); padding: .85rem 1rem; }
+.adm-filters label { display: grid; gap: .25rem; font-weight: 600; font-size: .85rem; }
+.adm-recs-sum { font-size: .95rem; }
+.adm-recs { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr)); }
+.adm-rec-card { background: var(--ggh-surface); border: 1px solid var(--ggh-line); border-radius: var(--ggh-radius-lg); padding: .85rem 1rem; display: grid; gap: .3rem; font-size: .9rem; }
+.adm-rec-card header { display: flex; flex-wrap: wrap; gap: .4rem .6rem; align-items: baseline; }
+.adm-rec-card header b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.adm-rec-card footer { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .2rem; }
+.adm-rec-card footer button { min-height: 36px; padding: 0 .7rem; border-radius: 8px; border: 1px solid #cfd8d2; font-size: .85rem; font-weight: 600; }
+.adm-rec-card footer button.danger { color: #a12a1f; border-color: #e7c5c1; }
+.adm-dialog { border: 0; border-radius: var(--ggh-radius-lg); padding: 1rem; width: min(52rem, calc(100% - 1.5rem)); max-height: 90vh; }
+.adm-dialog::backdrop { background: rgba(0,0,0,.55); }
+.adm-dialog-body { display: grid; gap: .6rem; margin-bottom: .75rem; }
+.adm-dialog-body img { width: 100%; height: auto; border-radius: 8px; }
+.adm-bullets { margin-left: 1.1rem; display: grid; gap: .3rem; font-size: .9rem; }
+.adm-inline { display: flex !important; align-items: center; gap: .5rem; font-weight: 600; font-size: .9rem; }
+.adm-inline select { width: auto; }
+.adm-tg-table input { min-width: 6.5rem; text-align: right; min-height: 38px; padding: .3rem .5rem; }
+.adm-tg-table tfoot td { font-weight: 700; background: #f6f8f5; }
+
+/* District map in reports (SVG, no tiles) */
+.adm-map { margin: .5rem 0; display: grid; gap: .4rem; justify-items: center; }
+.adm-map svg { width: 100%; max-width: 30rem; height: auto; }
+.adm-map text { font-size: 9.5px; font-weight: 700; fill: #1b2a20; paint-order: stroke; stroke: rgba(255,255,255,.85); stroke-width: 2.5px; }
+.adm-map text.on-dark { fill: #fff; stroke: rgba(0,0,0,.35); }
+.adm-map figcaption { display: flex; flex-wrap: wrap; gap: .3rem .8rem; font-size: .78rem; justify-content: center; }
+.adm-map figcaption i { display: inline-block; width: .9rem; height: .9rem; border-radius: 3px; vertical-align: -2px; margin-right: .25rem; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.adm-map path { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+@media print { body.is-printing-report .adm-map svg { max-width: 15cm; } body.is-printing-report .adm-map { break-inside: avoid; } }
+@media (max-width: 600px) {
+  .adm-top { padding: .6rem .8rem; }
+  .adm-brand { font-size: .95rem; }
+  .adm-form, .adm-form-inline, .adm-card { padding: .9rem; }
+  .adm-report { padding: 1rem; }
 }

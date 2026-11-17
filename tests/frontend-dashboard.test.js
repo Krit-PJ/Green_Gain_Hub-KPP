@@ -15,7 +15,7 @@ new vm.Script(js, { filename: 'frontend/assets/dashboard.js' });
 ['id="loginPage"', 'id="loginPhone"', 'id="loginBtn"', 'onclick="login()"', "toggleAuth('register')", 'id="registerPage"'].forEach(s => assert(html.includes(s), 'login markup missing: ' + s));
 ['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashSearch"',
   'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="reports"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=1.7.0') && html.includes('assets/dashboard.css?v=1.7.0'), 'dashboard assets are not linked');
+assert(html.includes('assets/dashboard.js?v=2.0.0') && html.includes('assets/dashboard.css?v=2.0.0'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
@@ -41,3 +41,13 @@ assert(/CC BY 4\.0/.test(geo.attribution) && /CC BY 4\.0/.test(js), 'boundary da
 
 assert(css.includes('prefers-reduced-motion'), 'reduced-motion rule missing');
 console.log('PASS: public dashboard markup, aggregate-only API use, boundaries and attribution');
+
+// 2.0.0: residue management tab, crop icons on the map, crop cards, recording form and roles.
+assert(html.includes('ระบบศูนย์กลางเชื่อมโยงการจัดการเศษวัสดุทางการเกษตร') && html.includes('การลดปริมาณก๊าซเรือนกระจกในภาคการเกษตร'), 'new system name and lede missing');
+assert(/data-tab="overview">การจัดการเศษวัสดุ</.test(html) && /data-tab="crops">สถานการณ์การเพาะปลูก</.test(html), 'tab names must be renamed');
+assert(html.includes('id="resCropIcons"') && html.includes('id="resMethods"') && html.includes('id="resProgress"') && html.includes('id="resFy"'), 'residue tab markup missing');
+assert(!/ggh-cropmonths" data-tabs="overview/.test(html), 'old overview cards must be removed from the residue tab');
+assert(admin.includes('id="recForm"') && admin.includes('capture="environment"') && admin.includes('name="confirmed"') && admin.includes('id="recGpsBtn"'), 'recording form missing');
+assert(admin.includes('value="mini"') && admin.includes('id="adminDistrict"') && admin.includes('data-preset="district"') && admin.includes('data-preset="province"'), 'roles / report presets missing');
+const dash = fs.readFileSync(path.join(__dirname, '..', 'frontend', 'assets', 'dashboard.js'), 'utf8');
+assert(dash.includes("endpoint: 'residue'") && dash.includes('resGhg') && dash.includes('data-province'), 'dashboard must load residue data');

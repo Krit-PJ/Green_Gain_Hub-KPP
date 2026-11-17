@@ -114,3 +114,13 @@ Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts
 - Admin: `reportCatalogServer()` → หมวด/ส่วนรายงานที่สิทธิ์นี้เลือกได้ และรายการพืช
 - Admin: `reportDataServer({sections:[…], crop, season, asOf, title, unmaskPhones})` → `{ title, generatedAt, generatedBy, phonesMasked, sections:[{ key, title, columns, rows, totals, notes }] }` (สูงสุด 20 ส่วน; ส่วน `market.plots`, `market.buyers`, `audit.log` เฉพาะ Super Admin; `unmaskPhones` มีผลเฉพาะ Super Admin)
 - Admin: `reportExportLogServer({format:'print'|'xlsx'|'csv', sections})` บันทึกการส่งออก
+
+## 2.0.0: การจัดการเศษวัสดุและ GHG
+
+- `GET /exec?api=v1&endpoint=residue[&fy=2570]` (สาธารณะ, cache 5 นาที, ไม่มีชื่อ พิกัด ภาพ หรือรหัสรายการ) →
+  `{ fy, fyRange, fiscalYears, province, params:{label, gwpSet, combinedEf, mode, version}, crops, methods, cells:[{d, c, m, n, a, t, g, ch4, n2o, ch4e, n2oe, b, x}], totals, targets:{total, officers, byMethod, byDistrict}, boundary }`
+  - `cells` = ผลรวม อำเภอ × พืช × ประเภท: `a` ไร่, `t` ตันเศษวัสดุ, `g` tCO2e ที่ลดได้, `x` ไร่ที่ยังไม่คำนวณ GHG
+- `summary` มี `province` เพิ่ม
+- Admin (ทุกระดับ, Admin เห็นเฉพาะอำเภอตัวเอง): `residueMetaServer`, `residueSaveServer`, `residueListServer`, `residueDeleteServer`, `residuePhotoServer`, `ghgValidationServer`
+- Mini Super Admin / Super Admin: `ghgSettingsServer`, `ghgParamsSaveServer`, `ghgCropSaveServer`, `ghgCalculateServer`, `residueSettingsServer`, `residueTargetsSaveServer`, `residueMethodSaveServer`, `siteSaveServer` และเมธอดผู้ดูแลเดิมทั้งหมด (Mini จัดการบัญชี Super Admin ไม่ได้)
+- รายงานกลุ่ม `residue.*` (summary, map, methods, districts, crops, subdistricts, admins, records, params) รับ `fy`, `district`
