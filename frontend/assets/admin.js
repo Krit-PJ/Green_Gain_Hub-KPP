@@ -568,6 +568,8 @@
   const cellText = (v, type) => (v === null || v === undefined || v === '' ? '' : type === 'number' && typeof v === 'number' ? fmt(v, numDigits(v)) : String(v));
   // printHide columns stay on screen and in Excel/CSV but are left out of the printed page.
   const cls = (c) => [c.type === 'number' ? 'num' : '', c.printHide ? 'print-hide' : ''].join(' ').trim();
+  // 2.4.3: "ชื่อคอลัมน์ (หน่วย)" → name on the first line, unit on the second, so long headers do not widen the table.
+  const headLabel = (s) => { const m = String(s == null ? '' : s).match(/^(.+?)\s*(\([^()]+\))$/); return m ? `${esc(m[1])}<span class="adm-th-unit">${esc(m[2])}</span>` : esc(s); };
   function renderReport(d) {
     const doc = $('reportDoc');
     doc.classList.remove('hidden');
@@ -583,7 +585,7 @@
         <h2>${esc(sec.group)}: ${esc(sec.title)}</h2>
         ${sec.subtitle ? `<p class="adm-muted">${esc(sec.subtitle)}</p>` : ''}
         ${sec.map ? mapSvg(sec.map) : ''}
-        <div class="adm-report-tablewrap"><table class="${sec.columns.filter((c) => !c.printHide).length > 9 ? 'is-wide' : ''}"><thead><tr>${sec.columns.map((c) => `<th class="${cls(c)}">${esc(c.label)}</th>`).join('')}</tr></thead>
+        <div class="adm-report-tablewrap"><table class="${sec.columns.filter((c) => !c.printHide).length > 9 ? 'is-wide' : ''}"><thead><tr>${sec.columns.map((c) => `<th class="${cls(c)}" scope="col">${headLabel(c.label)}</th>`).join('')}</tr></thead>
         <tbody>${sec.rows.length ? sec.rows.map((r) => `<tr>${sec.columns.map((c) => `<td class="${cls(c)}">${esc(cellText(r[c.key], c.type))}</td>`).join('')}</tr>`).join('')
           : `<tr><td colspan="${sec.columns.length}" class="adm-muted">ไม่มีข้อมูล</td></tr>`}</tbody>
         ${sec.totals ? `<tfoot><tr>${sec.columns.map((c) => `<td class="${cls(c)}">${esc(cellText(sec.totals[c.key], c.type))}</td>`).join('')}</tr></tfoot>` : ''}
@@ -603,11 +605,12 @@
     if (!rep.data) return;
     let style = $('reportPageStyle');
     if (!style) { style = document.createElement('style'); style.id = 'reportPageStyle'; document.head.appendChild(style); }
-    // auto: portrait pages, wide sections on named landscape pages; or one orientation for the whole report.
-    const o = $('reportForm').orientation.value;
-    style.textContent = o === 'auto'
-      ? '@page { size: A4 portrait; margin: 12mm; } @page wide { size: A4 landscape; margin: 10mm; }'
-      : `@page { size: A4 ${o}; margin: ${o === 'landscape' ? 10 : 12}mm; } @page wide { size: A4 ${o}; margin: ${o === 'landscape' ? 10 : 12}mm; }`;
+    // 2.4.3: one orientation for the whole report. Chrome lays the whole document out at one width, so mixing
+    // portrait and landscape pages cut wide tables at the page edge. auto = landscape when any section is wide.
+    const pick = $('reportForm').orientation.value;
+    const o = pick === 'auto' ? (rep.data.sections.some((x) => x.landscape) ? 'landscape' : 'portrait') : pick;
+    const mm = o === 'landscape' ? 10 : 12;
+    style.textContent = `@page { size: A4 ${o}; margin: ${mm}mm; } @page wide { size: A4 ${o}; margin: ${mm}mm; }`;
     document.body.classList.toggle('print-all-landscape', o === 'landscape');
     document.body.classList.add('is-printing-report');
     logExport('print');
