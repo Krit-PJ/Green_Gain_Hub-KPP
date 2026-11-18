@@ -18,9 +18,9 @@ assert(!html.includes('id="loginCard"') && !html.includes('id="registerPage"') &
 assert((html.match(/<dialog class="ggh-dialog"/g) || []).length === 2 && (html.match(/data-close aria-label="ปิดหน้าต่าง"/g) || []).length === 2, 'two dialogs, each with a close button');
 assert(html.includes('assets/staff-auth.js') && !/name="password"[^>]*type="password"|type="password"/.test(html), 'officer popup uses the shared module and has no password field');
 assert(html.includes('admin.html#admin') && /sell: \['register', 'farmer'\]/.test(html), 'admin link and shareable #sell/#buy links');
-['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashSearch"',
-  'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="reports"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html#admin"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=2.2.2') && html.includes('assets/dashboard.css?v=2.2.2'), 'dashboard assets are not linked');
+['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashDistrictSel"',
+  'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html#admin"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
+assert(html.includes('assets/dashboard.js?v=2.3.0') && html.includes('assets/dashboard.css?v=2.3.0'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
@@ -48,9 +48,8 @@ assert(css.includes('prefers-reduced-motion'), 'reduced-motion rule missing');
 console.log('PASS: public dashboard markup, aggregate-only API use, boundaries and attribution');
 
 // 2.0.0: residue management tab, crop icons on the map, crop cards, recording form and roles.
-assert(html.includes('ระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร') && html.includes('การลดปริมาณก๊าซเรือนกระจกในภาคการเกษตร'), 'new system name and lede missing');
-assert(/data-tab="overview">การจัดการวัสดุเหลือใช้ทางการเกษตร</.test(html) && /data-tab="crops">สถานการณ์การเพาะปลูก</.test(html), 'tab names must be renamed');
-assert(html.includes('id="resCropIcons"') && html.includes('id="resMethods"') && html.includes('id="resProgress"') && html.includes('id="resFy"'), 'residue tab markup missing');
+assert(html.includes('ระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร'), 'system name missing');
+assert(html.includes('id="resCropIcons"') && html.includes('id="resMethods"') && html.includes('id="resFy"'), 'residue tab markup missing');
 assert(!/ggh-cropmonths" data-tabs="overview/.test(html), 'old overview cards must be removed from the residue tab');
 assert(admin.includes('id="recForm"') && admin.includes('capture="environment"') && admin.includes('name="confirmed"') && admin.includes('id="recGpsBtn"'), 'recording form missing');
 assert(admin.includes('value="mini"') && admin.includes('id="adminDistrict"') && admin.includes('id="reportTypes"') && !admin.includes('id="reportAll"'), 'roles / report types (no select-all) missing');
@@ -62,11 +61,11 @@ assert(/ggh-topbar-title[^>]*>Green Gain Hub <span data-province>/.test(html) &&
 assert(/<footer[\s\S]*ระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร/.test(html), 'full official name in the footer');
 assert(/ggh-dialog-kicker">สำหรับเกษตรกรและผู้รับซื้อ</.test(html) && html.includes('STAFF_ACCOUNT') && html.includes('MARKET_ACCOUNT') && html.includes('data-to-staff') && html.includes('data-to-hub'), 'wrong-box numbers switch to the other popup');
 assert(js.includes('renderDistrictRanking'), 'side panel ranks districts when nothing is selected');
-assert(['data-role="farmer"', 'data-role="buyer"', 'data-door="staff"'].every((x) => html.includes(x)) && html.indexOf('ggh-doors') < html.indexOf('ggh-tabs"'), 'entry doors before the province data');
+assert(['data-role="farmer"', 'data-role="buyer"', 'data-door="staff"'].every((x) => html.includes(x)) && html.indexOf('ggh-entry') < html.indexOf('ggh-tabs"'), 'entry buttons before the province data');
 assert(!/tCO₂e|tCO2e/.test(html + dash) && dash.includes('ตันคาร์บอนไดออกไซด์เทียบเท่า'), 'Thai GHG unit on the homepage');
 assert(dash.includes("endpoint: 'balance'") && html.includes('id="resBalance"'), 'residue balance on the homepage');
 assert(admin.includes('id="staffLoginForm"') && admin.includes('id="staffRegForm"') && admin.includes('id="regProvinces"') && admin.includes('id="regGroup"'), 'officer sign-in / registration');
-assert(admin.includes('name="priceBahtKg"') && admin.includes('name="useGlobalPrice"') && admin.includes('id="priceForm"') && admin.includes('name="countValue"') && dash.includes('มูลค่าวัสดุเหลือใช้ทางการเกษตร'), 'value settings and display');
+assert(admin.includes('name="priceBahtKg"') && admin.includes('name="useGlobalPrice"') && admin.includes('id="priceForm"') && admin.includes('name="countValue"') && dash.includes('มูลค่าที่จัดการได้'), 'value settings and display');
 // 2.2.0 admin: task menus, overview, buyer link, print rules.
 const adminCss = fs.readFileSync(path.join(__dirname, '..', 'frontend', 'assets', 'admin.css'), 'utf8');
 assert(/admin: \[\{ key: 'record'[\s\S]*?\{ key: 'account'/.test(adminJs) && (adminJs.match(/\{ key: '(overview|data|reports|users|settings)', label/g) || []).length === 5, 'Admin 4 items, Mini/Super 5 groups');
@@ -74,3 +73,18 @@ assert(admin.includes('data-panel="overview"') && admin.includes('id="recBuyer"'
 assert(adminCss.includes('@page') === false && adminJs.includes('@page wide') && adminCss.includes('page: wide') && adminCss.includes('.print-hide') && adminCss.includes('display: table-header-group'), 'print: named landscape pages, excel-only columns, repeated headers');
 assert(!/tCO₂e|tCO2e/.test(admin + adminJs), 'Thai GHG unit on the admin page');
 
+// 2.3.0: one-line hero with three role buttons, scope bar, three tabs, district reports inside ผลการจัดการ, method footer.
+assert(html.includes('เชื่อมเกษตรกร ผู้รับซื้อ และเจ้าหน้าที่ เพื่อลดการเผา') && /data-role="farmer"[^>]*>[\s\S]*?ผู้ขาย<\/button>/.test(html) && /data-role="buyer"[^>]*>[\s\S]*?ผู้รับซื้อ<\/button>/.test(html) && /data-door="staff"[^>]*>[\s\S]*?เจ้าหน้าที่<\/button>/.test(html), 'hero line and [ผู้ขาย] [ผู้รับซื้อ] [เจ้าหน้าที่]');
+assert(!html.includes('ggh-doors') && !html.includes('id="dashSearch"') && !html.includes('data-tab="reports"') && !html.includes('id="resProgress"') && !html.includes('id="resScope"'), 'old doors, search, reports tab, duplicate progress and scope line are gone');
+assert(/data-tab="overview">ผลการจัดการ</.test(html) && /data-tab="crops">การเพาะปลูก</.test(html) && /data-tab="market">ตลาด</.test(html), 'three short tabs');
+assert(/ggh-scope-title">ข้อมูลจังหวัด<span data-province>/.test(html) && html.includes('id="resFyRange"') && html.indexOf('id="resFy"') < html.indexOf('ggh-tabs"'), 'scope bar above the tabs');
+assert(/id="sarWrap" data-tabs="overview"/.test(html) && html.includes('รายงานประจำสัปดาห์จากอำเภอ') && html.includes('KPP Smart Agri-Materials') && html.includes('id="dashTrend"'), 'Smart Agri section inside ผลการจัดการ');
+assert(html.indexOf('id="resMethodNote"') > html.indexOf('id="sarWrap"') && html.includes('วิธีคำนวณและแหล่งข้อมูล') && js.includes('data-open-method'), 'method footer with a link from the GHG card');
+assert(js.includes("const TABS = ['overview', 'crops', 'market']") && js.includes("if (tab === 'reports') { tab = 'overview'"), 'old #reports links land on ผลการจัดการ');
+['ลดก๊าซเรือนกระจก (ประมาณการ)', 'จากพื้นที่ที่ไม่เผา', 'ปริมาณที่จัดการ', 'ประมาณการชีวมวล จากพื้นที่ × อัตราต่อไร่', 'มูลค่าที่จัดการได้ (ประมาณการ)', 'ราคากลาง', 'ggh-goal-bar'].forEach((x) => assert(js.includes(x), 'card text missing: ' + x));
+// Percent below 1% must not round to 0%.
+const pctSrc = js.match(/function pctText\(p\) \{[\s\S]*?\n  \}/)[0];
+const fmtSrc = js.match(/function fmt\(n, digits\) \{[\s\S]*?\n  \}/)[0];
+const pctText = new Function(fmtSrc + pctSrc + 'return pctText;')();
+assert(pctText(35 / 70500 * 100) === '0.05%' && pctText(0) === '0%' && pctText(5.26) === '5.3%' && pctText(42.4) === '42%' && pctText(null) === '–', 'pctText: ' + pctText(35 / 70500 * 100));
+console.log('PASS: 2.3.0 homepage layout, cards and percent format');
