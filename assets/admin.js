@@ -1205,7 +1205,12 @@
   else if (!state.token && location.hash === '#register') loginTab('register');
   if (state.token) {
     call('adminMeServer').then(async (r) => { await enterApp(r); showSsoPrev(popSsoPrev()); }).catch(() => signOut());
-  } else if (window.GGH_STAFF.ssoAuto) {
+  } else {
+    // 2.4.2: wake the servers while the officer types the phone number
+    const ph = document.getElementById('staffPhone');
+    if (ph && window.GGH_SSO && window.GGH_SSO.warm) ['focus', 'pointerdown'].forEach((ev) => ph.addEventListener(ev, () => window.GGH_SSO.warm(), { passive: true }));
+  }
+  if (!state.token && window.GGH_STAFF.ssoAuto) {
     // 2.4.0: already signed in on Agri-Risk Map / Smart Agri / GGH on this device → open the officer pages directly
     window.GGH_STAFF.ssoAuto().then((r) => { if (r && r.token) { state.token = r.token; enterApp(r); } });
   }

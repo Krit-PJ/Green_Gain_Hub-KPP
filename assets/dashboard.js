@@ -273,7 +273,7 @@
         html = `<p class="ggh-kpi-empty">${state.residue && state.residue.error ? 'โหลดข้อมูลการจัดการวัสดุเหลือใช้ทางการเกษตรไม่สำเร็จ' : 'กำลังโหลดข้อมูลการจัดการวัสดุเหลือใช้ทางการเกษตร…'}</p>`;
       } else {
         const code = resScopeCode();
-        meta = `${code ? 'อำเภอ' + esc(districtName(code)) : 'ทั้งจังหวัด'} ปีงบประมาณ ${esc(R.fy)}${state.resCrop === 'all' ? '' : ' เฉพาะ' + esc(resCropName(state.resCrop))}`;
+        meta = `${code ? 'อำเภอ' + esc(districtName(code)) : 'ทุกอำเภอ'} ปีงบประมาณ ${esc(R.fy)}${state.resCrop === 'all' ? '' : ' เฉพาะ' + esc(resCropName(state.resCrop))}`;
         const sx = resSum(resCells({ d: code })), all = resSum(resCells({ d: code, crop: 'all' })), tg = resTarget(code);
         const bt = balanceTotals();
         const noValue = R.methods.filter((x) => x.countValue === false).map((x) => x.method);
@@ -301,7 +301,7 @@
       }
     } else if (state.tab === 'market' && s) {
       const tt = s.totals;
-      meta = 'ตลาด Green Gain Hub ทั้งจังหวัด';
+      meta = 'ตลาด Green Gain Hub ทุกอำเภอ';
       html += '<div class="ggh-cards-row is-5">';
       html += card({ label: 'แปลงพร้อมขาย', value: fmt(tt.farmerPlots), unit: 'แปลง', note: `จากเกษตรกร ${fmt(tt.farmers)} ราย` });
       html += card({ label: 'พื้นที่แปลงพร้อมขาย', value: fmt(tt.areaRai, 1), unit: 'ไร่', note: `ครอบคลุม ${fmt(tt.districtsCovered)} จาก ${fmt(tt.districtsTotal)} อำเภอ` });
@@ -422,7 +422,7 @@
     if (!el) return;
     if (!R) { el.innerHTML = '<p class="ggh-district-empty">กำลังโหลด…</p>'; return; }
     const code = resScopeCode();
-    $('resMethodsSub').textContent = `${code ? 'อำเภอ' + districtName(code) : 'ทั้งจังหวัด'} · ${state.resCrop === 'all' ? 'ทุกชนิดพืช' : resCropName(state.resCrop)} · ปีงบประมาณ ${R.fy}`;
+    $('resMethodsSub').textContent = `${code ? 'อำเภอ' + districtName(code) : 'ทุกอำเภอ'} · ${state.resCrop === 'all' ? 'ทุกชนิดพืช' : resCropName(state.resCrop)} · ปีงบประมาณ ${R.fy}`;
     const methods = R.methods.filter((m) => m.active || R.cells.some((c) => c.m === m.method)).map((m) => m.method);
     const rows = methods.map((m) => ({ m, s: resSum(resCells({ d: code, m })), t: resTarget(code, m) }));
     const total = rows.reduce((a, r) => a + r.s.a, 0);
@@ -855,7 +855,7 @@
   function renderDistrictSelect() {
     const ds = $('dashDistrictSel'); if (!ds || !state.geo) return;
     if (ds.options.length <= 1) {
-      ds.innerHTML = '<option value="">ทั้งจังหวัด</option>' + state.geo.features.map((f) => f.properties)
+      ds.innerHTML = '<option value="">ทุกอำเภอ</option>' + state.geo.features.map((f) => f.properties)
         .sort((a, b) => a.name.localeCompare(b.name, 'th')).map((p) => `<option value="${esc(p.code)}">${esc(p.name)}</option>`).join('');
     }
     ds.value = state.selected && state.selected !== 'OTHER' ? state.selected : '';
@@ -883,7 +883,7 @@
     if (!t || !(t.harvestedRai > 0)) { wrap.classList.add('hidden'); return; }
     wrap.classList.remove('hidden');
     const done = Math.min(t.managedRai, t.harvestedRai), pct = t.harvestedRai ? done / t.harvestedRai * 100 : 0;
-    $('resBalanceSub').textContent = `${code ? 'อำเภอ' + districtName(code) : 'ทั้งจังหวัด'} ปีงบประมาณ ${b.fy}: พื้นที่เก็บเกี่ยวจากทะเบียนเกษตรกร เทียบกับพื้นที่ที่เจ้าหน้าที่บันทึกการจัดการแล้ว`;
+    $('resBalanceSub').textContent = `${code ? 'อำเภอ' + districtName(code) : 'ทุกอำเภอ'} ปีงบประมาณ ${b.fy}: พื้นที่เก็บเกี่ยวจากทะเบียนเกษตรกร เทียบกับพื้นที่ที่เจ้าหน้าที่บันทึกการจัดการแล้ว`;
     $('resBalance').innerHTML = `<div class="ggh-bal-bar" role="img" aria-label="จัดการแล้ว ${fmt(pct, 1)}% ของพื้นที่เก็บเกี่ยว">
         <i class="is-done" style="width:${pct.toFixed(2)}%"></i><i class="is-left" style="width:${(100 - pct).toFixed(2)}%"></i></div>
       <dl class="ggh-bal-facts">
