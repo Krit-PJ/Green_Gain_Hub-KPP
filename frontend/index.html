@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.4.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.4.1">
 
   <style>
     * { box-sizing: border-box; }
@@ -73,35 +73,38 @@
   <main class="flex-grow pt-20 sm:pt-24 pb-10 sm:pb-12 px-3 sm:px-4 container mx-auto max-w-5xl">
 
     <div id="loginPage" class="ggh-landing" data-tab="overview">
-      <!-- 2.3.0: one line of purpose and three ways in, then one scope bar for the province data. -->
+      <!-- 2.4.1: purpose + three ways in share one band (text left, doors right); scope, freshness and tabs are one data header. -->
       <header class="ggh-hero">
-        <p class="ggh-hero-lede">เชื่อมเกษตรกร ผู้รับซื้อ และเจ้าหน้าที่ เพื่อลดการเผา</p>
+        <div class="ggh-hero-text">
+          <p class="ggh-hero-lede">เชื่อมเกษตรกร ผู้รับซื้อ และเจ้าหน้าที่ เพื่อลดการเผา</p>
+          <p class="ggh-hero-sub">ลงทะเบียนครั้งเดียวด้วยเบอร์โทร ใช้ได้ทั้ง Green Gain Hub, Agri-Risk Map และ Smart Agri</p>
+        </div>
         <nav class="ggh-entry" aria-label="เข้าสู่ระบบตามบทบาท">
-          <button type="button" data-door="login" data-role="farmer" class="ggh-entry-sell"><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i>ผู้ขาย</button>
-          <button type="button" data-door="login" data-role="buyer" class="ggh-entry-buy"><i class="fa-solid fa-truck" aria-hidden="true"></i>ผู้รับซื้อ</button>
-          <button type="button" data-door="staff" class="ggh-entry-staff"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>เจ้าหน้าที่</button>
+          <button type="button" data-door="login" data-role="farmer" class="ggh-entry-sell"><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i><span class="ggh-entry-name">ผู้ขาย</span><span class="ggh-entry-hint">ลงประกาศฟาง ตอซัง เศษวัสดุ</span></button>
+          <button type="button" data-door="login" data-role="buyer" class="ggh-entry-buy"><i class="fa-solid fa-truck" aria-hidden="true"></i><span class="ggh-entry-name">ผู้รับซื้อ</span><span class="ggh-entry-hint">ค้นหาแปลงที่พร้อมขาย</span></button>
+          <button type="button" data-door="staff" class="ggh-entry-staff"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i><span class="ggh-entry-name">เจ้าหน้าที่</span><span class="ggh-entry-hint">บันทึกและติดตามผลรายอำเภอ</span></button>
         </nav>
       </header>
 
       <section class="ggh-scope" aria-labelledby="scopeTitle">
-        <h2 id="scopeTitle" class="ggh-scope-title">ข้อมูลจังหวัด<span data-province>กำแพงเพชร</span></h2>
+        <div class="ggh-scope-head">
+          <h2 id="scopeTitle" class="ggh-scope-title">ข้อมูลจังหวัด<span data-province>กำแพงเพชร</span></h2>
+          <p class="ggh-scope-meta"><span data-tabs="overview"><small id="resFyRange"></small><span aria-hidden="true"> · </span></span><span class="ggh-updated" id="dashUpdated" aria-live="polite">กำลังโหลดข้อมูล…</span></p>
+        </div>
         <div class="ggh-scope-controls">
           <label class="ggh-scope-field" data-tabs="overview">ปีงบประมาณ
             <select id="resFy"></select>
-            <small id="resFyRange"></small>
           </label>
           <label class="ggh-scope-field">อำเภอ
             <select id="dashDistrictSel"><option value="">ทั้งจังหวัด</option></select>
           </label>
         </div>
-        <p class="ggh-updated" id="dashUpdated" aria-live="polite">กำลังโหลดข้อมูล…</p>
+        <nav class="ggh-tabs" role="tablist" aria-label="เลือกมุมมองข้อมูล">
+          <button type="button" role="tab" id="tab-overview" aria-controls="loginPage" aria-selected="true" data-tab="overview">ผลการจัดการ</button>
+          <button type="button" role="tab" id="tab-crops" aria-controls="loginPage" aria-selected="false" data-tab="crops">การเพาะปลูก</button>
+          <button type="button" role="tab" id="tab-market" aria-controls="loginPage" aria-selected="false" data-tab="market">ตลาด</button>
+        </nav>
       </section>
-
-      <nav class="ggh-tabs" role="tablist" aria-label="เลือกมุมมองข้อมูล">
-        <button type="button" role="tab" id="tab-overview" aria-controls="loginPage" aria-selected="true" data-tab="overview">ผลการจัดการ</button>
-        <button type="button" role="tab" id="tab-crops" aria-controls="loginPage" aria-selected="false" data-tab="crops">การเพาะปลูก</button>
-        <button type="button" role="tab" id="tab-market" aria-controls="loginPage" aria-selected="false" data-tab="market">ตลาด</button>
-      </nav>
 
       <section class="ggh-toolbar ggh-cropcards-wrap" data-tabs="crops" aria-label="ตัวเลือกข้อมูลเพาะปลูก">
         <div class="ggh-crop-chips" id="dashCropChips" role="radiogroup" aria-label="ชนิดพืช"></div>
@@ -752,6 +755,14 @@
       openHub(action === 'register' ? 'register' : 'login', role, '', opener);
     }
     document.querySelectorAll('[data-door]').forEach((b) => b.addEventListener('click', () => openDoor(b.dataset.door, b.dataset.role, b)));
+    // The fixed top bar grows when its title wraps (small phones); keep the page clear of it.
+    (function keepClearOfTopBar() {
+      const bar = document.querySelector('body > nav'), main = document.querySelector('body > main');
+      if (!bar || !main) return;
+      const fit = () => { main.style.paddingTop = Math.ceil(bar.getBoundingClientRect().height + 16) + 'px'; };
+      fit();
+      if (window.ResizeObserver) new ResizeObserver(fit).observe(bar); else window.addEventListener('resize', fit);
+    })();
     // Kept for older links/buttons.
     function toggleAuth(page) { openHub(page === 'register' ? 'register' : 'login'); }
 

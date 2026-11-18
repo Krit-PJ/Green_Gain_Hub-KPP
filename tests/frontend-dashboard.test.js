@@ -20,7 +20,7 @@ assert(html.includes('assets/staff-auth.js') && !/name="password"[^>]*type="pass
 assert(html.includes('admin.html#admin') && /sell: \['register', 'farmer'\]/.test(html), 'admin link and shareable #sell/#buy links');
 ['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashDistrictSel"',
   'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html#admin"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=2.4.0') && html.includes('assets/dashboard.css?v=2.4.0'), 'dashboard assets are not linked');
+assert(html.includes('assets/dashboard.js?v=2.4.0') && html.includes('assets/dashboard.css?v=2.4.1'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
@@ -74,7 +74,7 @@ assert(adminCss.includes('@page') === false && adminJs.includes('@page wide') &&
 assert(!/tCO₂e|tCO2e/.test(admin + adminJs), 'Thai GHG unit on the admin page');
 
 // 2.3.0: one-line hero with three role buttons, scope bar, three tabs, district reports inside ผลการจัดการ, method footer.
-assert(html.includes('เชื่อมเกษตรกร ผู้รับซื้อ และเจ้าหน้าที่ เพื่อลดการเผา') && /data-role="farmer"[^>]*>[\s\S]*?ผู้ขาย<\/button>/.test(html) && /data-role="buyer"[^>]*>[\s\S]*?ผู้รับซื้อ<\/button>/.test(html) && /data-door="staff"[^>]*>[\s\S]*?เจ้าหน้าที่<\/button>/.test(html), 'hero line and [ผู้ขาย] [ผู้รับซื้อ] [เจ้าหน้าที่]');
+assert(html.includes('เชื่อมเกษตรกร ผู้รับซื้อ และเจ้าหน้าที่ เพื่อลดการเผา') && /data-role="farmer"[^>]*>[\s\S]*?ggh-entry-name">ผู้ขาย<[\s\S]*?<\/button>/.test(html) && /data-role="buyer"[^>]*>[\s\S]*?ggh-entry-name">ผู้รับซื้อ<[\s\S]*?<\/button>/.test(html) && /data-door="staff"[^>]*>[\s\S]*?ggh-entry-name">เจ้าหน้าที่<[\s\S]*?<\/button>/.test(html), 'hero line and [ผู้ขาย] [ผู้รับซื้อ] [เจ้าหน้าที่]');
 assert(!html.includes('ggh-doors') && !html.includes('id="dashSearch"') && !html.includes('data-tab="reports"') && !html.includes('id="resProgress"') && !html.includes('id="resScope"'), 'old doors, search, reports tab, duplicate progress and scope line are gone');
 assert(/data-tab="overview">ผลการจัดการ</.test(html) && /data-tab="crops">การเพาะปลูก</.test(html) && /data-tab="market">ตลาด</.test(html), 'three short tabs');
 assert(/ggh-scope-title">ข้อมูลจังหวัด<span data-province>/.test(html) && html.includes('id="resFyRange"') && html.indexOf('id="resFy"') < html.indexOf('ggh-tabs"'), 'scope bar above the tabs');
@@ -87,7 +87,12 @@ const pctSrc = js.match(/function pctText\(p\) \{[\s\S]*?\n  \}/)[0];
 const fmtSrc = js.match(/function fmt\(n, digits\) \{[\s\S]*?\n  \}/)[0];
 const pctText = new Function(fmtSrc + pctSrc + 'return pctText;')();
 assert(pctText(35 / 70500 * 100) === '0.05%' && pctText(0) === '0%' && pctText(5.26) === '5.3%' && pctText(42.4) === '42%' && pctText(null) === '–', 'pctText: ' + pctText(35 / 70500 * 100));
-console.log('PASS: 2.3.0 homepage layout, cards and percent format');
+// 2.4.1: hero text + doors in one band, each door says what it is for; tabs live inside the data header; page clears the top bar.
+assert((html.match(/class="ggh-entry-hint"/g) || []).length === 3 && html.includes('ggh-hero-sub') && html.includes('ใช้ได้ทั้ง Green Gain Hub, Agri-Risk Map และ Smart Agri'), '2.4.1 hero: sub line and door hints');
+const scopeHtml = html.slice(html.indexOf('<section class="ggh-scope"'), html.indexOf('</section>', html.indexOf('<section class="ggh-scope"')));
+assert(scopeHtml.includes('class="ggh-tabs"') && scopeHtml.includes('id="dashUpdated"') && scopeHtml.includes('id="resFyRange"'), '2.4.1 one data header: title, period, freshness, filters, tabs');
+assert(html.includes('keepClearOfTopBar') && fs.readFileSync(path.join(__dirname, '..', 'frontend', 'assets', 'dashboard.css'), 'utf8').includes('body.ggh-landing-on > nav > .container { max-width: 84rem; }'), '2.4.1 top bar width and offset');
+console.log('PASS: 2.3.0/2.4.1 homepage layout, cards and percent format');
 // 2.4.0: central identity (SSO) shared with Agri-Risk Map and Smart Agri.
 const sso = fs.readFileSync(path.join(front, 'assets', 'sso-client.js'), 'utf8');
 const staffAuth = fs.readFileSync(path.join(front, 'assets', 'staff-auth.js'), 'utf8');

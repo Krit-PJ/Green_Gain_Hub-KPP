@@ -509,3 +509,49 @@ body.ggh-landing-on main { max-width: 84rem; }
 @media (min-width: 1024px) {
   .ggh-hero, .ggh-scope, .ggh-sar, .ggh-howto { grid-column: span 12; }
 }
+
+/* ---------- 2.4.1 homepage layout ----------
+   Hero: purpose on the left, three doors on the right (each says what it is for) — no empty band between them.
+   Data header: title + period + freshness on the left, filters on the right, tabs underneath — one block, one baseline.
+   Top bar uses the same width as the page so the logo lines up with the content edge. */
+body.ggh-landing-on > nav > .container { max-width: 84rem; }
+@media (max-width: 479px) { .ggh-topbar-sub { display: none; } }
+
+.ggh-hero { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: .9rem 2rem; padding: 1rem 1.1rem; }
+.ggh-hero-text { min-width: 0; }
+.ggh-hero-lede { font-size: clamp(1.15rem, 1rem + .7vw, 1.6rem); line-height: 1.3; }
+.ggh-hero-sub { margin-top: .3rem; font-size: .92rem; line-height: 1.5; color: var(--ggh-muted); max-width: 52ch; }
+.ggh-entry { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; width: 100%; }
+.ggh-entry button { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "icon name" "icon hint";
+  align-items: center; column-gap: .6rem; row-gap: .05rem; min-height: 56px; padding: .55rem .8rem; text-align: left; justify-content: stretch; }
+.ggh-entry button i { grid-area: icon; font-size: 1.1rem; width: 1.25rem; text-align: center; }
+.ggh-entry-name { grid-area: name; font-size: 1rem; line-height: 1.25; }
+.ggh-entry-hint { grid-area: hint; font-size: .8rem; font-weight: 500; line-height: 1.3; opacity: .85; }
+.ggh-entry .ggh-entry-sell .ggh-entry-hint { opacity: .92; }
+@media (max-width: 639px) {
+  .ggh-hero { padding: .85rem .9rem; }
+  .ggh-entry button { grid-template-columns: minmax(0, 1fr); grid-template-areas: "icon" "name"; justify-items: center; text-align: center; padding: .5rem .3rem; row-gap: .2rem; }
+  .ggh-entry-hint { display: none; }
+}
+@media (min-width: 1024px) {
+  .ggh-hero { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); padding: 1.15rem 1.35rem; }
+  .ggh-entry button { min-height: 64px; }
+}
+
+.ggh-scope { display: grid; grid-template-columns: minmax(0, 1fr); align-items: end; gap: .75rem 1.5rem; margin-top: 0;
+  padding: .9rem 1.1rem 0; background: var(--ggh-surface); border: 1px solid var(--ggh-line); border-radius: var(--ggh-radius-lg); }
+.ggh-scope-head { min-width: 0; }
+.ggh-scope-title { font-size: 1.25rem; margin-right: 0; }
+.ggh-scope-meta { margin-top: .15rem; font-size: .82rem; color: var(--ggh-muted); }
+.ggh-scope-meta small { font-size: inherit; }
+.ggh-scope .ggh-updated { font-size: inherit; }
+.ggh-scope-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: .5rem .75rem; }
+.ggh-scope-field select { width: 100%; }
+.ggh-scope .ggh-tabs { grid-column: 1 / -1; margin: 0 -1.1rem; padding: 0 .6rem; border-top: 1px solid var(--ggh-line); border-bottom: 0; }
+.ggh-scope .ggh-tabs button { margin-bottom: 0; }
+@media (min-width: 768px) {
+  .ggh-scope { grid-template-columns: minmax(0, 1fr) auto; }
+  .ggh-scope-controls { grid-template-columns: repeat(2, minmax(10rem, 12rem)); }
+  .ggh-landing[data-tab="crops"] .ggh-scope-controls, .ggh-landing[data-tab="market"] .ggh-scope-controls { grid-template-columns: minmax(10rem, 12rem); }
+}
+.ggh-scope-meta #resFyRange:empty + span { display: none; }
