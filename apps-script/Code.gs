@@ -1,5 +1,5 @@
 /**
- * Green Gain Hub 2.3.0 — API-only bridge from GitHub Pages to Google Sheets.
+ * Green Gain Hub 2.4.0 — API-only bridge from GitHub Pages to Google Sheets.
  * Files: Code.gs (this), Districts.gs (boundaries), Admin.gs (Super / Mini Super / Admin, doPost),
  *        Crops.gs (crop area import + crop summary), Counter.gs (visit counter),
  *        Reports.gs (admin reports for print / PDF / Excel / CSV),
@@ -18,7 +18,7 @@
  *   ?api=v1&endpoint=health           Public version check
  *   POST {method,args,token}          Admin API (Admin.gs)
  */
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.4.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -37,7 +37,7 @@ const CROP_MATERIAL_MAP = {
   'อ้อยโรงงาน': 'ใบอ้อย',
   'มันสำปะหลัง': 'เหง้ามันสำปะหลัง'
 };
-const PUBLIC_METHODS = ['loginServer', 'registerServer', 'getApiInfoServer'];
+const PUBLIC_METHODS = ['loginServer', 'registerServer', 'getApiInfoServer', 'ssoLoginServer', 'ssoProvisionServer'];
 const PRIVATE_METHODS = ['getUserProfileServer', 'saveDataServer', 'deleteDataServer', 'getMatchingDataServer'];
 
 /** JSONP endpoint used by the static GitHub Pages frontend. */
@@ -70,6 +70,8 @@ function apiMethods_() {
     loginServer: function (args) { return loginServer(args[0]); },
     registerServer: function (args) { return registerServer(args[0]); },
     getApiInfoServer: function () { return getApiInfoServer(); },
+    ssoLoginServer: function (args) { return ssoLoginServer(args[0]); },
+    ssoProvisionServer: function (args) { return ssoProvisionServer(args[0]); },
     getUserProfileServer: function (args, session) { return getUserProfileServer(session); },
     saveDataServer: function (args, session) { return saveDataServer(args[0], session); },
     deleteDataServer: function (args, session) { return deleteDataServer(args[0], session); },
@@ -83,7 +85,7 @@ function getApiInfoServer() {
     status: 'success',
     success: true,
     apiVersion: APP_VERSION,
-    feature: 'RESIDUE_BALANCE_HUB'
+    feature: 'SSO_IDENTITY'
   };
 }
 
@@ -532,6 +534,7 @@ function verifyPublicSummary() {
 
 function loginServer(input) {
   input = input || {};
+  if (typeof ssoGuardLegacy_ === 'function') ssoGuardLegacy_();   // 2.4.0 (Sso.gs): closed only when SSO_MODE = required
   const phone = normalizePhone_(input.phone || input.telephone || input.username || input);
   if (!/^0\d{9}$/.test(phone)) throw new Error('กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก');
   const rows = dataRows_(sheet_('users'));

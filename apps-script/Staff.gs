@@ -90,6 +90,7 @@ function staffRegister_(input) {
 }
 
 function staffLogin_(input) {
+  if (typeof ssoGuardLegacy_ === 'function') ssoGuardLegacy_();   // 2.4.0 (Sso.gs): closed only when SSO_MODE = required
   const phone = normalizePhone_(input && input.phone);
   if (!/^0\d{9}$/.test(phone)) throw new Error('หมายเลขโทรศัพท์ต้องมี 10 หลัก');
   const cache = CacheService.getScriptCache();

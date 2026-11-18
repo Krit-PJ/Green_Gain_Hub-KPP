@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.3.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.4.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -400,6 +400,7 @@
             <p><strong>๒.</strong> จัดทำฐานข้อมูล ประมวลผล วิเคราะห์ข้อมูลสถิติเพื่อใช้ในการจัดตั้งศูนย์กลางการสร้างมูลค่าเพิ่มวัสดุเหลือใช้ทางการเกษตร <strong>(Green Gain Hub)</strong> ขึ้นในพื้นที่โดย Hub เหล่านี้จะทำหน้าที่เป็น ศูนย์กลางการรวบรวม การแปรรูปเบื้องต้น และการรับซื้อ วัสดุเหลือใช้จากเกษตรกรเพื่อป้อนเข้าสู่ระบบตลาดหมุนเวียนอย่างมีประสิทธิภาพและนำไปเผยแพร่บนแพลตฟอร์มระบบของกรมส่งเสริมการเกษตรหรือแพลตฟอร์มอื่นๆ ที่เกี่ยวข้อง สำหรับให้เกษตรกรหรือประชาชนทั่วไปได้เข้าถึงข้อมูลของท่าน</p>
             <p>ทั้งนี้ ก่อนการแสดงเจตนา ข้าพเจ้าได้อ่านรายละเอียดจากเอกสารชี้แจงข้อมูล หรือได้รับคำอธิบายจากกรมส่งเสริมการเกษตร ถึงวัตถุประสงค์ในการเก็บรวบรวม ใช้หรือเปิดเผย (“ประมวลผล”) ข้อมูลส่วนบุคคล และมีความเข้าใจดีแล้ว</p>
             <p>ข้าพเจ้าให้ความยินยอมหรือปฏิเสธไม่ให้ความยินยอมในเอกสารนี้ด้วยความสมัครใจ ปราศจาก การบังคับ หรือชักจูง และข้าพเจ้าทราบว่าข้าพเจ้าสามารถถอนความยินยอมนี้เสียเมื่อใดก็ได้ เว้นแต่ในกรณี มีข้อจำกัดสิทธิ ตามกฎหมายหรือยังมีสัญญาระหว่างข้าพเจ้ากับกรมส่งเสริมการเกษตร ที่ให้ประโยชน์ แก่ข้าพเจ้าอยู่</p>
+            <p><strong>๓.</strong> (2.4.0) ใช้เบอร์โทร ชื่อ และจังหวัดเป็น<strong>ตัวตนกลาง</strong>ร่วมกับระบบที่เชื่อมโยงกัน (Agri-Risk Map, KPP Smart Agri-Materials) เพื่อยืนยันตัวตนและตรวจสอบการเข้าใช้งานเท่านั้น ข้าพเจ้าในฐานะเจ้าของข้อมูลรับผิดชอบความถูกต้องของข้อมูลที่ให้ไว้ ระบบปกป้องข้อมูลตามขอบเขตที่กระทำได้</p>
           </details>
           <label class="ggh-consent-check"><input type="checkbox" id="pdpaCheck" name="consent"> ข้าพเจ้ายินยอมให้ข้อมูลส่วนบุคคลตามเอกสารแสดงความยินยอมข้างต้น</label>
           <div class="ggh-dmsg" id="hubRegMsg" role="alert"></div>
@@ -467,10 +468,12 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=2.3.0"></script>
-  <script src="assets/api-client.js?v=2.3.0"></script>
-  <script src="assets/staff-auth.js?v=2.3.0"></script>
-  <script src="assets/dashboard.js?v=2.3.0" defer></script>
+  <script src="assets/config.js?v=2.4.0"></script>
+  <script src="assets/api-client.js?v=2.4.0"></script>
+  <script src="https://krit-pj.github.io/TH-Agri-Risk-Maps-Burning/js/kpp-id.js"></script>
+  <script src="assets/sso-client.js?v=2.4.0"></script>
+  <script src="assets/staff-auth.js?v=2.4.0"></script>
+  <script src="assets/dashboard.js?v=2.4.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -760,18 +763,30 @@
       else if (h === 'staff' || h === 'staff-register') { setTimeout(() => openStaff(h === 'staff' ? 'login' : 'register'), 0); history.replaceState(null, '', location.pathname + location.search); }
     })();
 
+    // 2.4.0: signed in on Agri-Risk Map / Smart Agri / GGH earlier on this device → open the market app without typing again.
+    (function ssoAutoMarket() {
+      if (!window.GGH_SSO || currentUser) return;
+      window.GGH_SSO.autoTicket('ggh-market-sso-tried').then((ticket) => {
+        if (!ticket || currentUser) return;
+        google.script.run.withSuccessHandler((d) => { if (d && d.status === 'success' && !currentUser) { currentUser = d; setupUI(d); } })
+          .withFailureHandler(() => { /* officer or no market account: stay on the homepage */ }).ssoLoginServer({ ticket });
+      });
+    })();
+
     function logout() {
       Swal.fire({
          title: 'ออกจากระบบ?', icon: 'question', showCancelButton: true, confirmButtonText: 'ยืนยัน', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#d33'
       }).then((result) => {
          if (result.isConfirmed) {
            if (window.GGH_API) window.GGH_API.logout();
+           if (window.GGH_SSO) window.GGH_SSO.logout();   // 2.4.0: signs out of all connected systems on this device
            location.reload();
          }
       });
     }
 
     // --- AUTH: farmers and buyers sign in by phone only. Messages stay inside the popup. ---
+    // 2.4.0: through the central identity (shared with Agri-Risk Map and Smart Agri); the old sign-in is the fallback.
     function login() {
       const u = document.getElementById('loginPhone').value.replace(/\D/g, '');
       const btn = document.getElementById('loginBtn');
@@ -779,14 +794,19 @@
       setMsg('hubLoginMsg', '');
       btn.textContent = 'กำลังตรวจสอบข้อมูล…'; btn.disabled = true;
       const done = () => { btn.textContent = 'เข้าสู่ระบบ'; btn.disabled = false; };
-      google.script.run
-        .withSuccessHandler(function (data) {
-          done();
-          if (data.status === 'success') { closeDialog(document.getElementById('hubAuth')); currentUser = data; setupUI(data); }
-          else setMsg('hubLoginMsg', escapeHtml(data.message || 'เข้าสู่ระบบไม่สำเร็จ'));
-        })
-        .withFailureHandler(function (err) {
-          done();
+      const success = (data, prev) => {
+        done();
+        if (data.status === 'success') { closeDialog(document.getElementById('hubAuth')); currentUser = data; setupUI(data); if (window.GGH_SSO) window.GGH_SSO.showPrev(prev, () => { if (window.GGH_API) window.GGH_API.logout(); setTimeout(() => location.reload(), 2500); }, document.getElementById('mainApp')); }
+        else if (data.status === 'need_register') {
+          // Has the shared identity (from Agri-Risk / Smart Agri) but no Green Gain Hub account yet: one step to choose farmer or buyer.
+          openHub('register', '', u);
+          const f = document.getElementById('hubPanelRegister'); if (data.name && !f.name.value) f.name.value = data.name;
+          setMsg('hubRegMsg', 'หมายเลขนี้มีตัวตนกลางแล้ว เลือกประเภทผู้ใช้ ติ๊กยินยอม แล้วกดลงทะเบียน', 'info');
+        }
+        else setMsg('hubLoginMsg', escapeHtml(data.message || 'เข้าสู่ระบบไม่สำเร็จ'));
+      };
+      const failure = function (err) {
+        done();
           const msg = String(err && err.message || '');
           if (/^STAFF_ACCOUNT:/.test(msg)) {
             // An officer number typed here: switch to the officer popup with the number filled in.
@@ -796,8 +816,11 @@
             setMsg('hubLoginMsg', `${escapeHtml(msg)}<br><button type="button" class="ggh-dlink" data-to-register>ลงทะเบียนด้วยหมายเลขนี้</button>`);
             document.querySelector('#hubLoginMsg [data-to-register]').addEventListener('click', () => openHub('register', '', u));
           } else setMsg('hubLoginMsg', escapeHtml(msg || 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่'));
-        })
-        .loginServer({ action: 'login', username: u });
+      };
+      const legacy = () => google.script.run.withSuccessHandler((d) => success(d, null)).withFailureHandler(failure).loginServer({ action: 'login', username: u });
+      if (!window.GGH_SSO || !window.GGH_SSO.available()) return legacy();
+      window.GGH_SSO.market(u).then(({ id, result }) => success(result, id && id.prevLogin))
+        .catch((err) => (window.GGH_SSO.fallback(err) ? legacy() : failure(err)));
     }
 
     document.getElementById('hubPanelRegister').addEventListener('submit', (e) => { e.preventDefault(); register(); });
@@ -818,6 +841,8 @@
           done();
           if (d.status !== 'success') return setMsg('hubRegMsg', escapeHtml(d.message || 'ลงทะเบียนไม่สำเร็จ'));
           closeDialog(document.getElementById('hubAuth'));
+          // 2.4.0: the same number now also opens Agri-Risk Map and Smart Agri (shared identity)
+          if (window.GGH_SSO) window.GGH_SSO.attach(u, (p) => window.GGH_SSO.rpc('ssoProvisionServer', { phone: p }));
           if (d.token) { currentUser = d; setupUI(d); Swal.fire({ icon: 'success', title: 'ลงทะเบียนสำเร็จ', text: 'เข้าใช้งานได้ทันที ครั้งต่อไปเข้าสู่ระบบด้วยหมายเลขโทรศัพท์นี้', timer: 3500 }); }
           else { openHub('login', '', u); setMsg('hubLoginMsg', 'ลงทะเบียนสำเร็จ กรุณาเข้าสู่ระบบ', 'ok'); }
         })

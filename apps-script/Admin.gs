@@ -37,6 +37,8 @@ const ADMIN_METHODS = {
   staffMetaServer: { role: null, fn: function () { return staffMeta_(); } },
   staffRegisterServer: { role: null, fn: function (a) { return staffRegister_(a[0]); } },
   staffLoginServer: { role: null, fn: function (a) { return staffLogin_(a[0]); } },
+  ssoStaffLoginServer: { role: null, fn: function (a) { return ssoStaffLogin_(a[0]); } },
+  ssoProvisionServer: { role: null, fn: function (a) { return ssoProvisionServer(a[0]); } },
   adminLogoutServer: { role: 'admin', fn: function (a, s, t) { return adminLogoutServer(t); } },
   adminMeServer: { role: 'admin', fn: function (a, s) { return adminMeServer(s); } },
   adminChangePasswordServer: { role: 'admin', fn: function (a, s) { return adminChangePasswordServer(a[0], s); } },

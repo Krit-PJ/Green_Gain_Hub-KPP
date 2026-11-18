@@ -1,4 +1,4 @@
-/* Green Gain Hub 2.2.1 — officer sign-in by phone and self-registration, shared by the homepage popup and admin.html.
+/* Green Gain Hub 2.4.0 (since 2.2.1) — officer sign-in by phone and self-registration, shared by the homepage popup and admin.html.
    A form uses the field names name, phone, officeType, group, district, province; the group and district fields sit
    inside elements marked data-reg="group" / data-reg="district" so they can be shown for the chosen office type. */
 (function () {
@@ -61,10 +61,26 @@
     return { input, missing };
   }
 
-  /** Signs in by phone; the session token is kept for admin.html (same tab). */
+  /** Signs in by phone; the session token is kept for admin.html (same tab).
+      2.4.0: through the central identity (SSO) when available; the old phone sign-in is the fallback. */
   async function login(phone) {
     const p = digits(phone);
     if (!/^0\d{9}$/.test(p)) throw new Error('กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก');
+    const S = window.GGH_SSO;
+    if (S && S.available()) {
+      try {
+        const { id, result } = await S.staff(p, call);
+        if (result.status === 'need_register') throw new Error('ไม่พบหมายเลขนี้ กรุณาลงทะเบียนเจ้าหน้าที่ก่อน');
+        sessionStorage.setItem(TOKEN_KEY, result.token);
+        result.prevLogin = id && id.prevLogin;
+        // shown once on the officer pages ("previous sign-in" + "not me"), also after the homepage popup redirects there
+        if (result.prevLogin) sessionStorage.setItem('ggh_sso_prev', JSON.stringify(result.prevLogin)); else sessionStorage.removeItem('ggh_sso_prev');
+        return result;
+      } catch (err) {
+        if (err.code === 'not_found') throw new Error('ไม่พบหมายเลขนี้ กรุณาลงทะเบียนเจ้าหน้าที่ก่อน');
+        if (!S.fallback(err)) throw err;
+      }
+    }
     const r = await call('staffLoginServer', { phone: p });
     sessionStorage.setItem(TOKEN_KEY, r.token);
     return r;
@@ -73,9 +89,21 @@
   async function register(input) {
     const r = await call('staffRegisterServer', input);
     sessionStorage.setItem(TOKEN_KEY, r.token);
+    // 2.4.0: the new officer also gets the shared identity (Agri-Risk Map / Smart Agri)
+    if (window.GGH_SSO) await window.GGH_SSO.attach(input.phone, (p) => call('ssoProvisionServer', { phone: p }));
     return r;
   }
 
-  window.GGH_STAFF = { TOKEN_KEY, call, loadMeta, prepareRegister, syncOffice, readRegister, login, register, digits,
+  /** admin.html: signed in elsewhere on this device → open the officer session without typing again. */
+  async function ssoAuto() {
+    const S = window.GGH_SSO;
+    if (!S || sessionStorage.getItem(TOKEN_KEY)) return null;
+    const ticket = await S.autoTicket('ggh-staff-sso-tried');
+    if (!ticket) return null;
+    try { const r = await call('ssoStaffLoginServer', { ticket }); if (r && r.token) { sessionStorage.setItem(TOKEN_KEY, r.token); return r; } } catch (e) { /* not an officer here */ }
+    return null;
+  }
+
+  window.GGH_STAFF = { TOKEN_KEY, call, loadMeta, prepareRegister, syncOffice, readRegister, login, register, ssoAuto, digits,
     hasSession: () => !!sessionStorage.getItem(TOKEN_KEY) };
 })();

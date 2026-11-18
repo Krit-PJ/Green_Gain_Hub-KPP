@@ -20,7 +20,7 @@ assert(html.includes('assets/staff-auth.js') && !/name="password"[^>]*type="pass
 assert(html.includes('admin.html#admin') && /sell: \['register', 'farmer'\]/.test(html), 'admin link and shareable #sell/#buy links');
 ['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashDistrictSel"',
   'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html#admin"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=2.3.0') && html.includes('assets/dashboard.css?v=2.3.0'), 'dashboard assets are not linked');
+assert(html.includes('assets/dashboard.js?v=2.4.0') && html.includes('assets/dashboard.css?v=2.4.0'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
@@ -88,3 +88,15 @@ const fmtSrc = js.match(/function fmt\(n, digits\) \{[\s\S]*?\n  \}/)[0];
 const pctText = new Function(fmtSrc + pctSrc + 'return pctText;')();
 assert(pctText(35 / 70500 * 100) === '0.05%' && pctText(0) === '0%' && pctText(5.26) === '5.3%' && pctText(42.4) === '42%' && pctText(null) === '–', 'pctText: ' + pctText(35 / 70500 * 100));
 console.log('PASS: 2.3.0 homepage layout, cards and percent format');
+// 2.4.0: central identity (SSO) shared with Agri-Risk Map and Smart Agri.
+const sso = fs.readFileSync(path.join(front, 'assets', 'sso-client.js'), 'utf8');
+const staffAuth = fs.readFileSync(path.join(front, 'assets', 'staff-auth.js'), 'utf8');
+new vm.Script(sso, { filename: 'frontend/assets/sso-client.js' });
+const KPP = 'https://krit-pj.github.io/TH-Agri-Risk-Maps-Burning/js/kpp-id.js';
+[html, admin].forEach((h, i) => assert(h.indexOf(KPP) > 0 && h.indexOf(KPP) < h.indexOf('assets/sso-client.js') && h.indexOf('assets/sso-client.js') < h.indexOf('assets/staff-auth.js'), 'kpp-id.js → sso-client.js → staff-auth.js order in ' + (i ? 'admin' : 'index')));
+assert(/GGH_SSO\.market\(u\)/.test(html) && /fallback\(err\) \? legacy\(\)/.test(html) && /need_register/.test(html) && /GGH_SSO\.logout\(\)/.test(html) && /ssoAutoMarket/.test(html), 'homepage market sign-in through SSO with fallback, auto sign-in, logout everywhere');
+assert(/ตัวตนกลาง/.test(html) && /Agri-Risk Map, KPP Smart Agri-Materials/.test(html), 'consent mentions the shared identity');
+assert(/S\.staff\(p, call\)/.test(staffAuth) && /ssoAuto/.test(staffAuth) && /attach\(input\.phone/.test(staffAuth), 'officer sign-in/registration through SSO');
+assert(/showSsoPrev/.test(adminJs) && /GGH_SSO\.logout\(\)/.test(adminJs) && /ssoAuto\(\)/.test(adminJs), 'officer pages: previous sign-in notice, logout everywhere, auto sign-in');
+assert(/'ssoLoginServer'/.test(fs.readFileSync(path.join(front, 'assets', 'api-client.js'), 'utf8')), 'SSO session token kept by the RPC client');
+console.log('PASS: 2.4.0 SSO wiring on the homepage and officer pages');
