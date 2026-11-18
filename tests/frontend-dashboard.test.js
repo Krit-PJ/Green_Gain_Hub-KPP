@@ -20,7 +20,7 @@ assert(html.includes('assets/staff-auth.js') && !/name="password"[^>]*type="pass
 assert(html.includes('admin.html#admin') && /sell: \['register', 'farmer'\]/.test(html), 'admin link and shareable #sell/#buy links');
 ['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashDistrictSel"',
   'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html#admin"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=2.4.0') && html.includes('assets/dashboard.css?v=2.4.1'), 'dashboard assets are not linked');
+assert(html.includes('assets/dashboard.js?v=2.4.2') && html.includes('assets/dashboard.css?v=2.4.2'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
@@ -92,7 +92,13 @@ assert((html.match(/class="ggh-entry-hint"/g) || []).length === 3 && html.includ
 const scopeHtml = html.slice(html.indexOf('<section class="ggh-scope"'), html.indexOf('</section>', html.indexOf('<section class="ggh-scope"')));
 assert(scopeHtml.includes('class="ggh-tabs"') && scopeHtml.includes('id="dashUpdated"') && scopeHtml.includes('id="resFyRange"'), '2.4.1 one data header: title, period, freshness, filters, tabs');
 assert(html.includes('keepClearOfTopBar') && fs.readFileSync(path.join(__dirname, '..', 'frontend', 'assets', 'dashboard.css'), 'utf8').includes('body.ggh-landing-on > nav > .container { max-width: 84rem; }'), '2.4.1 top bar width and offset');
-console.log('PASS: 2.3.0/2.4.1 homepage layout, cards and percent format');
+// 2.4.2: one top card holds the ways in and the data header; the district filter's empty choice reads ทุกอำเภอ.
+const topIdx = html.indexOf('<div class="ggh-topcard">');
+assert(topIdx > 0 && topIdx < html.indexOf('<header class="ggh-hero">') && html.indexOf('<section class="ggh-scope"') < html.indexOf('</div>', html.indexOf('id="tab-market"')), '2.4.2 hero + data header in one card');
+assert(html.includes('<option value="">ทุกอำเภอ</option>') && js.includes(`'<option value="">ทุกอำเภอ</option>'`) && !/'ทั้งจังหวัด'/.test(js), '2.4.2 ทุกอำเภอ instead of ทั้งจังหวัด');
+const ssoSrc242 = fs.readFileSync(path.join(__dirname, '..', 'frontend', 'assets', 'sso-client.js'), 'utf8');
+assert(ssoSrc242.includes("aud: 'GGH'") && ssoSrc242.includes('ticketFrom') && ssoSrc242.includes('function warm()') && html.includes('GGH_SSO.warm()'), '2.4.2 faster sign-in: ticket with the sign-in answer, warm-up');
+console.log('PASS: 2.3.0–2.4.2 homepage layout, cards and percent format');
 // 2.4.0: central identity (SSO) shared with Agri-Risk Map and Smart Agri.
 const sso = fs.readFileSync(path.join(front, 'assets', 'sso-client.js'), 'utf8');
 const staffAuth = fs.readFileSync(path.join(front, 'assets', 'staff-auth.js'), 'utf8');

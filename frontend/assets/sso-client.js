@@ -19,25 +19,34 @@
   }
   /** Central identity for a phone; creates it from the GGH record the first time. */
   async function identity(phone, provision, remember) {
-    try { return await window.KPP_ID.login(phone, { system: 'GGH', remember: !!remember }); }
+    try { return await window.KPP_ID.login(phone, { system: 'GGH', remember: !!remember, aud: 'GGH' }); }
     catch (err) {
       if (err.code !== 'not_found') throw err;
       const p = await provision(phone);
-      if (p && (p.status === 'provisioned' || p.status === 'exists')) return window.KPP_ID.login(phone, { system: 'GGH', remember: !!remember });
+      if (p && (p.status === 'provisioned' || p.status === 'exists')) return window.KPP_ID.login(phone, { system: 'GGH', remember: !!remember, aud: 'GGH' });
       const e = new Error('ไม่พบหมายเลขโทรศัพท์นี้ในระบบ กรุณาลงทะเบียน'); e.code = 'not_found'; throw e;
     }
+  }
+  /** 2.4.2: the ticket comes back with the sign-in answer (one Agri-Risk call less); older kpp-id.js → ask for one. */
+  const ticketOf = (id) => (window.KPP_ID.ticketFrom ? window.KPP_ID.ticketFrom(id, 'GGH') : window.KPP_ID.ticket('GGH'));
+  /** Wake the Apps Script projects while the person is typing (cold starts are the slowest part). */
+  let warmed = 0;
+  function warm() {
+    if (Date.now() - warmed < 300000) return; warmed = Date.now();
+    try { if (window.KPP_ID && window.KPP_ID.warm) window.KPP_ID.warm(); } catch (e) { /* ignore */ }
+    try { const u = window.GGH_CONFIG && window.GGH_CONFIG.SHEETS_API_URL; if (u) fetch(u + (u.includes('?') ? '&' : '?') + 'api=v1&endpoint=health', { cache: 'no-store' }).catch(() => {}); } catch (e) { /* ignore */ }
   }
   /** Farmer / buyer: returns { id, result } — result is the loginServer-shaped session or { status:'need_register' }. */
   async function market(phone) {
     const id = await identity(phone, (p) => rpc('ssoProvisionServer', { phone: p }), true);
-    const t = await window.KPP_ID.ticket('GGH');
+    const t = await ticketOf(id);
     const result = await rpc('ssoLoginServer', { ticket: t.ticket });
     return { id, result };
   }
   /** Officer: call = GGH_STAFF.call (POST admin API). */
   async function staff(phone, call) {
     const id = await identity(phone, (p) => call('ssoProvisionServer', { phone: p }), false);
-    const t = await window.KPP_ID.ticket('GGH');
+    const t = await ticketOf(id);
     const result = await call('ssoStaffLoginServer', { ticket: t.ticket });
     return { id, result };
   }
@@ -63,5 +72,5 @@
     window.KPP_ID.bindPrev(box, (suspended) => { if (suspended) { if (onSuspended) onSuspended(); } else box.remove(); });
   }
   function logout() { if (available()) window.KPP_ID.logout(); }
-  window.GGH_SSO = { available, fallback, rpc, market, staff, attach, autoTicket, showPrev, logout };
+  window.GGH_SSO = { available, fallback, rpc, market, staff, attach, autoTicket, showPrev, logout, warm };
 })();

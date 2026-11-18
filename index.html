@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.4.1">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.4.2">
 
   <style>
     * { box-sizing: border-box; }
@@ -73,7 +73,8 @@
   <main class="flex-grow pt-20 sm:pt-24 pb-10 sm:pb-12 px-3 sm:px-4 container mx-auto max-w-5xl">
 
     <div id="loginPage" class="ggh-landing" data-tab="overview">
-      <!-- 2.4.1: purpose + three ways in share one band (text left, doors right); scope, freshness and tabs are one data header. -->
+      <!-- 2.4.2: one top card — ways in (top), then the data header for everything below: title, period, filters, tabs (bottom edge). -->
+      <div class="ggh-topcard">
       <header class="ggh-hero">
         <div class="ggh-hero-text">
           <p class="ggh-hero-lede">เชื่อมเกษตรกร ผู้รับซื้อ และเจ้าหน้าที่ เพื่อลดการเผา</p>
@@ -96,7 +97,7 @@
             <select id="resFy"></select>
           </label>
           <label class="ggh-scope-field">อำเภอ
-            <select id="dashDistrictSel"><option value="">ทั้งจังหวัด</option></select>
+            <select id="dashDistrictSel"><option value="">ทุกอำเภอ</option></select>
           </label>
         </div>
         <nav class="ggh-tabs" role="tablist" aria-label="เลือกมุมมองข้อมูล">
@@ -105,6 +106,7 @@
           <button type="button" role="tab" id="tab-market" aria-controls="loginPage" aria-selected="false" data-tab="market">ตลาด</button>
         </nav>
       </section>
+      </div>
 
       <section class="ggh-toolbar ggh-cropcards-wrap" data-tabs="crops" aria-label="ตัวเลือกข้อมูลเพาะปลูก">
         <div class="ggh-crop-chips" id="dashCropChips" role="radiogroup" aria-label="ชนิดพืช"></div>
@@ -474,9 +476,9 @@
   <script src="assets/config.js?v=2.4.0"></script>
   <script src="assets/api-client.js?v=2.4.0"></script>
   <script src="https://krit-pj.github.io/TH-Agri-Risk-Maps-Burning/js/kpp-id.js"></script>
-  <script src="assets/sso-client.js?v=2.4.0"></script>
+  <script src="assets/sso-client.js?v=2.4.2"></script>
   <script src="assets/staff-auth.js?v=2.4.0"></script>
-  <script src="assets/dashboard.js?v=2.4.0" defer></script>
+  <script src="assets/dashboard.js?v=2.4.2" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -730,6 +732,7 @@
     wireTabs('staffAuth', 'staff', (tab) => { if (tab === 'register') prepareStaffRegister(); });
 
     function openHub(tab, role, phone, opener) {
+      if (window.GGH_SSO) window.GGH_SSO.warm();
       const dlg = openDialog('hubAuth', opener);
       const f = document.getElementById('hubPanelRegister');
       if (role) { const r = f.querySelector(`input[name="role"][value="${role}"]`); if (r) r.checked = true; }
@@ -738,6 +741,7 @@
       selectTab(dlg, 'hub', tab || 'login');
     }
     function openStaff(tab, phone, opener) {
+      if (window.GGH_SSO) window.GGH_SSO.warm();
       // An officer who is still signed in goes straight to the officer pages.
       if (!phone && window.GGH_STAFF && window.GGH_STAFF.hasSession()) { location.href = 'admin.html'; return; }
       const dlg = openDialog('staffAuth', opener);
@@ -754,7 +758,11 @@
       if (action === 'staff') return openStaff('login', '', opener);
       openHub(action === 'register' ? 'register' : 'login', role, '', opener);
     }
-    document.querySelectorAll('[data-door]').forEach((b) => b.addEventListener('click', () => openDoor(b.dataset.door, b.dataset.role, b)));
+    document.querySelectorAll('[data-door]').forEach((b) => {
+      b.addEventListener('click', () => openDoor(b.dataset.door, b.dataset.role, b));
+      // 2.4.2: wake the servers as soon as a door is approached, so sign-in does not wait for a cold start.
+      ['pointerenter', 'focus', 'touchstart'].forEach((ev) => b.addEventListener(ev, () => { if (window.GGH_SSO) window.GGH_SSO.warm(); }, { passive: true }));
+    });
     // The fixed top bar grows when its title wraps (small phones); keep the page clear of it.
     (function keepClearOfTopBar() {
       const bar = document.querySelector('body > nav'), main = document.querySelector('body > main');
