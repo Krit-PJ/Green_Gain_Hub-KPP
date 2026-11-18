@@ -123,6 +123,7 @@
         const r = await window.GGH_STAFF.login(phone);
         state.token = r.token; $('staffLoginError').textContent = '';
         await enterApp(r);
+        showSsoPrev(popSsoPrev());
       } catch (err) {
         // A farmer/buyer number typed here: point to the homepage box instead of "not found".
         if (/^MARKET_ACCOUNT:/.test(err.message)) {
@@ -158,7 +159,17 @@
       } catch (err) { $('loginError').textContent = err.message; }
     });
   });
-  $('admLogout').addEventListener('click', async () => { try { await call('adminLogoutServer'); } catch (e) { /* ignore */ } signOut(); });
+  // 2.4.0: signing out here also signs out of Agri-Risk Map / Smart Agri on this device (shared identity)
+  $('admLogout').addEventListener('click', async () => { try { await call('adminLogoutServer'); } catch (e) { /* ignore */ } if (window.GGH_SSO) window.GGH_SSO.logout(); signOut(); });
+  function popSsoPrev() { try { const v = sessionStorage.getItem('ggh_sso_prev'); sessionStorage.removeItem('ggh_sso_prev'); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+  /** "Previous sign-in" notice with a "not me" button, at the top of the officer pages. */
+  function showSsoPrev(prev) {
+    if (!prev || !window.KPP_ID) return;
+    let box = $('admSsoPrev');
+    if (!box) { box = document.createElement('div'); box.id = 'admSsoPrev'; box.style.margin = '0 0 1rem'; $('viewApp').prepend(box); }
+    box.innerHTML = window.KPP_ID.prevHtml(prev);
+    window.KPP_ID.bindPrev(box, (suspended) => { if (suspended) setTimeout(() => signOut('ระงับหมายเลขนี้แล้ว กรุณาติดต่อผู้ดูแลระบบ'), 2500); else box.remove(); });
+  }
 
   /* ---------------- navigation ---------------- */
   const loaders = { overview: loadOverview, record: loadRecordView, records: loadRecords, ghg: loadGhg, targets: () => loadTargets(), history: loadHistory, crops: loadCropTypesTable,
@@ -1193,6 +1204,9 @@
   if (!state.token && location.hash === '#admin') loginTab('admin');
   else if (!state.token && location.hash === '#register') loginTab('register');
   if (state.token) {
-    call('adminMeServer').then(enterApp).catch(() => signOut());
+    call('adminMeServer').then(async (r) => { await enterApp(r); showSsoPrev(popSsoPrev()); }).catch(() => signOut());
+  } else if (window.GGH_STAFF.ssoAuto) {
+    // 2.4.0: already signed in on Agri-Risk Map / Smart Agri / GGH on this device → open the officer pages directly
+    window.GGH_STAFF.ssoAuto().then((r) => { if (r && r.token) { state.token = r.token; enterApp(r); } });
   }
 })();
