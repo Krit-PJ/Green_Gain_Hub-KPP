@@ -361,7 +361,6 @@
     chips.innerHTML = list.length ? list.map((c) => {
       const k = cropKeyOf(c), g = cropGroupOf(c.crop);
       const t = cropTotals(c, k === (cur && cropKeyOf(cur)) ? asOf() : c.asOfMonth);
-      const done = resSum(resCells({ crop: g }));
       const p = pct(t.harvested, t.total);
       return `<div class="ggh-cropcard" data-on="${cur && k === cropKeyOf(cur)}">
         <button type="button" role="radio" aria-checked="${cur && k === cropKeyOf(cur)}" data-key="${esc(k)}">
@@ -370,16 +369,10 @@
           <span class="ggh-progress" aria-hidden="true"><i style="width:${p}%"></i></span>
           <small>เก็บเกี่ยวแล้ว ${p}% · คงเหลือ ${fmt(t.remaining)} ไร่</small>
         </button>
-        ${res() ? `<button type="button" class="ggh-cropcard-link" data-res="${esc(g)}">${done.a ? `จัดการวัสดุเหลือใช้ทางการเกษตรแล้ว ${fmt(done.a)} ไร่ · ลดก๊าซเรือนกระจก ${fmtG(done.g)} ตันคาร์บอนไดออกไซด์เทียบเท่า · มูลค่า ${baht(done.v)} บาท` : 'ยังไม่มีการบันทึกการจัดการวัสดุเหลือใช้ทางการเกษตร'}</button>` : ''}
       </div>`;
     }).join('') : '<span class="ggh-district-empty">ยังไม่มีข้อมูลเพาะปลูก</span>';
     chips.querySelectorAll('[data-key]').forEach((b) => b.addEventListener('click', () => {
       state.cropKey = b.dataset.key; state.asOf = null; state.detail = {}; renderAll();
-    }));
-    chips.querySelectorAll('[data-res]').forEach((b) => b.addEventListener('click', () => {
-      state.resCrop = (res()?.crops || []).some((c) => c.key === b.dataset.res) ? b.dataset.res : 'all';
-      setTab('overview');
-      $('dashKpis').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }));
     if (!cur) { sel.innerHTML = ''; sel.disabled = true; return; }
     sel.disabled = false;

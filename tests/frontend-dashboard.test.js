@@ -20,7 +20,7 @@ assert(html.includes('assets/staff-auth.js') && !/name="password"[^>]*type="pass
 assert(html.includes('admin.html#admin') && /sell: \['register', 'farmer'\]/.test(html), 'admin link and shareable #sell/#buy links');
 ['id="dashMap"', 'id="dashKpis"', 'id="dashHarvest"', 'id="dashMaterials"', 'id="dashTable"', 'id="dashDistrict"', 'id="dashDistrictSel"',
   'role="tablist"', 'data-tab="overview"', 'data-tab="crops"', 'data-tab="market"', 'id="dashCropMonths"', 'id="dashCropStack"', 'id="dashAsOf"', 'href="admin.html#admin"'].forEach(s => assert(html.includes(s), 'dashboard markup missing: ' + s));
-assert(html.includes('assets/dashboard.js?v=2.4.2') && html.includes('assets/dashboard.css?v=2.4.2'), 'dashboard assets are not linked');
+assert(html.includes('assets/dashboard.js?v=2.4.3') && html.includes('assets/dashboard.css?v=2.4.2'), 'dashboard assets are not linked');
 assert(html.indexOf('assets/config.js') < html.indexOf('assets/dashboard.js'), 'config must load before the dashboard');
 
 // Dashboard calls only the aggregate endpoint and renders no personal fields.
@@ -98,7 +98,10 @@ assert(topIdx > 0 && topIdx < html.indexOf('<header class="ggh-hero">') && html.
 assert(html.includes('<option value="">ทุกอำเภอ</option>') && js.includes(`'<option value="">ทุกอำเภอ</option>'`) && !/'ทั้งจังหวัด'/.test(js), '2.4.2 ทุกอำเภอ instead of ทั้งจังหวัด');
 const ssoSrc242 = fs.readFileSync(path.join(__dirname, '..', 'frontend', 'assets', 'sso-client.js'), 'utf8');
 assert(ssoSrc242.includes("aud: 'GGH'") && ssoSrc242.includes('ticketFrom') && ssoSrc242.includes('function warm()') && html.includes('GGH_SSO.warm()'), '2.4.2 faster sign-in: ticket with the sign-in answer, warm-up');
-console.log('PASS: 2.3.0–2.4.2 homepage layout, cards and percent format');
+// 2.4.3: crop cards without the management line; report headers split "name (unit)"; one orientation per printed report.
+assert(!js.includes('ggh-cropcard-link') && !js.includes('จัดการวัสดุเหลือใช้ทางการเกษตรแล้ว ${'), '2.4.3 crop cards: no management summary line');
+assert(adminJs.includes('const headLabel') && adminJs.includes('adm-th-unit') && adminCss.includes('.adm-th-unit') && /sections\.some\(\(x\) => x\.landscape\) \? 'landscape' : 'portrait'/.test(adminJs), '2.4.3 print: two-line headers, one orientation');
+console.log('PASS: 2.3.0–2.4.3 homepage layout, cards, print and percent format');
 // 2.4.0: central identity (SSO) shared with Agri-Risk Map and Smart Agri.
 const sso = fs.readFileSync(path.join(front, 'assets', 'sso-client.js'), 'utf8');
 const staffAuth = fs.readFileSync(path.join(front, 'assets', 'staff-auth.js'), 'utf8');

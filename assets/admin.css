@@ -302,3 +302,27 @@ input:focus, select:focus { outline: none; border-color: var(--ggh-green); box-s
 .adm-report-sec th:not(.num), .adm-report-sec td:not(.num) { min-width: 4.5em; }
 @media print { body.is-printing-report .adm-report-sec th:not(.num), body.is-printing-report .adm-report-sec td:not(.num) { min-width: 4em; } }
 .adm-reg-field { display: grid; gap: .35rem; }
+
+/* ---------- 2.4.3 report tables: two-line headers, nothing past the page edge ----------
+   Tables used to be wider than the page because long headers and minimum widths would not shrink.
+   Now the unit goes on a second header line, headers wrap between words, and text columns have no minimum width,
+   so every table fits the printable width of its own page (portrait 186 mm, landscape 277 mm). */
+.adm-report-sec th { text-align: center; vertical-align: bottom; line-height: 1.3; }
+.adm-report-sec th .adm-th-unit { display: block; font-weight: 400; font-size: .88em; color: #3f4a43; }
+.adm-report-sec th:first-child { text-align: left; }
+.adm-report-sec tbody tr:nth-child(even) td { background: #f8faf8; }
+.adm-report-sec tfoot td { border-top: 2px solid #9fb3a6; }
+@media print {
+  body.is-printing-report .adm-report-sec table { width: 100%; table-layout: auto; border-collapse: collapse; }
+  body.is-printing-report .adm-report-sec th { padding: 3px 4px; font-size: 1em; overflow-wrap: normal; word-break: normal; hyphens: none; }
+  body.is-printing-report .adm-report-sec td { padding: 2px 4px; vertical-align: top; }
+  body.is-printing-report .adm-report-sec th, body.is-printing-report .adm-report-sec td { border-color: #b9c6bd; }
+  body.is-printing-report .adm-report-sec th:not(.num), body.is-printing-report .adm-report-sec td:not(.num) { min-width: 0; }
+  body.is-printing-report .adm-report-sec tbody tr:nth-child(even) td, body.is-printing-report .adm-report-sec tfoot td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body.is-printing-report .adm-report-sec h2 { margin-top: 0; }
+  body.is-printing-report .adm-report-sec + .adm-report-sec { margin-top: 6mm; }
+  body.is-printing-report .adm-report-tablewrap { overflow: visible; max-width: 100%; }
+  /* every page has the same orientation now: no forced page breaks around wide sections */
+  body.is-printing-report .adm-report-sec.is-landscape,
+  body.is-printing-report .adm-report-sec.is-landscape + .adm-report-sec:not(.is-landscape) { break-before: auto; }
+}
