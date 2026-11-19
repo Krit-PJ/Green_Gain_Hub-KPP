@@ -18,7 +18,7 @@
  *   ?api=v1&endpoint=health           Public version check
  *   POST {method,args,token}          Admin API (Admin.gs)
  */
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.5.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -85,7 +85,7 @@ function getApiInfoServer() {
     status: 'success',
     success: true,
     apiVersion: APP_VERSION,
-    feature: 'SSO_IDENTITY'
+    feature: 'MATCHING_MAP'
   };
 }
 
@@ -116,6 +116,8 @@ function publicApiResponse_(p, callback) {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getResidueBalancePublic_(p) };
     } else if (endpoint === 'crop') {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getCropDetail_(p) };
+    } else if (endpoint === 'market') {
+      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getMarketPublic_(p) };
     } else if (endpoint === 'health') {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, feature: getApiInfoServer().feature,
         generatedAt: new Date().toISOString() };
@@ -522,7 +524,7 @@ function verifySmartAgriConnection() {
 
 /** Saves change the dashboard immediately instead of waiting for the cache to expire. */
 function invalidateSummary_() {
-  try { CacheService.getScriptCache().remove(SUMMARY_CACHE_KEY); } catch (err) { /* best effort */ }
+  try { CacheService.getScriptCache().removeAll([SUMMARY_CACHE_KEY, 'market:v1:' + APP_VERSION]); } catch (err) { /* best effort */ }
 }
 
 /** Run from the editor after deployment to preview the public summary. */
