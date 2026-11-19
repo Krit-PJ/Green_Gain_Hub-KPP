@@ -16,8 +16,8 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.5.0">
-  <link rel="stylesheet" href="assets/market.css?v=2.5.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.6.0">
+  <link rel="stylesheet" href="assets/market.css?v=2.6.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -85,7 +85,7 @@
           <button type="button" data-door="login" data-role="buyer" class="ggh-mk-door is-buy"><i class="fa-solid fa-truck" aria-hidden="true"></i><span class="ggh-mk-door-name">ฉันรับซื้อวัสดุ</span><span class="ggh-mk-door-hint">ปักจุดรับซื้อ และดูแปลงพร้อมขาย</span></button>
         </nav>
         <p class="ggh-mk-stats" id="mkStats" aria-live="polite">กำลังโหลดข้อมูลตลาด…</p>
-        <a class="ggh-mk-perf" href="#performance"><i class="fa-solid fa-chart-column" aria-hidden="true"></i>ผลการดำเนินงาน · เจ้าหน้าที่</a>
+        <a class="ggh-mk-perf" href="https://krit-pj.github.io/KPP-Agri-Byproduct-Management/" data-abm-link><i class="fa-solid fa-chart-column" aria-hidden="true"></i>ผลการดำเนินงาน · เจ้าหน้าที่</a>
       </header>
 
       <section class="ggh-mk-board" aria-labelledby="mkBoardTitle">
@@ -131,150 +131,7 @@
       </section>
     </div>
 
-    <div id="loginPage" class="ggh-landing hidden" data-tab="overview">
-      <!-- 2.5.0: results for officers and executives (moved from the front page); staff sign-in unchanged. -->
-      <div class="ggh-topcard">
-      <header class="ggh-hero">
-        <div class="ggh-hero-text">
-          <p class="ggh-hero-lede">ผลการดำเนินงานลดการเผา</p>
-          <p class="ggh-hero-sub">ผลการจัดการวัสดุเหลือใช้ การเพาะปลูก และตลาด เปิดดูได้โดยไม่ต้องเข้าสู่ระบบ เจ้าหน้าที่เข้าสู่ระบบเพื่อบันทึกผลและออกรายงาน</p>
-        </div>
-        <nav class="ggh-entry ggh-entry-perf" aria-label="เจ้าหน้าที่">
-          <a href="#" class="ggh-entry-back" data-goto="market"><i class="fa-solid fa-store" aria-hidden="true"></i><span class="ggh-entry-name">ตลาดวัสดุ</span><span class="ggh-entry-hint">หน้าสำหรับผู้ขายและผู้รับซื้อ</span></a>
-          <button type="button" data-door="staff" class="ggh-entry-staff"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i><span class="ggh-entry-name">เข้าสู่ระบบเจ้าหน้าที่</span><span class="ggh-entry-hint">บันทึกและติดตามผลรายอำเภอ</span></button>
-        </nav>
-      </header>
-
-      <section class="ggh-scope" aria-labelledby="scopeTitle">
-        <div class="ggh-scope-head">
-          <h2 id="scopeTitle" class="ggh-scope-title">ข้อมูลจังหวัด<span data-province>กำแพงเพชร</span></h2>
-          <p class="ggh-scope-meta"><span data-tabs="overview"><small id="resFyRange"></small><span aria-hidden="true"> · </span></span><span class="ggh-updated" id="dashUpdated" aria-live="polite">กำลังโหลดข้อมูล…</span></p>
-        </div>
-        <div class="ggh-scope-controls">
-          <label class="ggh-scope-field" data-tabs="overview">ปีงบประมาณ
-            <select id="resFy"></select>
-          </label>
-          <label class="ggh-scope-field">อำเภอ
-            <select id="dashDistrictSel"><option value="">ทุกอำเภอ</option></select>
-          </label>
-        </div>
-        <nav class="ggh-tabs" role="tablist" aria-label="เลือกมุมมองข้อมูล">
-          <button type="button" role="tab" id="tab-overview" aria-controls="loginPage" aria-selected="true" data-tab="overview">ผลการจัดการ</button>
-          <button type="button" role="tab" id="tab-crops" aria-controls="loginPage" aria-selected="false" data-tab="crops">การเพาะปลูก</button>
-          <button type="button" role="tab" id="tab-market" aria-controls="loginPage" aria-selected="false" data-tab="market">ตลาด</button>
-        </nav>
-      </section>
-      </div>
-
-      <section class="ggh-toolbar ggh-cropcards-wrap" data-tabs="crops" aria-label="ตัวเลือกข้อมูลเพาะปลูก">
-        <div class="ggh-crop-chips" id="dashCropChips" role="radiogroup" aria-label="ชนิดพืช"></div>
-        <label class="ggh-asof">ข้อมูล ณ สิ้นเดือน
-          <select id="dashAsOf"></select>
-        </label>
-      </section>
-
-      <section class="ggh-kpis-wrap" aria-label="ตัวเลขสรุป">
-        <p class="ggh-cards-context" id="dashKpiMeta"></p>
-        <div class="ggh-cards" id="dashKpis"></div>
-      </section>
-
-      <section class="ggh-mapcard" aria-label="แผนที่รายอำเภอ">
-        <p class="ggh-ci-caption" data-tabs="overview">ก๊าซเรือนกระจกที่ลดได้ รายพืช (ตันคาร์บอนไดออกไซด์เทียบเท่า)</p>
-        <div class="ggh-cropicons" id="resCropIcons" data-tabs="overview" role="radiogroup" aria-label="เลือกชนิดพืชเพื่อดูปริมาณ ก๊าซเรือนกระจกที่ลดได้"></div>
-        <div class="ggh-mapbar">
-          <div class="ggh-metric" id="dashMetrics" role="radiogroup" aria-label="ระบายสีแผนที่ตาม"></div>
-        </div>
-        <div id="dashMap" class="ggh-map" role="img" aria-label="แผนที่จังหวัดกำแพงเพชร ระบายสีตามข้อมูลรายอำเภอ"></div>
-        <div class="ggh-legend" id="dashLegend" aria-hidden="true"></div>
-        <p class="ggh-note" id="dashSourceNote"></p>
-      </section>
-
-      <aside class="ggh-side">
-        <div class="ggh-district" id="dashDistrict" aria-live="polite">
-          <p class="ggh-district-empty">เลือกอำเภอบนแผนที่ หรือค้นหาชื่ออำเภอ เพื่อดูรายละเอียด</p>
-        </div>
-      </aside>
-
-      <section class="ggh-panel ggh-balance hidden" id="resBalanceWrap" data-tabs="overview" aria-labelledby="resBalanceTitle">
-        <h3 id="resBalanceTitle" class="ggh-panel-title">วัสดุเหลือใช้ทางการเกษตรที่จัดการได้ เทียบกับพื้นที่เก็บเกี่ยว</h3>
-        <p class="ggh-panel-sub" id="resBalanceSub"></p>
-        <div id="resBalance"></div>
-      </section>
-
-      <section class="ggh-panel ggh-resmethods" data-tabs="overview" aria-labelledby="resMethodsTitle">
-        <h3 id="resMethodsTitle" class="ggh-panel-title">พื้นที่จัดการวัสดุเหลือใช้ทางการเกษตร แยกตามประเภท</h3>
-        <p class="ggh-panel-sub" id="resMethodsSub"></p>
-        <div class="ggh-methods" id="resMethods"></div>
-      </section>
-
-      <section class="ggh-panel ggh-cropmonths" data-tabs="crops" aria-labelledby="dashCropMonthsTitle">
-        <h3 id="dashCropMonthsTitle" class="ggh-panel-title">พื้นที่เก็บเกี่ยวรายเดือน</h3>
-        <p class="ggh-panel-sub" id="dashCropMonthsSub"></p>
-        <div id="dashCropMonths" class="ggh-columns ggh-columns-crop"></div>
-      </section>
-
-      <section class="ggh-panel ggh-cropstack" data-tabs="crops" aria-labelledby="dashCropStackTitle">
-        <h3 id="dashCropStackTitle" class="ggh-panel-title">เก็บเกี่ยวแล้ว และคงเหลือ</h3>
-        <p class="ggh-panel-sub">แต่ละแท่งคือพื้นที่ปลูกทั้งหมด แบ่งเป็นส่วนที่เก็บเกี่ยวแล้วถึงสิ้นเดือนนั้น กับส่วนที่ยังคงเหลือ</p>
-        <div id="dashCropStack" class="ggh-columns ggh-columns-stack"></div>
-      </section>
-
-      <section class="ggh-panel ggh-harvest" data-tabs="market" aria-labelledby="dashHarvestTitle">
-        <h3 id="dashHarvestTitle" class="ggh-panel-title">ปฏิทินเก็บเกี่ยวของแปลงพร้อมขาย</h3>
-        <p class="ggh-panel-sub">พื้นที่ (ไร่) ของแปลงที่ลงทะเบียนใน Green Gain Hub ตามเดือนที่คาดว่าจะเก็บเกี่ยว</p>
-        <div id="dashHarvest" class="ggh-columns"></div>
-      </section>
-
-      <section class="ggh-panel ggh-materials" data-tabs="market" aria-labelledby="dashMaterialTitle">
-        <h3 id="dashMaterialTitle" class="ggh-panel-title">ตามชนิดวัสดุเหลือใช้ทางการเกษตร</h3>
-        <p class="ggh-panel-sub">พื้นที่แปลงพร้อมขาย และจำนวนจุดรับซื้อของวัสดุแต่ละชนิด</p>
-        <div id="dashMaterials" class="ggh-bars"></div>
-        <p class="ggh-footnote" id="dashResidueNote"></p>
-      </section>
-
-      <section class="ggh-panel ggh-table" data-tabs="overview crops market" aria-labelledby="dashTableTitle">
-        <h3 id="dashTableTitle" class="ggh-panel-title">รายอำเภอ</h3>
-        <p class="ggh-panel-sub" id="dashTableSub">เลือกแถวเพื่อดูอำเภอนั้นบนแผนที่</p>
-        <div class="ggh-table-wrap">
-          <table>
-            <thead id="dashTableHead"></thead>
-            <tbody id="dashTable"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- 2.3.0: district weekly reports (KPP Smart Agri-Materials), formerly their own tab; kept apart from the records above. -->
-      <section class="ggh-panel ggh-sar" id="sarWrap" data-tabs="overview" aria-labelledby="sarTitle">
-        <h3 id="sarTitle" class="ggh-panel-title">รายงานประจำสัปดาห์จากอำเภอ</h3>
-        <p class="ggh-panel-sub" id="sarSub">ระบบรายงานการจัดการ KPP Smart Agri-Materials</p>
-        <div class="ggh-sar-kpis" id="sarKpis"></div>
-        <div id="dashTrendWrap">
-          <p class="ggh-sar-chart-title">ไถกลบตอซัง/ใช้สารย่อยสลาย สะสมรายครั้ง (ไร่ ทั้งจังหวัด)</p>
-          <div id="dashTrend" class="ggh-columns ggh-columns-trend"></div>
-        </div>
-        <div class="ggh-table-wrap">
-          <table>
-            <thead id="sarHead"></thead>
-            <tbody id="sarBody"></tbody>
-          </table>
-        </div>
-        <p class="ggh-footnote">ตัวเลขชุดนี้เป็นยอดที่อำเภอรายงานเป็นรอบ แยกจากพื้นที่ที่เจ้าหน้าที่บันทึกรายแปลงใน Green Gain Hub ด้านบน จึงอาจไม่เท่ากัน</p>
-      </section>
-
-      <section class="ggh-panel ggh-howto" data-tabs="overview" aria-label="วิธีคำนวณและแหล่งข้อมูล">
-        <details id="resMethodNote">
-          <summary>วิธีคำนวณและแหล่งข้อมูล</summary>
-          <div id="resNote"></div>
-        </details>
-      </section>
-
-      <section class="ggh-panel ggh-goals hidden" id="dashGoalsWrap" data-tabs="market" aria-labelledby="dashGoalsTitle">
-        <h3 id="dashGoalsTitle" class="ggh-panel-title">เป้าหมายโครงการ</h3>
-        <ul id="dashGoals" class="ggh-goal-list"></ul>
-      </section>
-
-      <div class="ggh-tooltip" id="dashTooltip" role="tooltip" hidden></div>
-    </div>
+    <!-- 2.6.0: the results page (ผลการดำเนินงาน) and officer sign-in moved to ABM — ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร -->
 
 
     <div id="mainApp" class="hidden">
@@ -473,50 +330,12 @@
       </div>
     </dialog>
 
-    <dialog class="ggh-dialog" id="staffAuth" aria-labelledby="staffAuthTitle">
-      <div class="ggh-dialog-box">
-        <header class="ggh-dialog-head is-staff">
-          <div>
-            <p class="ggh-dialog-kicker">สำหรับเจ้าหน้าที่</p>
-            <h2 id="staffAuthTitle">บันทึกการจัดการ ภาพรวม และรายงาน</h2>
-          </div>
-          <button type="button" class="ggh-dialog-close" data-close aria-label="ปิดหน้าต่าง">✕</button>
-        </header>
-        <div class="ggh-dtabs" role="tablist" aria-label="เข้าสู่ระบบหรือลงทะเบียนเจ้าหน้าที่">
-          <button type="button" role="tab" id="staffTabLogin" data-stafftab="login" aria-selected="true" aria-controls="staffPanelLogin">เข้าสู่ระบบ</button>
-          <button type="button" role="tab" id="staffTabRegister" data-stafftab="register" aria-selected="false" aria-controls="staffPanelRegister">ลงทะเบียนเจ้าหน้าที่</button>
-        </div>
-        <form class="ggh-dpanel" id="staffPanelLogin" data-staffpanel="login" role="tabpanel" aria-labelledby="staffTabLogin" novalidate>
-          <label class="label-text" for="staffPhone">หมายเลขโทรศัพท์ที่ลงทะเบียนไว้</label>
-          <input type="tel" id="staffPhone" name="phone" class="input-field text-lg tracking-widest text-center font-bold" placeholder="08XXXXXXXX" maxlength="12" inputmode="numeric" autocomplete="tel">
-          <div class="ggh-dmsg" id="staffLoginMsg" role="alert"></div>
-          <button type="submit" class="ggh-dbtn" id="staffLoginBtn">เข้าสู่ระบบ</button>
-          <p class="ggh-dswitch">ยังไม่มีบัญชี? <button type="button" data-stafftab="register">ลงทะเบียนเจ้าหน้าที่</button></p>
-        </form>
-        <form class="ggh-dpanel hidden" id="staffPanelRegister" data-staffpanel="register" role="tabpanel" aria-labelledby="staffTabRegister" novalidate>
-          <label class="label-text" for="sregName">ชื่อ-สกุล</label>
-          <input id="sregName" name="name" class="input-field" maxlength="120" autocomplete="name">
-          <label class="label-text" for="sregPhone">หมายเลขโทรศัพท์</label>
-          <input id="sregPhone" name="phone" type="tel" class="input-field" inputmode="numeric" maxlength="12" autocomplete="tel" placeholder="08XXXXXXXX">
-          <label class="label-text" for="sregOffice">หน่วยงาน</label>
-          <select id="sregOffice" name="officeType" class="input-field"><option value="">กำลังโหลด…</option></select>
-          <label class="ggh-reg-field hidden" data-reg="group"><span class="label-text">กลุ่ม</span><select name="group" class="input-field"></select></label>
-          <label class="ggh-reg-field" data-reg="district"><span class="label-text">อำเภอ</span><select name="district" class="input-field"></select></label>
-          <label class="label-text" for="sregProvince">จังหวัด <span class="ggh-dmuted">(พิมพ์เพื่อค้นหา)</span></label>
-          <input id="sregProvince" name="province" list="sregProvinces" class="input-field" autocomplete="off">
-          <datalist id="sregProvinces"></datalist>
-          <p class="ggh-dmuted">ข้อมูลนี้ใช้ระบุตัวผู้บันทึกข้อมูลในระบบและรายงานของหน่วยงานเท่านั้น</p>
-          <div class="ggh-dmsg" id="staffRegMsg" role="alert"></div>
-          <button type="submit" class="ggh-dbtn" id="staffRegBtn">ลงทะเบียนและเข้าใช้งาน</button>
-        </form>
-        <p class="ggh-dfoot">Super Admin / Mini Super Admin <a href="admin.html#admin">เข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่าน</a></p>
-      </div>
-    </dialog>
   </main>
 
   <footer class="bg-green-900 text-white text-center py-6 mt-auto">
     <div class="container mx-auto px-4">
       <p class="text-xs md:text-sm opacity-90 mb-2">ระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร จังหวัดกำแพงเพชร</p>
+      <p class="text-xs md:text-sm opacity-90 mb-2">เจ้าหน้าที่และผู้บริหาร: <a class="underline" href="https://krit-pj.github.io/KPP-Agri-Byproduct-Management/" data-abm-link>ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร</a></p>
       <h4 class="font-bold text-sm md:text-base mb-1">สำนักงานเกษตรจังหวัดกำแพงเพชร</h4>
       <p class="text-xs md:text-sm opacity-80 mb-3">กรมส่งเสริมการเกษตร กระทรวงเกษตรและสหกรณ์</p>
       <p class="ggh-counter" id="visitCounter" aria-live="polite" hidden>
@@ -531,13 +350,11 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=2.4.0"></script>
+  <script src="assets/config.js?v=2.6.0"></script>
   <script src="assets/api-client.js?v=2.4.0"></script>
   <script src="https://krit-pj.github.io/TH-Agri-Risk-Maps-Burning/js/kpp-id.js"></script>
-  <script src="assets/sso-client.js?v=2.4.2"></script>
-  <script src="assets/staff-auth.js?v=2.4.0"></script>
-  <script src="assets/market.js?v=2.5.0" defer></script>
-  <script src="assets/dashboard.js?v=2.5.0" defer></script>
+  <script src="assets/sso-client.js?v=2.6.0"></script>
+  <script src="assets/market.js?v=2.6.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -751,7 +568,9 @@
       toggleOtherMaterial(materialSelect);
     }
 
-    // --- 2.2.1 sign-in popups: farmers/buyers (#hubAuth) and officers (#staffAuth) ---
+    // --- 2.2.1 sign-in popup for farmers/buyers (#hubAuth); 2.6.0: officers sign in at ABM ---
+    const ABM_URL = window.GGH_CONFIG?.ABM_URL || 'https://krit-pj.github.io/KPP-Agri-Byproduct-Management/';
+    document.querySelectorAll('[data-abm-link]').forEach((a) => { a.href = ABM_URL; });
     const AUTH = { opener: null };
     function setMsg(id, html, kind) {
       const el = document.getElementById(id);
@@ -760,7 +579,6 @@
     }
     function openDialog(id, opener) {
       const dlg = document.getElementById(id);
-      ['hubAuth', 'staffAuth'].forEach((x) => { const d = document.getElementById(x); if (x !== id && d.open) d.close(); });
       AUTH.opener = opener || document.activeElement;
       if (!dlg.open) { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); }
       return dlg;
@@ -788,7 +606,6 @@
       }));
     }
     wireTabs('hubAuth', 'hub');
-    wireTabs('staffAuth', 'staff', (tab) => { if (tab === 'register') prepareStaffRegister(); });
 
     function openHub(tab, role, phone, opener) {
       if (window.GGH_SSO) window.GGH_SSO.warm();
@@ -799,20 +616,8 @@
       setMsg('hubLoginMsg', ''); setMsg('hubRegMsg', '');
       selectTab(dlg, 'hub', tab || 'login');
     }
-    function openStaff(tab, phone, opener) {
-      if (window.GGH_SSO) window.GGH_SSO.warm();
-      // An officer who is still signed in goes straight to the officer pages.
-      if (!phone && window.GGH_STAFF && window.GGH_STAFF.hasSession()) { location.href = 'admin.html'; return; }
-      const dlg = openDialog('staffAuth', opener);
-      if (phone) document.getElementById('staffPhone').value = phone;
-      setMsg('staffLoginMsg', ''); setMsg('staffRegMsg', '');
-      selectTab(dlg, 'staff', tab || 'login');
-      if (tab === 'register') prepareStaffRegister();
-    }
-    function prepareStaffRegister() {
-      window.GGH_STAFF.prepareRegister(document.getElementById('staffPanelRegister'), 'sregProvinces')
-        .catch((err) => setMsg('staffRegMsg', escapeHtml(err.message)));
-    }
+    /** 2.6.0: officer sign-in is in ABM (same popup and phone sign-in as before). */
+    function openStaff(tab) { location.href = ABM_URL + (tab === 'register' ? '#staff-register' : '#staff'); }
     function openDoor(action, role, opener) {
       if (action === 'staff') return openStaff('login', '', opener);
       openHub(action === 'register' ? 'register' : 'login', role, '', opener);
@@ -833,12 +638,11 @@
     // Kept for older links/buttons.
     function toggleAuth(page) { openHub(page === 'register' ? 'register' : 'login'); }
 
-    // Shareable links (e.g. in LINE): #sell, #buy, #login, #staff, #staff-register. Read before the dashboard rewrites the hash.
+    // Shareable links (e.g. in LINE): #sell, #buy, #login, #register. (#staff, #staff-register and the old results links open ABM — market.js.)
     (function openFromHash() {
       const h = decodeURIComponent((location.hash || '').slice(1));
       const map = { sell: ['register', 'farmer'], buy: ['register', 'buyer'], login: ['login', ''], register: ['register', ''] };
       if (map[h]) { setTimeout(() => openHub(map[h][0], map[h][1]), 0); history.replaceState(null, '', location.pathname + location.search); }
-      else if (h === 'staff' || h === 'staff-register') { setTimeout(() => openStaff(h === 'staff' ? 'login' : 'register'), 0); history.replaceState(null, '', location.pathname + location.search); }
     })();
 
     // 2.4.0: signed in on Agri-Risk Map / Smart Agri / GGH earlier on this device → open the market app without typing again.
@@ -886,11 +690,7 @@
       const failure = function (err) {
         done();
           const msg = String(err && err.message || '');
-          if (/^STAFF_ACCOUNT:/.test(msg)) {
-            // An officer number typed here: switch to the officer popup with the number filled in.
-            setMsg('hubLoginMsg', `${escapeHtml(msg.replace(/^STAFF_ACCOUNT:\s*/, ''))}<br><button type="button" class="ggh-dlink" data-to-staff>เปิดหน้าต่างเจ้าหน้าที่</button>`, 'info');
-            document.querySelector('#hubLoginMsg [data-to-staff]').addEventListener('click', () => openStaff('login', u));
-          } else if (/ไม่พบหมายเลข/.test(msg)) {
+          if (/ไม่พบหมายเลข/.test(msg)) {
             setMsg('hubLoginMsg', `${escapeHtml(msg)}<br><button type="button" class="ggh-dlink" data-to-register>ลงทะเบียนด้วยหมายเลขนี้</button>`);
             document.querySelector('#hubLoginMsg [data-to-register]').addEventListener('click', () => openHub('register', '', u));
           } else setMsg('hubLoginMsg', escapeHtml(msg || 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่'));
@@ -935,37 +735,8 @@
         .registerServer({ role: role, name: f.name.value.trim(), phone: u, password: '' });
     }
 
-    // --- Officers: shared logic in assets/staff-auth.js; on success go to the officer pages. ---
-    document.getElementById('staffPanelLogin').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('staffLoginBtn'), phone = window.GGH_STAFF.digits(e.target.phone.value);
-      btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ…'; setMsg('staffLoginMsg', '');
-      try { await window.GGH_STAFF.login(phone); location.href = 'admin.html'; }
-      catch (err) {
-        const msg = String(err.message || '');
-        if (/^MARKET_ACCOUNT:/.test(msg)) {
-          setMsg('staffLoginMsg', `${escapeHtml(msg.replace(/^MARKET_ACCOUNT:\s*/, ''))}<br><button type="button" class="ggh-dlink" data-to-hub>เปิดหน้าต่างเกษตรกรและผู้รับซื้อ</button>`, 'info');
-          document.querySelector('#staffLoginMsg [data-to-hub]').addEventListener('click', () => openHub('login', '', phone));
-        } else if (/ลงทะเบียน/.test(msg)) {
-          setMsg('staffLoginMsg', `${escapeHtml(msg)}<br><button type="button" class="ggh-dlink" data-to-sreg>ลงทะเบียนเจ้าหน้าที่</button>`);
-          document.querySelector('#staffLoginMsg [data-to-sreg]').addEventListener('click', () => { document.getElementById('staffPanelRegister').phone.value = phone; selectTab(document.getElementById('staffAuth'), 'staff', 'register'); prepareStaffRegister(); });
-        } else setMsg('staffLoginMsg', escapeHtml(msg));
-      } finally { btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ'; }
-    });
-    document.getElementById('staffPanelRegister').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const { input, missing } = window.GGH_STAFF.readRegister(e.target);
-      if (missing.length) return setMsg('staffRegMsg', 'กรุณากรอก: ' + escapeHtml(missing.join(', ')));
-      const btn = document.getElementById('staffRegBtn');
-      btn.disabled = true; btn.textContent = 'กำลังลงทะเบียน…'; setMsg('staffRegMsg', '');
-      try { await window.GGH_STAFF.register(input); location.href = 'admin.html'; }
-      catch (err) { setMsg('staffRegMsg', escapeHtml(err.message)); }
-      finally { btn.disabled = false; btn.textContent = 'ลงทะเบียนและเข้าใช้งาน'; }
-    });
-
     // --- UI SETUP ---
     function setupUI(user) {
-      document.getElementById('loginPage').classList.add('hidden');
       document.getElementById('marketPage')?.classList.add('hidden');
       document.getElementById('mainApp').classList.remove('hidden');
       document.getElementById('userNameDisplay').innerText = user.name;

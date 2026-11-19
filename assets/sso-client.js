@@ -1,4 +1,5 @@
-/* Green Gain Hub 2.4.0 — sign-in through the central identity (SSO) shared with Agri-Risk Map and Smart Agri.
+/* Green Gain Hub 2.6.0 (since 2.4.0) — farmer/buyer sign-in through the central identity (SSO) shared with Agri-Risk Map,
+   Smart Agri and ABM (officers sign in at ABM since 19 Nov 2026).
    Uses KPP_ID (https://krit-pj.github.io/TH-Agri-Risk-Maps-Burning/js/kpp-id.js): phone → identity → one-use ticket → this
    system's Apps Script redeems it and opens its own session as before. Existing GGH users get an identity created from
    their GGH record on first sign-in (ssoProvisionServer), so nobody registers twice.
@@ -43,13 +44,6 @@
     const result = await rpc('ssoLoginServer', { ticket: t.ticket });
     return { id, result };
   }
-  /** Officer: call = GGH_STAFF.call (POST admin API). */
-  async function staff(phone, call) {
-    const id = await identity(phone, (p) => call('ssoProvisionServer', { phone: p }), false);
-    const t = await ticketOf(id);
-    const result = await call('ssoStaffLoginServer', { ticket: t.ticket });
-    return { id, result };
-  }
   /** After a new GGH registration: give the person the shared identity too (best effort, never blocks GGH). */
   async function attach(phone, provision) {
     if (!available()) return null;
@@ -72,5 +66,5 @@
     window.KPP_ID.bindPrev(box, (suspended) => { if (suspended) { if (onSuspended) onSuspended(); } else box.remove(); });
   }
   function logout() { if (available()) window.KPP_ID.logout(); }
-  window.GGH_SSO = { available, fallback, rpc, market, staff, attach, autoTicket, showPrev, logout, warm };
+  window.GGH_SSO = { available, fallback, rpc, market, attach, autoTicket, showPrev, logout, warm };
 })();

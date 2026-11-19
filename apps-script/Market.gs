@@ -43,7 +43,8 @@ function buildMarketPublic_(now) {
   const districts = districtList_();
   const today = startOfDay_(now);
   const rates = {};
-  try { ghgCrops_(true).forEach(function (c) { if (c.residueTRai !== '' && c.residueTRai !== null) rates[c.key] = Number(c.residueTRai); }); } catch (err) { /* defaults unknown */ }
+  // 2.6.0: residue rates (ตัน/ไร่) are ABM's — read from its public residue endpoint (Abm.gs), defaults if unreachable
+  try { const r = abmResidueRates_(); Object.keys(r).forEach(function (k) { rates[k] = Number(r[k]); }); } catch (err) { /* defaults unknown */ }
   const groups = {};
   MARKET_GROUPS.forEach(function (g) {
     groups[g.key] = { key: g.key, label: g.label, residueTRai: rates[g.key] === undefined ? null : rates[g.key], others: {},
