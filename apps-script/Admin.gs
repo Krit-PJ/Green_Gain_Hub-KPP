@@ -84,6 +84,10 @@ function doPost(e) {
   let payload;
   try {
     const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    // 2.5.1: server-to-server feed for ABM (Code.gs abmFeed_) — not an admin method, no session.
+    if (body.action === 'abm_feed') {
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, data: abmFeed_(body) })).setMimeType(ContentService.MimeType.JSON);
+    }
     const method = String(body.method || '');
     const def = ADMIN_METHODS[method];
     if (!def) throw new Error('Method not allowed');
