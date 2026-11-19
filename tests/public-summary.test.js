@@ -123,7 +123,7 @@ const json = JSON.stringify(s);
 // HTTP routing: JSON, JSONP, health, key gate, and RPC untouched.
 api.doGet({ parameter: { api: 'v1', endpoint: 'summary', key: 'YOUR_KEY' } });
 let out = JSON.parse(lastOutput.body);
-assert(out.ok && out.api === 'v1' && out.apiVersion === '2.5.0' && out.data.totals.farmerPlots === 5 && lastOutput.mime === 'json', 'JSON summary route failed: ' + lastOutput.body.slice(0, 200));
+assert(out.ok && out.api === 'v1' && out.apiVersion === '2.5.1' && out.data.totals.farmerPlots === 5 && lastOutput.mime === 'json', 'JSON summary route failed: ' + lastOutput.body.slice(0, 200));
 assert(out.data.crops && out.data.crops.ok && Array.isArray(out.data.crops.crops) && out.data.crops.crops.length === 0, 'summary must include an empty crops block before any import: ' + JSON.stringify(out.data.crops));
 api.doGet({ parameter: { api: 'v1', endpoint: 'summary', callback: 'cb_1' } });
 assert(lastOutput.body.startsWith('cb_1(') && lastOutput.mime === 'js', 'JSONP summary route failed');
@@ -138,7 +138,7 @@ api.doGet({ parameter: { api: 'v1', endpoint: 'summary', key: 'secret-1' } });
 assert(JSON.parse(lastOutput.body).ok === true, 'matching key must be accepted');
 props = {};
 api.doGet({ parameter: { action: 'rpc', method: 'getApiInfoServer', args: '[]' } });
-assert(JSON.parse(lastOutput.body).result.apiVersion === '2.5.0', 'existing RPC route must keep working');
+assert(JSON.parse(lastOutput.body).result.apiVersion === '2.5.1', 'existing RPC route must keep working');
 
 // Without Districts.gs the summary still works (everything falls into OTHER).
 const apiNoDistricts = new Function(code + '; return { buildPublicSummary_ };')();

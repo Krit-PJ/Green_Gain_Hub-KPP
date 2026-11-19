@@ -18,7 +18,7 @@
  *   ?api=v1&endpoint=health           Public version check
  *   POST {method,args,token}          Admin API (Admin.gs)
  */
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.5.1';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -520,6 +520,35 @@ function verifySmartAgriConnection() {
   if (!r.ok) return (r.configured ? 'FAIL: ' : 'INFO: ') + r.error;
   return 'PASS: Smart Agri-Materials — round ' + r.round.round + ' (' + r.round.label + '), ' + r.reportedCount + '/' +
     r.districtsTotal + ' district(s) reported, ' + r.items.length + ' indicator(s)';
+}
+
+/* ------------------------------------------------------------------------- *
+ * 2.5.1 — feed for ABM (ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร), server-to-server only.
+ * ABM keeps its own officer data and reads the market registry from here instead of copying it.
+ * POST {action:'abm_feed', key} → farmers + buyers rows (sheet column order). ABM made the key by code and wrote only its
+ * SHA-256 to Config (abm_feed_key_sha256); the key itself is never stored in this project or its sheet.
+ * ------------------------------------------------------------------------- */
+const ABM_FEED_HASH_PARAM = 'abm_feed_key_sha256';
+
+function abmSha256Hex_(s) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(s), Utilities.Charset.UTF_8)
+    .map(function (b) { return ('0' + (b & 0xff).toString(16)).slice(-2); }).join('');
+}
+
+function abmFeed_(body) {
+  const expected = String(setting_(ABM_FEED_HASH_PARAM, '') || '').trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(expected)) throw new Error('Feed not configured');
+  const key = String((body && body.key) || '');
+  if (key.length < 32 || abmSha256Hex_(key) !== expected) throw new Error('Invalid feed key');
+  const pack = function (kind) {
+    const sh = sheet_(kind);
+    const lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
+    return {
+      headers: lastCol ? sh.getRange(1, 1, 1, lastCol).getValues()[0] : [],
+      rows: lastRow >= 2 && lastCol ? sh.getRange(2, 1, lastRow - 1, lastCol).getValues() : []
+    };
+  };
+  return { apiVersion: APP_VERSION, generatedAt: new Date().toISOString(), farmers: pack('farmers'), buyers: pack('buyers') };
 }
 
 /** Saves change the dashboard immediately instead of waiting for the cache to expire. */

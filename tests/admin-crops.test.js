@@ -181,7 +181,7 @@ assert(ok(post('cropTypesListServer', [], A), 'types').some((t) => t.crop === '�
 /* ---------- public API ---------- */
 api.doGet({ parameter: { api: 'v1', endpoint: 'summary', refresh: '1' } });
 const pub = JSON.parse(lastOut.body);
-assert(pub.ok && pub.apiVersion === '2.5.0' && pub.data.crops.ok && pub.data.crops.crops[0].crop === 'ข้าวนาปี', 'summary must include crops');
+assert(pub.ok && pub.apiVersion === '2.5.1' && pub.data.crops.ok && pub.data.crops.crops[0].crop === 'ข้าวนาปี', 'summary must include crops');
 assert(!lastOut.body.includes(superRow[4]) && !lastOut.body.includes('0899000003') && !lastOut.body.includes('admin.khanu'), 'public summary must not leak admin data');
 api.doGet({ parameter: { api: 'v1', endpoint: 'crop', crop: 'ข้าวนาปี', district: '6204' } });
 const det = JSON.parse(lastOut.body);
