@@ -1,34 +1,28 @@
 /**
- * Green Gain Hub 2.4.0 — API-only bridge from GitHub Pages to Google Sheets.
- * Files: Code.gs (this), Districts.gs (boundaries), Admin.gs (Super / Mini Super / Admin, doPost),
- *        Crops.gs (crop area import + crop summary), Counter.gs (visit counter),
- *        Reports.gs (admin reports for print / PDF / Excel / CSV),
- *        Ghg.gs (GHG Calculation Engine v1.0), Residue.gs (residue records, targets, GHG avoided, value),
- *        Staff.gs (officer self-registration and phone sign-in),
- *        Balance.gs (residue balance: registry harvest × marketplace × officer records).
- * Database: Google Sheets / file storage: Google Drive.
+ * Green Gain Hub 2.6.0 — ตลาดวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ (API-only bridge from GitHub Pages to Google Sheets).
+ *
+ * 19 Nov 2026: the officer side moved to ABM — ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร
+ * (records, GHG, value, targets, reports, crop data, officer accounts, executive dashboard):
+ *   https://krit-pj.github.io/KPP-Agri-Byproduct-Management/
+ * This system keeps what farmers and buyers use and own: their accounts, plots for sale, buyers, the matching map.
+ * ABM reads plots and buyers through the server-to-server feed below (abmFeed_); it never copies them.
+ *
+ * Files: Code.gs (this), Market.gs (public matching map), Sso.gs (farmer/buyer sign-in through the central identity),
+ *        Abm.gs (link to ABM: residue rates, managed area, helpers), Counter.gs (visit counter), Districts.gs (boundaries).
+ * Database: Google Sheets (users, farmers, buyers, Config, visit_stats). The officer sheets that used to live in the same
+ * file stay there untouched as an archive (ABM has its own database since 19 Nov 2026).
  *
  * Endpoints (same /exec URL):
- *   ?action=rpc&method=...            JSONP RPC used by the logged-in app (unchanged)
- *   ?api=v1&endpoint=summary[&key=]   Public, aggregate-only dashboard data (JSON or JSONP)
- *   ?api=v1&endpoint=crop&crop=&season=&district=   Public sub-district crop breakdown
- *   ?api=v1&endpoint=residue[&fy=2570] Public residue management + GHG avoided (district × crop × method sums)
- *   ?api=v1&endpoint=balance[&fy=2570] Public residue balance ①–⑥ per district × crop (aggregate only)
+ *   ?action=rpc&method=...            JSONP RPC used by the logged-in market app (unchanged)
+ *   ?api=v1&endpoint=market           Public matching map (aggregate grid, no personal data)
  *   ?api=v1&endpoint=hit | visits     Visit counter (count once per session | read)
  *   ?api=v1&endpoint=health           Public version check
- *   POST {method,args,token}          Admin API (Admin.gs)
+ *   POST {action:'abm_feed', key}     Server-to-server feed for ABM (2.5.1)
  */
-const APP_VERSION = '2.5.1';
+const APP_VERSION = '2.6.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
-const SUMMARY_CACHE_SECONDS = 300;
-const SUMMARY_CACHE_KEY = 'summary:v1:' + APP_VERSION;
-// KPP Smart Agri-Materials (รายงานการจัดการวัสดุเหลือใช้ทางการเกษตรรายอำเภอ) — อ่านผ่าน Data API v1 ฝั่ง Server
-// API Key เก็บใน Script Property SMART_AGRI_API_KEY เท่านั้น (ไม่อยู่ใน GitHub/หน้าเว็บ)
-const SMART_AGRI_DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbxoo4VuAomjDPaDPXgEF6y0CFVxBfor-4OmIi3bQVik7FCgAx_7XghYmeav7BHDbpLcaw/exec';
-const SMART_AGRI_CACHE_KEY = 'smartagri:v1:' + APP_VERSION;
-const SMART_AGRI_ITEMS = 'agri';
 const DEFAULT_SESSION_TTL_SECONDS = 21600; // 6 hours
 const MATERIAL_TYPES = ['ฟางข้าว', 'ใบอ้อย', 'เหง้ามันสำปะหลัง', 'อื่นๆ'];
 const CROP_MATERIAL_MAP = {
@@ -85,7 +79,7 @@ function getApiInfoServer() {
     status: 'success',
     success: true,
     apiVersion: APP_VERSION,
-    feature: 'MATCHING_MAP'
+    feature: 'MARKET_ONLY'
   };
 }
 
@@ -100,26 +94,18 @@ function publicApiResponse_(p, callback) {
     if (String(p.api) !== 'v1') throw new Error('Unsupported API version');
     requireSummaryKey_(p.key);
     const endpoint = String(p.endpoint || 'summary');
-    if (endpoint === 'summary') {
-      const data = getPublicSummary_(p.refresh === '1');
-      data.reports = getSmartAgriReports_(p.refresh === '1');
-      data.crops = getCropSummary_(p.refresh === '1');
-      data.province = provinceName_();
-      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: data };
+    if (endpoint === 'summary' || endpoint === 'residue' || endpoint === 'balance' || endpoint === 'crop') {
+      // 2.6.0: these moved to ABM with the officer side — the answer says where to find them.
+      payload = { ok: false, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, moved: 'ABM', url: abmApiUrl_(),
+        error: 'ย้ายไปที่ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร (ABM): ' + ABM_SITE_URL };
     } else if (endpoint === 'hit') {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: recordVisit_() };
     } else if (endpoint === 'visits') {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: visitCounts_(false) };
-    } else if (endpoint === 'residue') {
-      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getResiduePublic_(p) };
-    } else if (endpoint === 'balance') {
-      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getResidueBalancePublic_(p) };
-    } else if (endpoint === 'crop') {
-      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getCropDetail_(p) };
     } else if (endpoint === 'market') {
       payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, data: getMarketPublic_(p) };
     } else if (endpoint === 'health') {
-      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, feature: getApiInfoServer().feature,
+      payload = { ok: true, api: 'v1', endpoint: endpoint, apiVersion: APP_VERSION, feature: getApiInfoServer().feature, system: 'GGH',
         generatedAt: new Date().toISOString() };
     } else {
       throw new Error('Unknown endpoint');
@@ -143,213 +129,6 @@ function requireSummaryKey_(key) {
   if (expected && String(key || '') !== String(expected)) throw new Error('Invalid API key');
 }
 
-function getPublicSummary_(forceRefresh) {
-  const cache = CacheService.getScriptCache();
-  if (!forceRefresh) {
-    const cached = cache.get(SUMMARY_CACHE_KEY);
-    if (cached) return JSON.parse(cached);
-  }
-  const summary = buildPublicSummary_(new Date());
-  try { cache.put(SUMMARY_CACHE_KEY, JSON.stringify(summary), SUMMARY_CACHE_SECONDS); } catch (err) { /* >100KB: skip cache */ }
-  return summary;
-}
-
-function buildPublicSummary_(now) {
-  const farmers = dataRows_(sheet_('farmers')).filter(function (r) {
-    return String(r[11] || '').trim().toLowerCase() === 'open';
-  });
-  const buyers = dataRows_(sheet_('buyers')).filter(function (r) {
-    return String(r[11] || '').trim().toLowerCase() === 'active';
-  });
-  const refs = researchRefs_();
-  const districts = districtList_();
-  const byDistrict = {};
-  districts.forEach(function (d) { byDistrict[d.code] = emptyDistrictStat_(d); });
-  const outside = emptyDistrictStat_({ code: 'OTHER', name: 'นอกเขต/ไม่ระบุพิกัด' });
-  const byMaterial = {};
-  const byCrop = {};
-  const owners = {};
-  const today = startOfDay_(now);
-  const months = harvestMonthWindow_(today, 6, 6);
-  const monthIndex = {};
-  months.forEach(function (m, i) { monthIndex[m.month] = i; });
-  const upcoming = { days30: { plots: 0, areaRai: 0 }, days60: { plots: 0, areaRai: 0 } };
-  let totalArea = 0;
-  let withCoordinates = 0;
-
-  buyers.forEach(function (r) {
-    const material = resolvedMaterial_(r[13], r[14], r[7]) || 'ไม่ระบุ';
-    const capacity = leadingNumber_(r[10]);
-    const price = maybeNumber_(r[9]);
-    const district = hasCoordinates_(r[5], r[6]) ? districtForPoint_(Number(r[5]), Number(r[6]), districts) : null;
-    const target = district ? byDistrict[district.code] : outside;
-    target.buyers++;
-    target.capacityTonPerDay += capacity;
-    const m = materialStat_(byMaterial, material);
-    m.buyers++;
-    m.capacityTonPerDay += capacity;
-    if (price !== '' && price > 0) { m.priceSum += price; m.priceCount++; }
-  });
-
-  farmers.forEach(function (r) {
-    const area = parseAreaRai_(r[8]);
-    const material = resolvedMaterial_(r[13], r[14], r[5]) || 'ไม่ระบุ';
-    const crop = text_(r[5]) || 'ไม่ระบุ';
-    const owner = normalizePhone_(r[12]) || normalizePhone_(r[4]);
-    if (owner) owners[owner] = true;
-    totalArea += area;
-    let district = null;
-    if (hasCoordinates_(r[9], r[10])) {
-      withCoordinates++;
-      district = districtForPoint_(Number(r[9]), Number(r[10]), districts);
-    }
-    const target = district ? byDistrict[district.code] : outside;
-    target.plots++;
-    target.areaRai += area;
-    if (owner) target.owners[owner] = true;
-    target.materials[material] = (target.materials[material] || 0) + area;
-
-    const m = materialStat_(byMaterial, material);
-    m.plots++;
-    m.areaRai += area;
-    const c = byCrop[crop] || (byCrop[crop] = { crop: crop, material: material, plots: 0, areaRai: 0 });
-    c.plots++;
-    c.areaRai += area;
-
-    const harvest = toDate_(r[7]);
-    if (harvest) {
-      const key = Utilities.formatDate(harvest, Session.getScriptTimeZone(), 'yyyy-MM');
-      if (key in monthIndex) {
-        months[monthIndex[key]].plots++;
-        months[monthIndex[key]].areaRai += area;
-      }
-      const days = Math.round((startOfDay_(harvest).getTime() - today.getTime()) / 86400000);
-      if (days >= 0 && days <= 30) { upcoming.days30.plots++; upcoming.days30.areaRai += area; }
-      if (days >= 0 && days <= 60) { upcoming.days60.plots++; upcoming.days60.areaRai += area; }
-    }
-  });
-
-  const materialList = Object.keys(byMaterial).map(function (k) {
-    const m = byMaterial[k];
-    const ref = refs[k] || null;
-    const avgPrice = m.priceCount ? m.priceSum / m.priceCount : null;
-    return {
-      material: k,
-      plots: m.plots,
-      areaRai: round_(m.areaRai, 2),
-      buyers: m.buyers,
-      capacityTonPerDay: round_(m.capacityTonPerDay, 1),
-      avgBuyerPriceBahtPerRai: avgPrice === null ? null : round_(avgPrice, 2),
-      potentialValueBaht: avgPrice === null ? null : Math.round(m.areaRai * avgPrice),
-      bioRateTonPerRai: ref && ref.bioRate !== null ? ref.bioRate : null,
-      residueTon: ref && ref.bioRate !== null ? round_(m.areaRai * ref.bioRate, 1) : null
-    };
-  }).sort(function (a, b) { return b.areaRai - a.areaRai || b.buyers - a.buyers; });
-
-  const valueKnown = materialList.filter(function (m) { return m.potentialValueBaht !== null; });
-  const residueKnown = materialList.filter(function (m) { return m.residueTon !== null; });
-  const allBuyerPrices = buyers.map(function (r) { return maybeNumber_(r[9]); }).filter(function (v) { return v !== '' && v > 0; });
-
-  const districtList = districts.map(function (d) { return finalizeDistrictStat_(byDistrict[d.code], refs); });
-  if (outside.plots || outside.buyers) districtList.push(finalizeDistrictStat_(outside, refs));
-
-  return {
-    generatedAt: now.toISOString(),
-    province: 'กำแพงเพชร',
-    cacheSeconds: SUMMARY_CACHE_SECONDS,
-    totals: {
-      farmerPlots: farmers.length,
-      farmers: Object.keys(owners).length,
-      plotsWithCoordinates: withCoordinates,
-      areaRai: round_(totalArea, 2),
-      buyers: buyers.length,
-      capacityTonPerDay: round_(buyers.reduce(function (s, r) { return s + leadingNumber_(r[10]); }, 0), 1),
-      avgBuyerPriceBahtPerRai: allBuyerPrices.length ? round_(allBuyerPrices.reduce(function (s, v) { return s + v; }, 0) / allBuyerPrices.length, 2) : null,
-      potentialValueBaht: valueKnown.length ? valueKnown.reduce(function (s, m) { return s + m.potentialValueBaht; }, 0) : null,
-      residueTon: residueKnown.length ? round_(residueKnown.reduce(function (s, m) { return s + m.residueTon; }, 0), 1) : null,
-      districtsCovered: districtList.filter(function (d) { return d.code !== 'OTHER' && (d.plots || d.buyers); }).length,
-      districtsTotal: districts.length
-    },
-    upcomingHarvest: {
-      days30: { plots: upcoming.days30.plots, areaRai: round_(upcoming.days30.areaRai, 2) },
-      days60: { plots: upcoming.days60.plots, areaRai: round_(upcoming.days60.areaRai, 2) }
-    },
-    byDistrict: districtList,
-    byMaterial: materialList,
-    byCrop: Object.keys(byCrop).map(function (k) {
-      return { crop: k, material: byCrop[k].material, plots: byCrop[k].plots, areaRai: round_(byCrop[k].areaRai, 2) };
-    }).sort(function (a, b) { return b.areaRai - a.areaRai; }),
-    harvestByMonth: months.map(function (m) { return { month: m.month, plots: m.plots, areaRai: round_(m.areaRai, 2), isCurrent: m.isCurrent }; }),
-    goals: activeGoals_(),
-    notes: {
-      area: 'พื้นที่แปลง (ไร่) แปลงจากรูปแบบ ไร่-งาน-ตร.ว. ของแบบฟอร์ม',
-      price: 'ราคารับซื้อเป็นค่าเฉลี่ยที่ผู้รับซื้อสถานะ Active ระบุ (บาท/ไร่)',
-      residue: residueKnown.length ? 'ปริมาณวัสดุเหลือใช้ทางการเกษตรประมาณจาก BioRate (ตัน/ไร่) ในชีต Research_Refs'
-        : 'ยังไม่ได้กำหนด BioRate (ตัน/ไร่) ในชีต Research_Refs จึงยังไม่ประมาณปริมาณวัสดุเหลือใช้ทางการเกษตร',
-      privacy: 'ข้อมูลสรุปเชิงสถิติเท่านั้น ไม่มีชื่อ เบอร์โทร หรือพิกัดรายแปลง'
-    }
-  };
-}
-
-function emptyDistrictStat_(d) {
-  return { code: d.code, name: d.name, plots: 0, areaRai: 0, buyers: 0, capacityTonPerDay: 0, owners: {}, materials: {} };
-}
-
-function finalizeDistrictStat_(d, refs) {
-  let residue = 0;
-  let residueKnown = false;
-  const materials = Object.keys(d.materials).map(function (k) {
-    const ref = refs[k];
-    if (ref && ref.bioRate !== null) { residue += d.materials[k] * ref.bioRate; residueKnown = true; }
-    return { material: k, areaRai: round_(d.materials[k], 2) };
-  }).sort(function (a, b) { return b.areaRai - a.areaRai; });
-  return {
-    code: d.code, name: d.name, plots: d.plots, farmers: Object.keys(d.owners).length,
-    areaRai: round_(d.areaRai, 2), buyers: d.buyers, capacityTonPerDay: round_(d.capacityTonPerDay, 1),
-    residueTon: residueKnown ? round_(residue, 1) : null, materials: materials
-  };
-}
-
-function materialStat_(map, material) {
-  return map[material] || (map[material] = { plots: 0, areaRai: 0, buyers: 0, capacityTonPerDay: 0, priceSum: 0, priceCount: 0 });
-}
-
-/** Research_Refs: Type = ชนิดวัสดุเหลือใช้ทางการเกษตร, BioRate = ตัน/ไร่ (optional). */
-function researchRefs_() {
-  const out = {};
-  try {
-    const sh = spreadsheet_().getSheetByName('Research_Refs');
-    if (!sh || sh.getLastRow() < 2) return out;
-    const head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim(); });
-    const iType = head.indexOf('Type');
-    const iRate = head.indexOf('BioRate');
-    if (iType < 0) return out;
-    dataRows_(sh).forEach(function (r) {
-      const type = text_(r[iType]);
-      if (!type) return;
-      const rate = iRate >= 0 ? Number(r[iRate]) : NaN;
-      out[type] = { bioRate: isFinite(rate) && rate > 0 && String(r[iRate]).trim() !== '' ? rate : null };
-    });
-  } catch (err) { /* optional sheet */ }
-  return out;
-}
-
-/** Goals: ID, Icon, Title, Description, SortOrder, Active — shown on the landing page when present. */
-function activeGoals_() {
-  try {
-    const sh = spreadsheet_().getSheetByName('Goals');
-    if (!sh || sh.getLastRow() < 2) return [];
-    return dataRows_(sh).filter(function (r) {
-      const active = String(r[5]).trim().toLowerCase();
-      return text_(r[2]) && (active === 'true' || active === 'yes' || active === '1' || r[5] === true);
-    }).map(function (r) {
-      return { icon: cleanText_(r[1], 40), title: cleanText_(r[2], 120), description: cleanText_(r[3], 400), sortOrder: Number(r[4]) || 0 };
-    }).sort(function (a, b) { return a.sortOrder - b.sortOrder; }).slice(0, 8);
-  } catch (err) {
-    return [];
-  }
-}
-
 /** "20 ไร่ 1 งาน 25 ตร.ว." → 20.3125 rai. A bare number is read as rai. */
 function parseAreaRai_(value) {
   if (typeof value === 'number') return isFinite(value) && value > 0 ? value : 0;
@@ -369,16 +148,6 @@ function leadingNumber_(value) {
   if (typeof value === 'number') return isFinite(value) && value > 0 ? value : 0;
   const m = String(value || '').replace(/,/g, '').match(/\d+(?:\.\d+)?/);
   return m ? Number(m[0]) : 0;
-}
-
-function harvestMonthWindow_(today, before, after) {
-  const out = [];
-  const tz = Session.getScriptTimeZone();
-  for (let i = -before; i <= after; i++) {
-    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
-    out.push({ month: Utilities.formatDate(d, tz, 'yyyy-MM'), plots: 0, areaRai: 0, isCurrent: i === 0 });
-  }
-  return out;
 }
 
 function startOfDay_(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
@@ -428,100 +197,6 @@ function pointInRing_(x, y, ring) {
  * the browser. Failures return { ok:false } and never break the GGH summary.
  * ------------------------------------------------------------------------- */
 
-function getSmartAgriReports_(forceRefresh) {
-  const cache = CacheService.getScriptCache();
-  if (!forceRefresh) {
-    const hit = cache.get(SMART_AGRI_CACHE_KEY);
-    if (hit) return JSON.parse(hit);
-  }
-  const reports = fetchSmartAgriReports_();
-  // Cache failures briefly so a broken upstream is retried soon without hammering it.
-  try { cache.put(SMART_AGRI_CACHE_KEY, JSON.stringify(reports), reports.ok ? SUMMARY_CACHE_SECONDS : 60); } catch (err) { /* too large */ }
-  return reports;
-}
-
-function fetchSmartAgriReports_() {
-  const props = PropertiesService.getScriptProperties();
-  const key = String(props.getProperty('SMART_AGRI_API_KEY') || '').trim();
-  const base = String(props.getProperty('SMART_AGRI_API_URL') || SMART_AGRI_DEFAULT_URL).trim();
-  const source = { name: 'KPP Smart Agri-Materials', office: '', title: '' };
-  if (!key) return { ok: false, configured: false, source: source, error: 'ยังไม่ได้ตั้งค่า SMART_AGRI_API_KEY ใน Script Properties' };
-  try {
-    const url = function (endpoint) {
-      return base + (base.indexOf('?') >= 0 ? '&' : '?') + 'api=v1&endpoint=' + endpoint +
-        '&items=' + SMART_AGRI_ITEMS + '&key=' + encodeURIComponent(key);
-    };
-    const responses = UrlFetchApp.fetchAll(['summary', 'districts', 'timeseries', 'meta'].map(function (endpoint) {
-      return { url: url(endpoint), muteHttpExceptions: true, followRedirects: true };
-    }));
-    const bodies = responses.map(function (res) {
-      if (res.getResponseCode() !== 200) throw new Error('Smart Agri API HTTP ' + res.getResponseCode());
-      const body = JSON.parse(res.getContentText());
-      if (!body || body.ok === false) throw new Error('Smart Agri API: ' + (body && (body.error || body.code) || 'error'));
-      return body;
-    });
-    return normalizeSmartAgri_(bodies[0], bodies[1], bodies[2], bodies[3]);
-  } catch (err) {
-    return { ok: false, configured: true, source: source, error: cleanText_(err && err.message || err, 200) };
-  }
-}
-
-/** Reshape the external API into the compact, district-keyed form used by the dashboard. */
-function normalizeSmartAgri_(summaryBody, districtsBody, seriesBody, metaBody) {
-  const s = summaryBody.data || {};
-  const d = (districtsBody && districtsBody.data) || {};
-  const ts = (seriesBody && seriesBody.data) || {};
-  const meta = (metaBody && metaBody.data) || {};
-  const items = (s.items || []).map(function (it) {
-    return { id: text_(it.id), code: text_(it.code), label: text_(it.label), unit: text_(it.unit),
-      week: numOrNull_(it.week), cumulative: numOrNull_(it.cumulative), districtsYes: Number(it.districts_reporting_yes) || 0 };
-  });
-  const byDistrict = (d.districts || []).map(function (x) {
-    const values = {};
-    Object.keys(x.items || {}).forEach(function (id) {
-      values[id] = { week: numOrNull_(x.items[id].week), cumulative: numOrNull_(x.items[id].cumulative) };
-    });
-    return { code: text_(x.amp_code), sourceCode: text_(x.code), name: text_(x.name), status: text_(x.status) || 'none',
-      counted: !!x.counted, late: !!x.late, items: values };
-  });
-  const series = (ts.series || []).map(function (r) {
-    const values = {};
-    Object.keys(r.values || {}).forEach(function (id) {
-      values[id] = { week: numOrNull_(r.values[id].week), cumulative: numOrNull_(r.values[id].cumulative) };
-    });
-    return { round: Number(r.round) || 0, label: text_(r.label), start: text_(r.start), end: text_(r.end), reported: Number(r.reported) || 0, values: values };
-  });
-  const round = s.round || {};
-  return {
-    ok: true,
-    configured: true,
-    source: { name: text_(meta.site) || 'KPP Smart Agri-Materials', office: text_(meta.office), title: text_(meta.title), season: text_(meta.season) },
-    generatedAt: text_(summaryBody.generated_at),
-    round: { round: Number(round.round) || 0, label: text_(round.label), start: text_(round.start), end: text_(round.end), due: text_(round.due) },
-    districtsTotal: Number(s.districts_total) || byDistrict.length,
-    reportedCount: s.reported ? Number(s.reported.count) || 0 : 0,
-    statusCounts: s.status_counts || {},
-    items: items,
-    byDistrict: byDistrict,
-    series: series
-  };
-}
-
-function numOrNull_(v) {
-  if (v === null || v === undefined || v === '') return null;
-  const n = Number(v);
-  return isFinite(n) ? n : null;
-}
-
-/** Run from the editor after setting SMART_AGRI_API_KEY to confirm the connection. */
-function verifySmartAgriConnection() {
-  CacheService.getScriptCache().remove(SMART_AGRI_CACHE_KEY);
-  const r = fetchSmartAgriReports_();
-  if (!r.ok) return (r.configured ? 'FAIL: ' : 'INFO: ') + r.error;
-  return 'PASS: Smart Agri-Materials — round ' + r.round.round + ' (' + r.round.label + '), ' + r.reportedCount + '/' +
-    r.districtsTotal + ' district(s) reported, ' + r.items.length + ' indicator(s)';
-}
-
 /* ------------------------------------------------------------------------- *
  * 2.5.1 — feed for ABM (ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร), server-to-server only.
  * ABM keeps its own officer data and reads the market registry from here instead of copying it.
@@ -551,16 +226,22 @@ function abmFeed_(body) {
   return { apiVersion: APP_VERSION, generatedAt: new Date().toISOString(), farmers: pack('farmers'), buyers: pack('buyers') };
 }
 
-/** Saves change the dashboard immediately instead of waiting for the cache to expire. */
-function invalidateSummary_() {
-  try { CacheService.getScriptCache().removeAll([SUMMARY_CACHE_KEY, 'market:v1:' + APP_VERSION]); } catch (err) { /* best effort */ }
+/** 2.6.0: the only POST is the ABM feed (the officer/admin API moved to ABM). */
+function doPost(e) {
+  let payload;
+  try {
+    const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    if (body.action !== 'abm_feed') throw new Error('หน้าเจ้าหน้าที่ย้ายไปที่ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร (ABM): ' + ABM_SITE_URL);
+    payload = { ok: true, data: abmFeed_(body) };
+  } catch (err) {
+    payload = { ok: false, error: publicError_(err) };
+  }
+  return ContentService.createTextOutput(JSON.stringify(payload)).setMimeType(ContentService.MimeType.JSON);
 }
 
-/** Run from the editor after deployment to preview the public summary. */
-function verifyPublicSummary() {
-  const s = buildPublicSummary_(new Date());
-  return 'PASS: summary ' + APP_VERSION + ' — ' + s.totals.farmerPlots + ' plot(s), ' + s.totals.areaRai + ' rai, ' +
-    s.totals.buyers + ' buyer(s), ' + s.totals.districtsCovered + '/' + s.totals.districtsTotal + ' district(s) covered';
+/** Saves change the dashboard immediately instead of waiting for the cache to expire. */
+function invalidateSummary_() {
+  try { CacheService.getScriptCache().remove('market:v1:' + APP_VERSION); } catch (err) { /* best effort */ }
 }
 
 function loginServer(input) {
@@ -570,13 +251,7 @@ function loginServer(input) {
   if (!/^0\d{9}$/.test(phone)) throw new Error('กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก');
   const rows = dataRows_(sheet_('users'));
   const found = rows.find(function (r) { return normalizePhone_(r[0]) === phone; });
-  if (!found) {
-    // 2.2.0: an officer who typed the number into the farmer/buyer box is pointed to the officer page.
-    let staff = null;
-    try { staff = staffFindByPhone_(phone); } catch (err) { staff = null; }
-    if (staff) throw new Error('STAFF_ACCOUNT: หมายเลขนี้ลงทะเบียนเป็นบัญชีเจ้าหน้าที่ กรุณาเข้าสู่ระบบที่หน้า "สำหรับเจ้าหน้าที่"');
-    throw new Error('ไม่พบหมายเลขโทรศัพท์นี้ในระบบ กรุณาลงทะเบียน');
-  }
+  if (!found) throw new Error('ไม่พบหมายเลขโทรศัพท์นี้ในระบบ กรุณาลงทะเบียน');
   const role = normalizeRole_(found[2]);
   const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
   const session = { phone: phone, role: role, name: cleanText_(found[3], 150) };
@@ -848,17 +523,10 @@ function setupSystem() {
   const schema = verifyDatabaseSchema();
   const restored = restoreLegacyExpiredFarmers_();
   const trigger = setupDailyTrigger();
-  invalidateSummary_();
-  const summary = verifyPublicSummary();
-  const reports = verifySmartAgriConnection();
-  const adminSchema = ensureAdminSchema_();
-  const cropSchema = ensureCropSchema_();
-  const superAdmin = ensureSuperAdmin_();
   const visits = ensureVisitSchema_();
-  const ghg = ensureGhgSchema_();
-  const residue = ensureResidueSchema_();
-  invalidateCropSummary_();
-  const out = [migration, formats, normalized, schema, restored, trigger, summary, reports, adminSchema, cropSchema, superAdmin, visits, ghg, residue].join('\n');
+  invalidateSummary_();
+  const abm = verifyAbmLink();
+  const out = [migration, formats, normalized, schema, restored, trigger, visits, abm].join('\n');
   console.log(out);
   return out;
 }

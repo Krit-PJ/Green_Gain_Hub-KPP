@@ -1,12 +1,11 @@
-/* Green Gain Hub 2.5.0 — front page for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
+/* Green Gain Hub 2.6.0 (since 2.5.0) — front page for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
  *
  * ?api=v1&endpoint=market gives grid cells (~5.5 km) with residue offered (sell) and bought (buy) per material.
  * Public = aggregate only: cell centres, counts, area, price range — no names, phones or real coordinates.
  * Exact pins and phone numbers are in the signed-in market (unchanged), reached through the two doors.
  *
- * Also routes between the two landing views of index.html:
- *   (no hash)                         → #marketPage  (this page)
- *   #performance #overview #crops #market → #loginPage (results for officers; dashboard.js, staff sign-in unchanged)
+ * 2.6.0: the results page and officer sign-in moved to ABM (ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร).
+ *   Old links #performance #overview #crops #market #staff #staff-register open ABM (same view).
  */
 (function () {
   'use strict';
@@ -17,7 +16,10 @@
   const TIMEOUT = Number(cfg.REQUEST_TIMEOUT_MS) || 30000;
   const CACHE_KEY = 'ggh_market_v1';
   const GEO_URL = 'assets/kpp-districts.geojson?v=1.5.0';
-  const PERF_HASHES = ['performance', 'overview', 'crops', 'market'];
+  const ABM_URL = cfg.ABM_URL || 'https://krit-pj.github.io/KPP-Agri-Byproduct-Management/';
+  const ABM_API = cfg.ABM_API_URL || '';
+  // old links to the results page / officer sign-in → the same place in ABM
+  const MOVED = { performance: '', overview: '', crops: '#crops', market: '#market', staff: '#staff', 'staff-register': '#staff-register' };
   const NEAR_KM = 40;   // "ผู้รับซื้อใกล้สุด" is searched within this distance
 
   /* the same material drawings as the results page (dashboard.js) */
@@ -41,12 +43,11 @@
   function loggedIn() { const app = $('mainApp'); return app && !app.classList.contains('hidden'); }
   function route() {
     if (loggedIn()) return;
-    const h = (location.hash || '').replace('#', '');
-    const perf = PERF_HASHES.includes(h);
-    $('marketPage').classList.toggle('hidden', perf);
-    $('loginPage').classList.toggle('hidden', !perf);
+    const h = decodeURIComponent((location.hash || '').replace('#', ''));
+    if (Object.prototype.hasOwnProperty.call(MOVED, h)) { location.replace(ABM_URL + MOVED[h]); return; }
+    $('marketPage').classList.remove('hidden');
     document.body.classList.add('ggh-landing-on');
-    if (!perf && state.map) setTimeout(() => state.map.invalidateSize(), 50);
+    if (state.map) setTimeout(() => state.map.invalidateSize(), 50);
     window.scrollTo(0, 0);
   }
 
@@ -83,7 +84,8 @@
       if (!state.data) { stats('โหลดข้อมูลตลาดไม่สำเร็จ ', true, true); renderList(); }
     });
     // the one number that says "this works": area managed without burning (officer records, current fiscal year)
-    call({ api: 'v1', endpoint: 'residue' }).then((p) => {
+    // 2.6.0: officer records live in ABM — its public residue endpoint (aggregate only)
+    if (ABM_API) getJson(ABM_API + '?api=v1&endpoint=residue').then((p) => {
       if (p && p.ok && p.data && p.data.ok) { state.results = { areaRai: p.data.totals.areaRai, value: p.data.totals.value, fy: p.data.fy }; renderStats(); save(); }
     }).catch(() => { /* optional */ });
   }
@@ -293,7 +295,6 @@
       const b = e.target.closest('#mkList [data-door], .ggh-mk-popup [data-door]'); if (!b) return;
       const top = document.querySelector(`.ggh-mk-doors [data-role="${b.dataset.role}"]`); if (top) top.click();
     });
-    document.querySelectorAll('[data-goto="market"]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); history.pushState(null, '', location.pathname + location.search); route(); }));
     window.addEventListener('hashchange', route);
   }
 

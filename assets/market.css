@@ -137,16 +137,6 @@
 .ggh-mk-steps span { font-size: .88rem; color: var(--ggh-muted); }
 @media (min-width: 900px) { .ggh-mk-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
-/* results page: the way back to the market and the unchanged staff sign-in */
-.ggh-entry.ggh-entry-perf { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.ggh-entry .ggh-entry-back { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "icon name" "icon hint"; align-items: center; column-gap: .6rem;
-  min-height: 56px; padding: .55rem .8rem; border-radius: 10px; border: 1px solid var(--ggh-line); background: #fff; color: #44524a; text-decoration: none; font-weight: 700; }
-.ggh-entry .ggh-entry-back i { grid-area: icon; }
-.ggh-entry .ggh-entry-back:hover { background: var(--ggh-zero); }
-@media (max-width: 639px) {
-  .ggh-entry .ggh-entry-back { grid-template-columns: minmax(0, 1fr); grid-template-areas: "icon" "name"; justify-items: center; text-align: center; padding: .5rem .3rem; }
-  .ggh-entry .ggh-entry-back .ggh-entry-hint { display: none; }
-}
 @media (prefers-reduced-motion: reduce) { .ggh-mk * { scroll-behavior: auto; transition: none !important; } }
 .ggh-mk-mats button.is-empty { opacity: .62; }
 .ggh-mk-mats button.is-empty[aria-pressed="true"] { opacity: 1; }

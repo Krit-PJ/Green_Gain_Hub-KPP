@@ -1,4 +1,5 @@
-/* 2.4.0 central identity (SSO): ticket redeem, existing-user provisioning, officers, Mini/Super unchanged, SSO_MODE.
+/* 2.4.0–2.6.0 central identity (SSO) for farmers and buyers: ticket redeem, existing-user provisioning, SSO_MODE.
+   2.6.0: officers sign in at ABM (tested there); an officer number here is simply a person without a market account.
    Agri-Risk is replaced by a small in-test identity service with the same id_redeem / id_register contract. */
 const { load, Sheet, HEADERS } = require('./helpers/gas-mock');
 function assert(v, m) { if (!v) throw new Error(m); }
@@ -23,7 +24,7 @@ const urlFetch = { fetch: (url, opts) => {
   return { getContentText: () => JSON.stringify(out), getResponseCode: () => 200 };
 } };
 
-const env = load({ urlFetch, sheets: { Config: new Sheet('Config', [HEADERS.Config]) }, props: { SUPER_ADMIN_USERNAME: 'krit', SUPER_ADMIN_PASSWORD: 'Super12345' } });
+const env = load({ urlFetch, sheets: { Config: new Sheet('Config', [HEADERS.Config]) } });
 const { post, get, sheets, api, props } = env;
 console.log = () => {};
 api.setupSystem();
@@ -33,7 +34,6 @@ const rpc = (method, arg) => get({ action: 'rpc', method, args: JSON.stringify([
 
 /* existing GGH accounts */
 sheets.users.rows.push(['0811111111', '', 'farmer', 'สมชาย ขายฟาง', false, true, '', '', ''], ['0822222222', '', 'buyer', 'มาลี รับซื้อ', false, true, '', '', '']);
-ok(post('staffRegisterServer', [{ name: 'วิชัย เกษตรอำเภอ', phone: '0833333333', officeType: 'district', district: '6204', province: 'กำแพงเพชร' }]), 'officer');
 
 /* 1. first sign-in of an existing farmer: identity created from the GGH record, nobody registers twice */
 let r = rpc('ssoProvisionServer', { phone: '081-111-1111' });
@@ -62,23 +62,12 @@ bad(rpc('ssoLoginServer', { ticket: issue('0844444444', 'GGH'), role: 'buyer' })
 r = rpc('ssoLoginServer', { ticket: issue('0844444444', 'GGH'), role: 'buyer', consent: true });
 check(r.ok && r.result.role === 'buyer' && sheets.users.rows.some((x) => x[0] === '0844444444' && x[2] === 'buyer' && x[5] === true), 'buyer created from identity');
 
-/* 4. officers */
-check(rpc('ssoProvisionServer', { phone: '0833333333' }).result.status === 'provisioned' && idp.people['0833333333'].affiliation === 'สำนักงานเกษตรอำเภอขาณุวรลักษบุรี' && idp.people['0833333333'].districtName === 'ขาณุวรลักษบุรี', 'officer identity carries the office');
-bad(rpc('ssoLoginServer', { ticket: issue('0833333333', 'GGH') }), /^STAFF_ACCOUNT/, 'officer number in the market box points to the officer popup');
-r = post('ssoStaffLoginServer', [{ ticket: issue('0833333333', 'GGH') }]);
-check(r.ok && r.result.role === 'admin' && r.result.district === '6204' && /^[0-9a-f]{64}$/.test(r.result.token), 'officer signs in with a ticket: ' + JSON.stringify(r));
-check(sheets.admin_log.rows.some((x) => /ตัวตนกลาง \(SSO\)/.test(x.join(' '))), 'SSO sign-in written to admin_log');
-bad(post('ssoStaffLoginServer', [{ ticket: issue('0811111111', 'GGH') }]), /^MARKET_ACCOUNT/, 'farmer number in the officer box');
-idp.people['0855555555'] = { phone: '0855555555', fullName: 'ใหม่ ยังไม่ลงทะเบียน', status: 'active' };
-check(post('ssoStaffLoginServer', [{ ticket: issue('0855555555', 'GGH') }]).result.status === 'need_register', 'officer without a GGH account must register');
-
-/* 5. Mini / Super keep username + password and cannot use SSO */
-const T = ok(post('adminLoginServer', [{ username: 'krit', password: 'Super12345' }]), 'super password login unchanged').token;
-ok(post('adminSaveServer', [{ username: 'mini1', name: 'มินิ หนึ่ง', role: 'mini', password: 'Mini12345', phone: '0866666666' }], T), 'mini created');
-idp.people['0866666666'] = { phone: '0866666666', fullName: 'มินิ หนึ่ง', status: 'active' };
-bad(post('ssoStaffLoginServer', [{ ticket: issue('0866666666', 'GGH') }]), /ชื่อผู้ใช้และรหัสผ่าน/, 'Mini cannot sign in through SSO');
-check(rpc('ssoProvisionServer', { phone: '0866666666' }).result.status === 'none', 'Mini/Super are never provisioned into the shared identity');
-ok(post('adminLoginServer', [{ username: 'mini1', password: 'Mini12345' }]), 'mini password login unchanged');
+/* 4. 2.6.0: no officer accounts here — an officer number is provisioned only if it has a market account */
+check(rpc('ssoProvisionServer', { phone: '0833333333' }).result.status === 'none', 'officer-only numbers are not sent from Green Gain Hub');
+idp.people['0833333333'] = { phone: '0833333333', fullName: 'วิชัย เกษตรอำเภอ', status: 'active' };
+r = rpc('ssoLoginServer', { ticket: issue('0833333333', 'GGH') });
+check(r.ok && r.result.status === 'need_register', 'an officer identity without a market account may register as farmer/buyer: ' + JSON.stringify(r));
+bad(rpc('ssoLoginServer', { ticket: issue('0833333333', 'ABM') }), /ไม่ได้ออกให้ระบบนี้/, 'an ABM ticket is refused here');
 
 /* 6. suspended in Agri-Risk ("not me") → refused here at once */
 idp.people['0811111111'].status = 'suspended';
@@ -88,14 +77,11 @@ bad(rpc('ssoLoginServer', { ticket: issue('0811111111', 'GGH') }), /ระงั
 check(rpc('loginServer', { username: '0822222222' }).ok, 'optional: old phone sign-in still works');
 props.SSO_MODE = 'required';
 bad(rpc('loginServer', { username: '0822222222' }), /ตัวตนกลาง/, 'required: old market sign-in closed');
-bad(post('staffLoginServer', [{ phone: '0833333333' }]), /ตัวตนกลาง/, 'required: old officer sign-in closed');
-check(post('ssoStaffLoginServer', [{ ticket: issue('0833333333', 'GGH') }]).ok, 'required: SSO officer sign-in works');
-ok(post('adminLoginServer', [{ username: 'krit', password: 'Super12345' }]), 'required: Super password still works');
 check(rpc('registerServer', { role: 'farmer', name: 'ลงทะเบียน ใหม่', phone: '0877777777' }).ok, 'required: new registration still possible (no takeover)');
 props.SSO_MODE = 'off';
 bad(rpc('ssoLoginServer', { ticket: issue('0822222222', 'GGH') }), /ปิดใช้งาน/, 'off: SSO closed');
 check(rpc('loginServer', { username: '0822222222' }).ok, 'off: old sign-in works');
 check(rpc('ssoProvisionServer', { phone: '0822222222' }).result.status === 'off', 'off: nothing sent to Agri-Risk');
-check(api.doGet && JSON.parse((api.doGet({ parameter: { api: 'v1', endpoint: 'health' } }), env.out().body)).feature === 'MATCHING_MAP', 'health shows the current feature flag');
+check(api.doGet && JSON.parse((api.doGet({ parameter: { api: 'v1', endpoint: 'health' } }), env.out().body)).feature === 'MARKET_ONLY', 'health shows the current feature flag');
 
-console.info('PASS: ' + n + ' checks — GGH 2.4.0 central identity (SSO)');
+console.info('PASS: ' + n + ' checks — GGH 2.6.0 farmer/buyer central identity (SSO)');

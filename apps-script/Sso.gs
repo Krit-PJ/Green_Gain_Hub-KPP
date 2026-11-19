@@ -1,12 +1,13 @@
 /**
- * Green Gain Hub 2.4.0 — central identity (SSO) shared with Agri-Risk Map and KPP Smart Agri-Materials.
+ * Green Gain Hub 2.6.0 (since 2.4.0) — farmer/buyer sign-in through the central identity (SSO) shared with Agri-Risk Map,
+ * KPP Smart Agri-Materials and ABM. Officers sign in at ABM since 19 Nov 2026 (aud ABM there).
  *
  * Who signs in how (decided 18 Nov 2026):
- *   - farmers, buyers and officers: phone number only; one registration works in every connected system
- *   - Mini Super Admin / Super Admin: username + password of this system, as before (not through SSO)
+ *   - farmers and buyers: phone number only; one registration works in every connected system
+ *   - officers, Mini Super Admin and Super Admin: ABM (since 19 Nov 2026)
  *
  * Agri-Risk Map holds the identity ("this person owns this phone"). Rights stay here: the users sheet
- * decides farmer/buyer, the admins sheet decides officers. The browser gets a one-use ticket from
+ * decides farmer/buyer. The browser gets a one-use ticket from
  * Agri-Risk (2 minutes, for GGH only) and this script redeems it server-side (id_redeem) — no shared
  * secret is copied between systems.
  *
@@ -56,7 +57,6 @@ function ssoMarketSession_(phone, role, name) {
 /**
  * Farmer/buyer sign-in with a ticket. { ticket, role?, consent? }
  *   - phone is in users → signed in
- *   - phone is an officer → STAFF_ACCOUNT (the page switches to the officer popup)
  *   - phone not in users and no role given → { status: 'need_register', phone, name } (page asks farmer or buyer)
  *   - role given → a users row is created from the identity (consent required) and signed in
  */
@@ -66,9 +66,6 @@ function ssoLoginServer(input) {
   const phone = person.phone;
   const found = dataRows_(sheet_('users')).find(function (r) { return normalizePhone_(r[0]) === phone; });
   if (found) return ssoMarketSession_(phone, normalizeRole_(found[2]), found[3] || person.fullName);
-  let staff = null;
-  try { staff = staffFindByPhone_(phone); } catch (err) { staff = null; }
-  if (staff && !input.role) throw new Error('STAFF_ACCOUNT: หมายเลขนี้ลงทะเบียนเป็นบัญชีเจ้าหน้าที่ กรุณาเข้าสู่ระบบที่หน้า "สำหรับเจ้าหน้าที่"');
   if (!input.role) return { status: 'need_register', phone: phone, name: cleanText_(person.fullName, 150) };
   if (input.consent !== true && input.consent !== 'true') throw new Error('กรุณาอ่านและติ๊กยินยอมการใช้ข้อมูลส่วนบุคคล (PDPA) ก่อนลงทะเบียน');
   const role = normalizeRole_(input.role);
@@ -91,22 +88,6 @@ function ssoLoginServer(input) {
   return out;
 }
 
-/** Officer sign-in with a ticket (POST admin API). Mini/Super keep username + password. */
-function ssoStaffLogin_(input) {
-  input = input || {};
-  const person = ssoRedeem_(input.ticket);
-  const a = staffFindByPhone_(person.phone);
-  if (!a) {
-    if (dataRows_(sheet_('users')).some(function (r) { return normalizePhone_(r[0]) === person.phone; })) {
-      throw new Error('MARKET_ACCOUNT: หมายเลขนี้ลงทะเบียนเป็นเกษตรกรหรือผู้รับซื้อ กรุณาเข้าสู่ระบบที่หน้าแรก');
-    }
-    return { status: 'need_register', phone: person.phone, name: cleanText_(person.fullName, 120) };
-  }
-  if (a.status !== 'active') throw new Error('บัญชีนี้ถูกระงับ กรุณาติดต่อผู้ดูแลระบบ');
-  if (a.role !== 'admin') throw new Error('บัญชี ' + roleLabel_(a.role) + ' เข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่าน');
-  return adminIssueSession_(a, 'login', 'เข้าสู่ระบบด้วยตัวตนกลาง (SSO)');
-}
-
 /**
  * First sign-in of an existing GGH user: creates the central identity from the GGH record, so nobody registers twice.
  * { phone } → { status: 'provisioned' | 'exists' | 'none' }. Only numbers already in this system are sent to Agri-Risk.
@@ -120,16 +101,9 @@ function ssoProvisionServer(input) {
   const u = dataRows_(sheet_('users')).find(function (r) { return normalizePhone_(r[0]) === phone; });
   if (u) {
     body = { fullName: cleanText_(u[3], 120), position: normalizeRole_(u[2]) === 'buyer' ? 'ผู้รับซื้อ' : 'เกษตรกร', affiliation: '' };
-  } else {
-    let a = null;
-    try { a = staffFindByPhone_(phone); } catch (err) { a = null; }
-    if (a && a.role === 'admin' && a.status === 'active') {
-      const d = residueDistrictNames_()[a.district] || '';
-      body = { fullName: cleanText_(a.name, 120), position: 'เจ้าหน้าที่', affiliation: staffOfficeLabel_(a), districtName: d };
-    }
   }
   if (!body) return { status: 'none' };
-  // Consent: users gave PDPA consent when registering in GGH; officers registered under the same notice.
+  // Consent: users gave PDPA consent when registering in GGH.
   const r = ssoIdpCall_(Object.assign({ action: 'id_register', phone: phone, provinceCode: prov, consent: true, system: SSO_AUD, device: 'Green Gain Hub (ย้ายบัญชีเดิม)' }, body));
   if (r && r.ok) return { status: 'provisioned' };
   if (r && /ลงทะเบียนแล้ว/.test(String(r.error || ''))) return { status: 'exists' };

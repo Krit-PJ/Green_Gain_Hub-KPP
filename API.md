@@ -1,3 +1,23 @@
+# Green Gain Hub API 2.6.0
+
+**19 พ.ย. 2569:** ส่วนเจ้าหน้าที่ย้ายไป ABM (ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร) — API ของการบันทึก รายงาน และ Dashboard ดูที่ `API.md` ของ repo `KPP-Agri-Byproduct-Management`
+
+ที่เหลือในระบบนี้
+
+| ช่องทาง | หมายเหตุ |
+| --- | --- |
+| `GET ?action=rpc&method=…` | แอปเกษตรกร/ผู้รับซื้อ (login, register, ssoLogin, ssoProvision, profile, save, delete, matching) — ไม่เปลี่ยน |
+| `GET ?api=v1&endpoint=market` | แผนที่จับคู่สาธารณะ (กริด ~5.6 กม. ไม่มีข้อมูลส่วนบุคคล) |
+| `GET ?api=v1&endpoint=hit` / `visits` | ตัวนับผู้เข้าชมหน้าตลาด |
+| `GET ?api=v1&endpoint=health` | `{ apiVersion: "2.6.0", feature: "MARKET_ONLY", system: "GGH" }` |
+| `GET ?api=v1&endpoint=summary\|residue\|balance\|crop` | ย้ายแล้ว: `{ ok:false, moved:"ABM", url }` |
+| `POST {action:"abm_feed", key}` | feed ฝั่ง Server ให้ ABM (2.5.1): แถว farmers + buyers ตรวจกุญแจด้วย SHA-256 ใน `Config!abm_feed_key_sha256` |
+| `POST` อื่น | ปฏิเสธ พร้อมที่อยู่ ABM (Admin API เดิมย้ายไป ABM) |
+
+---
+
+ประวัติ (ก่อน 2.6.0):
+
 # Green Gain Hub API 1.4.1
 
 Frontend เรียก Google Apps Script ผ่าน JSONP ที่ URL `/exec` เดิม

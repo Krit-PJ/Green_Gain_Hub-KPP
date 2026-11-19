@@ -1,28 +1,31 @@
-# Deploy Green Gain Hub 2.5.0
+# Deploy Green Gain Hub 2.6.0
 
-สถานะ 18 พ.ย. 2569: **Deploy แล้ว**
+สถานะ 19 พ.ย. 2569: **Deploy แล้ว** (ดูเลขเวอร์ชันล่าสุดในประวัติด้านล่าง)
 
 - Apps Script: **Green Gain Hub KPP API** (`1JfUtXCoOvrb_Nz2N6xgRBSiT72DSWV92pFepA20eNcGb8WUhDNuRLLSg`, บัญชี noonoy.cmu@gmail.com)
-- Deployment เวอร์ชัน 11 (2.5.0 — หน้าแรกตลาดวัสดุ: ไฟล์ใหม่ Market.gs + แก้ Code.gs) · เวอร์ชัน 10 = 2.4.0 ตัวตนกลาง (Sso.gs): `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` (Execute as: Me, Access: Anyone)
-- Script Property: `SMART_AGRI_API_KEY` = คีย์ "Green Gain Hub — Backend proxy" (prefix `kpp_fa4750`) ของระบบ Smart Agri-Materials
+- Deployment `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` (Execute as: Me, Access: Anyone)
+  - เวอร์ชัน 13 = 2.6.0 ตลาดอย่างเดียว (แยกส่วนเจ้าหน้าที่ไป ABM) · 12 = 2.5.1 feed สำหรับ ABM · 11 = 2.5.0 หน้าแรกตลาด · 10 = 2.4.0 ตัวตนกลาง
+- ABM (ระบบเจ้าหน้าที่): repo `KPP-Agri-Byproduct-Management`, Apps Script `1ZRd2SmPDj6yKB3MuQe7tW1yOMfZwBFULjIDOCnN-hH-YcsqPT6CieYe8`
 
 > ⚠️ `AKfycbxoo4…` เป็นของระบบ **KPP Smart Agri-Materials v2** ห้ามวางโค้ด GGH หรือ Deploy ทับ
 
+## ไฟล์ในโปรเจกต์ Apps Script (2.6.0)
+
+`Code.gs` (ในตัวแก้ไขภาษาไทยชื่อ "รหัส.gs"), `Districts.gs`, `Counter.gs`, `Market.gs`, `Sso.gs`, `Abm.gs`
+
 ## อัปเดตโค้ดครั้งถัดไป
 
-1. เปิดโปรเจกต์ Green Gain Hub KPP API แล้ววางไฟล์ `apps-script/Code.gs`, `Districts.gs`, `Admin.gs`, `Crops.gs`, `Counter.gs`, `Reports.gs`, `Ghg.gs`, `Residue.gs`, `Staff.gs`, `Balance.gs`, `Sso.gs`, `Market.gs` (ชื่อไฟล์ใน Apps Script ตรงกัน)
-2. Run `setupSystem()` (2.0.0: ครั้งแรกต้องอนุญาตสิทธิ์ Google Drive เพิ่มเพื่อสร้างโฟลเดอร์ภาพ; บรรทัดสุดท้ายแสดงผลการเชื่อมต่อ Smart Agri: `PASS`, `INFO` หรือ `FAIL`)
-3. **ทำให้ใช้งานได้ > จัดการการทำให้ใช้งานได้ > ✏️ แก้ไข** Deployment `AKfycbylUGpPc7g9…` > **เวอร์ชันใหม่** > ทำให้ใช้งานได้ (URL เดิม)
-4. ตรวจ `…/exec?api=v1&endpoint=health` (feature `MATCHING_MAP`), `…/exec?api=v1&endpoint=market&refresh=1` และ `…/exec?api=v1&endpoint=summary&refresh=1`
-
-2.2.0: `setupSystem()` ย้ายพืชทุกชนิดไปใช้ราคากลาง 0.8 บาท/กก. ครั้งเดียว (Script Property `GGH_MIGRATION_220`) ราคาเดิมรายพืชยังเก็บไว้ในคอลัมน์ Price_baht_kg
+1. ตรวจว่าโค้ดในตัวแก้ไขตรงกับ `main` แล้ววางไฟล์ที่เปลี่ยน → บันทึก → โหลดหน้าใหม่ตรวจอีกครั้ง
+2. Run `setupSystem()` (บรรทัดสุดท้ายแสดงการเชื่อม ABM)
+3. **ทำให้ใช้งานได้ > จัดการการทำให้ใช้งานได้ > ✏️ แก้ไข** > **เวอร์ชันใหม่** > ทำให้ใช้งานได้ (URL เดิม)
+4. ตรวจ `…/exec?api=v1&endpoint=health` (feature `MARKET_ONLY`) และ `…/exec?api=v1&endpoint=market&refresh=1`
 
 ## Script Properties
 
 | Property | ค่า | จำเป็น |
 | --- | --- | --- |
-| `SMART_AGRI_API_KEY` | API Key จากระบบ Smart Agri (Super Admin สร้าง/ยกเลิกได้) | ใช่ สำหรับข้อมูลรายงาน |
-| `SMART_AGRI_API_URL` | URL `/exec` ของ Smart Agri ถ้าเปลี่ยน Deployment | ไม่ |
+| `SMART_AGRI_API_KEY` | 2.6.0: ไม่ใช้แล้ว (รายงานอำเภออยู่ที่ ABM) — ลบได้ และยกเลิกคีย์ `kpp_fa4750…` ในระบบ Smart Agri หลัง ABM ใส่คีย์ของตัวเองแล้ว | ไม่ |
+| `ABM_API_URL` | URL `/exec` ของ ABM ถ้าเปลี่ยน Deployment | ไม่ |
 | `SPREADSHEET_ID` | ใช้ Sheet อื่นแทนค่าเริ่มต้น | ไม่ |
 | `SUMMARY_API_KEY` | บังคับ key สำหรับ summary ของ GGH | ไม่ |
 | `SUPER_ADMIN_USERNAME` | ชื่อผู้ใช้ Super Admin คนแรก (3–32 ตัว a–z 0–9 . _ -) ถ้าไม่มีจะอ่านจาก `SUPER_ADMIN_PHONE` | ครั้งแรกเท่านั้น |
