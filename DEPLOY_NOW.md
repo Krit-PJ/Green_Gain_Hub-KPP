@@ -1,19 +1,19 @@
-# Deploy Green Gain Hub 2.4.0
+# Deploy Green Gain Hub 2.5.0
 
 สถานะ 18 พ.ย. 2569: **Deploy แล้ว**
 
 - Apps Script: **Green Gain Hub KPP API** (`1JfUtXCoOvrb_Nz2N6xgRBSiT72DSWV92pFepA20eNcGb8WUhDNuRLLSg`, บัญชี noonoy.cmu@gmail.com)
-- Deployment เวอร์ชัน 10 (2.4.0 — ตัวตนกลาง SSO: ไฟล์ใหม่ Sso.gs + แก้ Code.gs, Admin.gs, Staff.gs): `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` (Execute as: Me, Access: Anyone)
+- Deployment เวอร์ชัน 11 (2.5.0 — หน้าแรกตลาดวัสดุ: ไฟล์ใหม่ Market.gs + แก้ Code.gs) · เวอร์ชัน 10 = 2.4.0 ตัวตนกลาง (Sso.gs): `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` (Execute as: Me, Access: Anyone)
 - Script Property: `SMART_AGRI_API_KEY` = คีย์ "Green Gain Hub — Backend proxy" (prefix `kpp_fa4750`) ของระบบ Smart Agri-Materials
 
 > ⚠️ `AKfycbxoo4…` เป็นของระบบ **KPP Smart Agri-Materials v2** ห้ามวางโค้ด GGH หรือ Deploy ทับ
 
 ## อัปเดตโค้ดครั้งถัดไป
 
-1. เปิดโปรเจกต์ Green Gain Hub KPP API แล้ววางไฟล์ `apps-script/Code.gs`, `Districts.gs`, `Admin.gs`, `Crops.gs`, `Counter.gs`, `Reports.gs`, `Ghg.gs`, `Residue.gs`, `Staff.gs`, `Balance.gs` (ชื่อไฟล์ใน Apps Script ตรงกัน)
+1. เปิดโปรเจกต์ Green Gain Hub KPP API แล้ววางไฟล์ `apps-script/Code.gs`, `Districts.gs`, `Admin.gs`, `Crops.gs`, `Counter.gs`, `Reports.gs`, `Ghg.gs`, `Residue.gs`, `Staff.gs`, `Balance.gs`, `Sso.gs`, `Market.gs` (ชื่อไฟล์ใน Apps Script ตรงกัน)
 2. Run `setupSystem()` (2.0.0: ครั้งแรกต้องอนุญาตสิทธิ์ Google Drive เพิ่มเพื่อสร้างโฟลเดอร์ภาพ; บรรทัดสุดท้ายแสดงผลการเชื่อมต่อ Smart Agri: `PASS`, `INFO` หรือ `FAIL`)
 3. **ทำให้ใช้งานได้ > จัดการการทำให้ใช้งานได้ > ✏️ แก้ไข** Deployment `AKfycbylUGpPc7g9…` > **เวอร์ชันใหม่** > ทำให้ใช้งานได้ (URL เดิม)
-4. ตรวจ `…/exec?api=v1&endpoint=health` และ `…/exec?api=v1&endpoint=summary&refresh=1`
+4. ตรวจ `…/exec?api=v1&endpoint=health` (feature `MATCHING_MAP`), `…/exec?api=v1&endpoint=market&refresh=1` และ `…/exec?api=v1&endpoint=summary&refresh=1`
 
 2.2.0: `setupSystem()` ย้ายพืชทุกชนิดไปใช้ราคากลาง 0.8 บาท/กก. ครั้งเดียว (Script Property `GGH_MIGRATION_220`) ราคาเดิมรายพืชยังเก็บไว้ในคอลัมน์ Price_baht_kg
 

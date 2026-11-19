@@ -96,6 +96,6 @@ props.SSO_MODE = 'off';
 bad(rpc('ssoLoginServer', { ticket: issue('0822222222', 'GGH') }), /ปิดใช้งาน/, 'off: SSO closed');
 check(rpc('loginServer', { username: '0822222222' }).ok, 'off: old sign-in works');
 check(rpc('ssoProvisionServer', { phone: '0822222222' }).result.status === 'off', 'off: nothing sent to Agri-Risk');
-check(api.doGet && JSON.parse((api.doGet({ parameter: { api: 'v1', endpoint: 'health' } }), env.out().body)).feature === 'SSO_IDENTITY', 'health shows SSO_IDENTITY');
+check(api.doGet && JSON.parse((api.doGet({ parameter: { api: 'v1', endpoint: 'health' } }), env.out().body)).feature === 'MATCHING_MAP', 'health shows the current feature flag');
 
 console.info('PASS: ' + n + ' checks — GGH 2.4.0 central identity (SSO)');

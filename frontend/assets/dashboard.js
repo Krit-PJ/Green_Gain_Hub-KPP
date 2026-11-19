@@ -822,7 +822,8 @@
       b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1;
       if (on && focus) b.focus();
     });
-    try { history.replaceState(null, '', tab === 'overview' ? location.pathname + location.search : '#' + tab); } catch (e) { /* ignore */ }
+    // 2.5.0: on the results page the first tab keeps #performance, so a reload stays on this page
+    try { history.replaceState(null, '', tab === 'overview' ? location.pathname + location.search + ($('marketPage') ? '#performance' : '') : '#' + tab); } catch (e) { /* ignore */ }
     renderAll();
     if (state.map) setTimeout(() => state.map.invalidateSize(), 30);
   }
@@ -921,7 +922,9 @@
     const page = $('loginPage'); if (!page) return;
     const sync = () => {
       const visible = !page.classList.contains('hidden');
-      document.body.classList.toggle('ggh-landing-on', visible);
+      // 2.5.0: the market front page (marketPage) is a landing page too
+      const market = $('marketPage');
+      document.body.classList.toggle('ggh-landing-on', visible || !!(market && !market.classList.contains('hidden')));
       if (visible && state.map) setTimeout(() => state.map.invalidateSize(), 50);
     };
     new MutationObserver(sync).observe(page, { attributes: true, attributeFilter: ['class'] });
@@ -983,7 +986,19 @@
   function init() {
     counter();
     if (!$('dashMap')) return;
-    watchLanding(); bindTabs();
+    // 2.5.0: the results page is not the front page any more — load its data only when it is opened.
+    const page = $('loginPage');
+    if (page.classList.contains('hidden') && $('marketPage')) {
+      watchLanding();
+      const mo = new MutationObserver(() => { if (!page.classList.contains('hidden')) { mo.disconnect(); start(); } });
+      mo.observe(page, { attributes: true, attributeFilter: ['class'] });
+      return;
+    }
+    watchLanding();
+    start();
+  }
+  function start() {
+    bindTabs();
     const cached = readCache();
     if (cached && cached.totals) state.summary = cached;
     try { const rc = JSON.parse(localStorage.getItem(RES_CACHE_KEY) || 'null'); if (rc && rc.ok) { state.residue = rc; state.resFy = rc.fy; } } catch (e) { /* ignore */ }

@@ -143,6 +143,15 @@ Backend เรียก `…AKfycbxoo4…/exec?api=v1&endpoint=summary|districts
 - `reportCatalogServer` คืน `types` (district, province, ghg, register); ส่วนรายงานใหม่ `residue.balance`, `residue.ghgcrops`; คอลัมน์ `printHide` ไม่พิมพ์แต่อยู่ใน Excel/CSV, ส่วน `landscape` พิมพ์แนวนอน
 - หน่วย: `ตันคาร์บอนไดออกไซด์เทียบเท่า` (เดิม tCO2e); `loginServer` แจ้ง `STAFF_ACCOUNT:` และ `staffLoginServer` แจ้ง `MARKET_ACCOUNT:` เมื่อกรอกเบอร์ผิดช่อง
 
+## 2.5.0
+
+- `GET /exec?api=v1&endpoint=market[&refresh=1]` (สาธารณะ, cache 5 นาที, ล้างเมื่อมีการบันทึกแปลงหรือจุดรับซื้อ) — แผนที่จับคู่หน้าแรก →
+  `{ gridDeg: 0.05, gridKm, readyDays: 15, totals:{plots, readyPlots, areaRai, ton, buyers, capacityTonPerDay}, groups:[{key, label, residueTRai, others, sell:{plots, readyPlots, areaRai, ton}, buy:{buyers, capacityTonPerDay, priceMin, priceMax}}], cells:[{id, lat, lng, district, districtName, sell:{<group>:{plots, readyPlots, areaRai, ton, nextHarvest}}, buy:{<group>:{buyers, capacityTonPerDay, priceMin, priceMax, afterHarvestDays}}}], notes }`
+  - group: `rice` ฟางข้าว · `sugarcane` ใบและยอดอ้อย · `maize` ซังและต้นข้าวโพด · `cassava` เหง้ามันสำปะหลัง · `other` (เหมือน Balance.gs)
+  - **ความเป็นส่วนตัว:** รวมเป็นช่องตาราง 0.05° (~5.6 กม.) เผยแพร่เฉพาะจุดกึ่งกลางช่อง ไม่มีชื่อ เบอร์โทร หรือพิกัดจริง — ตำแหน่งจริงและเบอร์อยู่ใน `getMatchingDataServer` (ต้องเข้าสู่ระบบ, ไม่เปลี่ยน)
+  - เสนอขาย = แปลงสถานะ Open ที่มีพิกัด; พร้อมขาย = เก็บเกี่ยวแล้วหรือภายใน 15 วัน; ผู้รับซื้อ = สถานะ Active ที่มีพิกัด; ราคา บาท/ไร่ ตามที่ผู้รับซื้อระบุ; ตัน = ไร่ × อัตราวัสดุต่อไร่ของพืช (ghg_crops)
+- `health.feature` = `MATCHING_MAP`
+
 ## 2.2.1
 
 - `registerServer` (เกษตรกร/ผู้รับซื้อ) คืน session ทันที: `{ token, phone, role, name }` เหมือน `loginServer`

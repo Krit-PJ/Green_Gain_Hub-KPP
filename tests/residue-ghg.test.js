@@ -97,7 +97,7 @@ assert(e1.record.area === 30 && e1.record.photoCount === 1 && e1.id === s1.id, '
 
 /* ---------- public endpoint ---------- */
 let pub = get({ api: 'v1', endpoint: 'residue', fy: '2570' });
-assert(pub.ok && pub.apiVersion === '2.4.0', 'residue endpoint');
+assert(pub.ok && pub.apiVersion === '2.5.0', 'residue endpoint');
 let t = pub.data.totals;
 const ghgRice = 30 * 880 * 94.15 / 1e6, ghgCane = 40 * 1040 * 94.15 / 1e6, ghgCass = 10 * 500 * 0.8 * 94.15 / 1e6, ghgMaize = 15.064;
 assert(t.records === 5 && t.areaRai === 190 && near(t.ghg, ghgRice + ghgCane + ghgCass + ghgMaize, 1e-3) && t.excludedRai === 10, 'public totals: ' + JSON.stringify(t));
