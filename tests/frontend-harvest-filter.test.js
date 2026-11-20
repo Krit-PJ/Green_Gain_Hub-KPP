@@ -17,7 +17,7 @@ assert(
   config.includes('AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT/exec'),
   'deployment URL is missing or stale'
 );
-assert(config.includes("BUILD_VERSION: '2.7.0'"), 'frontend build version is missing or stale');
+assert(config.includes("BUILD_VERSION: '2.8.0'"), 'frontend build version is missing or stale');
 assert(config.includes("MINIMUM_API_VERSION: '1.3.1'"), 'minimum compatible API version is missing');
 
 [
@@ -26,7 +26,10 @@ assert(config.includes("MINIMUM_API_VERSION: '1.3.1'"), 'minimum compatible API 
   'ระบบแสดงเฉพาะหมุดสีเขียวของแปลงเกษตรกร',
   'id="harvestPeriodFilter"',
   '<option value="ALL">ทั้งหมด</option>',
-  'เมื่อเลือก “ทั้งหมด” ระบบจะแสดงเกษตรกรสถานะ Open ที่มีพิกัดทั้งหมด โดยไม่กรองวันเก็บเกี่ยว ปี หรือเดือน',
+  'เมื่อเลือก “ทั้งหมด” ระบบจะแสดงทุกแปลงที่ยังประกาศขายอยู่ โดยไม่กรองปีหรือเดือน',
+  // 2.8.0: harvest date required; plot status and "ยังมีวัสดุอยู่" on the farmer's card
+  'function listingStatusHtml', 'function renewListing', '.renewFarmerServer({ id: id })', '${listingStatusHtml(f)}',
+  'วันเก็บเกี่ยว <span class="required-mark">*</span></label><input type="date" name="harvestDate" required',
   'id="harvestMonthFrom"',
   'id="harvestMonthTo"',
   'function harvestDateParts',

@@ -1,5 +1,5 @@
 /**
- * Green Gain Hub 2.7.0 — ตลาดวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ (API-only bridge from GitHub Pages to Google Sheets).
+ * Green Gain Hub 2.8.0 — ตลาดวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ (API-only bridge from GitHub Pages to Google Sheets).
  *
  * 19 Nov 2026: the officer side moved to ABM — ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร
  * (records, GHG, value, targets, reports, crop data, officer accounts, executive dashboard):
@@ -17,9 +17,13 @@
  *   ?api=v1&endpoint=market           Public matching map (aggregate grid, no personal data; 2.7.0 + harvest timing, districts)
  *   ?api=v1&endpoint=hit | visits     Visit counter (count once per session | read)
  *   ?api=v1&endpoint=health           Public version check
- *   POST {action:'abm_feed', key}     Server-to-server feed for ABM (2.5.1)
+ *   POST {action:'abm_feed', key}     Server-to-server feed for ABM (2.5.1; 2.8.0 + market listing rule)
+ *   POST {action:'abm_config', key}   ABM officers set how long a plot stays on the market after harvest (2.8.0)
+ *
+ * 2.8.0: a plot is shown until N days after its harvest date (Market.gs farmerListing_, Config hide_after_harvest_days,
+ * default 20, set in ABM). A harvest date is required when saving. "ยังมีวัสดุอยู่" (renewFarmerServer) shows it N more days.
  */
-const APP_VERSION = '2.7.0';
+const APP_VERSION = '2.8.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -32,7 +36,7 @@ const CROP_MATERIAL_MAP = {
   'มันสำปะหลัง': 'เหง้ามันสำปะหลัง'
 };
 const PUBLIC_METHODS = ['loginServer', 'registerServer', 'getApiInfoServer', 'ssoLoginServer', 'ssoProvisionServer'];
-const PRIVATE_METHODS = ['getUserProfileServer', 'saveDataServer', 'deleteDataServer', 'getMatchingDataServer'];
+const PRIVATE_METHODS = ['getUserProfileServer', 'saveDataServer', 'deleteDataServer', 'getMatchingDataServer', 'renewFarmerServer'];
 
 /** JSONP endpoint used by the static GitHub Pages frontend. */
 function doGet(e) {
@@ -69,7 +73,8 @@ function apiMethods_() {
     getUserProfileServer: function (args, session) { return getUserProfileServer(session); },
     saveDataServer: function (args, session) { return saveDataServer(args[0], session); },
     deleteDataServer: function (args, session) { return deleteDataServer(args[0], session); },
-    getMatchingDataServer: function (args, session) { return getMatchingDataServer(session); }
+    getMatchingDataServer: function (args, session) { return getMatchingDataServer(session); },
+    renewFarmerServer: function (args, session) { return renewFarmerServer(args[0], session); }
   };
 }
 
@@ -210,11 +215,47 @@ function abmSha256Hex_(s) {
     .map(function (b) { return ('0' + (b & 0xff).toString(16)).slice(-2); }).join('');
 }
 
-function abmFeed_(body) {
+function abmCheckKey_(body) {
   const expected = String(setting_(ABM_FEED_HASH_PARAM, '') || '').trim().toLowerCase();
   if (!/^[0-9a-f]{64}$/.test(expected)) throw new Error('Feed not configured');
   const key = String((body && body.key) || '');
   if (key.length < 32 || abmSha256Hex_(key) !== expected) throw new Error('Invalid feed key');
+}
+
+/** 2.8.0: the listing rule and which Open plots are not shown on the market today (ids only). */
+function marketListingInfo_() {
+  const rule = marketHideRule_();
+  const today = startOfDay_(new Date());
+  const hidden = [];
+  let listed = 0;
+  dataRows_(sheet_('farmers')).forEach(function (r) {
+    if (String(r[11] || '').trim().toLowerCase() !== 'open') return;
+    const l = farmerListing_(r, rule, today);
+    if (l.listed) listed++; else hidden.push({ id: text_(r[0]), reason: l.reason });
+  });
+  return { hideAfterHarvestDays: rule.days, startDate: rule.start ? dateInput_(rule.start) : '', listedPlots: listed, hiddenPlots: hidden.length, hidden: hidden };
+}
+
+/** 2.8.0: ABM (Super/Mini Super Admin) sets N. Turning the rule on again counts listed plots from today. */
+function abmConfig_(body) {
+  abmCheckKey_(body);
+  if (body.hideAfterHarvestDays !== undefined) {
+    const days = hideDaysValid_(body.hideAfterHarvestDays);
+    const lock = LockService.getScriptLock();
+    lock.waitLock(20000);
+    try {
+      const before = marketHideRule_();
+      const start = days > 0 && (!before.days || !before.start) ? dateInput_(new Date()) : (before.start ? dateInput_(before.start) : '');
+      hideRuleWrite_(days, start);
+      settingWrite_('hide_after_harvest_updated', new Date(), 'วันที่', 'แก้ไขล่าสุดโดย ABM: ' + cleanText_(body.by || '', 80));
+    } finally { lock.releaseLock(); }
+    invalidateSummary_();
+  }
+  return marketListingInfo_();
+}
+
+function abmFeed_(body) {
+  abmCheckKey_(body);
   const pack = function (kind) {
     const sh = sheet_(kind);
     const lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
@@ -223,16 +264,17 @@ function abmFeed_(body) {
       rows: lastRow >= 2 && lastCol ? sh.getRange(2, 1, lastRow - 1, lastCol).getValues() : []
     };
   };
-  return { apiVersion: APP_VERSION, generatedAt: new Date().toISOString(), farmers: pack('farmers'), buyers: pack('buyers') };
+  return { apiVersion: APP_VERSION, generatedAt: new Date().toISOString(), farmers: pack('farmers'), buyers: pack('buyers'), market: marketListingInfo_() };
 }
 
-/** 2.6.0: the only POST is the ABM feed (the officer/admin API moved to ABM). */
+/** 2.6.0: the only POSTs are from ABM (the officer/admin API moved there): the feed and, 2.8.0, the market listing rule. */
 function doPost(e) {
   let payload;
   try {
     const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-    if (body.action !== 'abm_feed') throw new Error('หน้าเจ้าหน้าที่ย้ายไปที่ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร (ABM): ' + ABM_SITE_URL);
-    payload = { ok: true, data: abmFeed_(body) };
+    if (body.action === 'abm_feed') payload = { ok: true, data: abmFeed_(body) };
+    else if (body.action === 'abm_config') payload = { ok: true, data: abmConfig_(body) };
+    else throw new Error('หน้าเจ้าหน้าที่ย้ายไปที่ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร (ABM): ' + ABM_SITE_URL);
   } catch (err) {
     payload = { ok: false, error: publicError_(err) };
   }
@@ -241,7 +283,8 @@ function doPost(e) {
 
 /** Saves change the dashboard immediately instead of waiting for the cache to expire. */
 function invalidateSummary_() {
-  try { CacheService.getScriptCache().remove('market:v1:' + APP_VERSION); } catch (err) { /* best effort */ }
+  // 2.8.0 fix: 2.7.0 renamed the market cache (market:v2) but this still removed the old name, so saves waited up to 5 min
+  try { CacheService.getScriptCache().remove(MARKET_CACHE_PREFIX + APP_VERSION); } catch (err) { /* best effort */ }
 }
 
 function loginServer(input) {
@@ -321,6 +364,26 @@ function deleteDataServer(input, session) {
   return { status: 'success', success: true, message: 'ลบข้อมูลแล้ว' };
 }
 
+/** 2.8.0 "ยังมีวัสดุอยู่": the owner shows an Open plot on the market for N more days from today. */
+function renewFarmerServer(input, session) {
+  if (session.role !== 'farmer') throw new Error('ไม่มีสิทธิ์แก้ไขข้อมูลนี้');
+  const id = cleanText_(typeof input === 'object' && input ? input.id : input, 100);
+  const sh = sheet_('farmers');
+  const row = id ? findOwnedRow_(sh, id, session.phone, 13) : 0;
+  if (!row) throw new Error('ไม่พบข้อมูล หรือคุณไม่มีสิทธิ์แก้ไขข้อมูลนี้');
+  const r = sh.getRange(row, 1, 1, 18).getValues()[0];
+  if (String(r[11] || '').trim().toLowerCase() !== 'open') throw new Error('แปลงนี้ไม่ได้ประกาศขายอยู่');
+  if (!toDate_(r[7])) throw new Error('กรุณาระบุวันเก็บเกี่ยวแล้วกดบันทึกก่อน');
+  const rule = marketHideRule_();
+  if (!rule.days) return { status: 'success', success: true, listed: true, listedUntil: '', message: 'ตลาดแสดงทุกแปลงอยู่แล้ว' };
+  const until = new Date(startOfDay_(new Date()).getTime() + rule.days * 86400000);
+  sh.getRange(row, 16).setValue(dateInput_(until));
+  sh.getRange(row, 18).setValue(new Date());
+  invalidateSummary_();
+  return { status: 'success', success: true, listed: true, listedUntil: dateInput_(until),
+    message: 'แสดงแปลงบนตลาดต่อถึงวันที่ ' + dateInput_(until) };
+}
+
 function getMatchingDataServer(session) {
   // Enforce partner-only visibility at the API layer. Empty arrays are retained
   // for backward compatibility with the existing Frontend response structure.
@@ -342,13 +405,15 @@ function getMatchingDataServer(session) {
 }
 
 /**
- * Single source of truth for the buyer's "ALL" option.
- * Deliberately ignores Havest_Date, Map_Expire_Date and Map_Visible.
+ * Single source of truth for the buyer's "ALL" option: Open plots with coordinates that are on the market today
+ * (2.8.0 farmerListing_: until N days after harvest, or the "ยังมีวัสดุอยู่" date). Map_Visible is not used.
  */
 function openFarmersWithCoordinates_() {
+  const rule = marketHideRule_();
+  const today = startOfDay_(new Date());
   return dataRows_(sheet_('farmers')).filter(function (r) {
     return String(r[11] || '').trim().toLowerCase() === 'open' &&
-      hasCoordinates_(r[9], r[10]);
+      hasCoordinates_(r[9], r[10]) && farmerListing_(r, rule, today).listed;
   });
 }
 
@@ -375,6 +440,7 @@ function saveFarmer_(data, session) {
   const crop = cleanText_(data.crop, 150);
   const material = farmerMaterialForCrop_(crop, data.materialType, data.materialOther);
   const harvest = parseDate_(data.harvestDate || data.havestDate, 'วันเก็บเกี่ยว');
+  if (!harvest) throw new Error('กรุณาระบุวันเก็บเกี่ยว');   // 2.8.0: required (the market shows a plot until N days after it)
   const plant = parseDate_(data.plantDate, 'วันเพาะปลูก');
   if (plant && harvest && plant.getTime() > harvest.getTime()) throw new Error('วันเก็บเกี่ยวต้องไม่ก่อนวันเพาะปลูก');
   const id = cleanText_(data.id, 100) || newId_();
@@ -395,6 +461,7 @@ function saveFarmer_(data, session) {
     if (occupiedRow && !row) throw new Error('ไม่มีสิทธิ์แก้ไขข้อมูลนี้');
     if (row) {
       rowValues[1] = sh.getRange(row, 2).getValue() || now;
+      rowValues[15] = sh.getRange(row, 16).getValue() || '';   // 2.8.0: keep "ยังมีวัสดุอยู่" (shown-until date)
       sh.getRange(row, 1, 1, 18).setValues([rowValues]);
     } else {
       sh.appendRow(rowValues);
@@ -445,10 +512,14 @@ function saveBuyer_(data, session) {
 }
 
 function farmerRecords_(phone) {
+  const rule = marketHideRule_();
+  const today = startOfDay_(new Date());
   return dataRows_(sheet_('farmers')).filter(function (r) {
     return isOwned_(r, phone, 12) && String(r[11]) !== 'Deleted';
   }).map(function (r) {
+    const l = farmerListing_(r, rule, today);
     return {
+      listed: l.listed, listedUntil: l.until ? dateInput_(l.until) : '', hiddenReason: l.reason, hideAfterHarvestDays: rule.days,
       id: text_(r[0]), timestamp: dateTime_(r[1]), fname: text_(r[2]), lname: text_(r[3]), phone: displayPhone_(r[4]),
       crop: text_(r[5]), plantDate: dateInput_(r[6]), harvestDate: dateInput_(r[7]), area: text_(r[8]),
       lat: maybeNumber_(r[9]), lng: maybeNumber_(r[10]), recordStatus: text_(r[11]), materialType: text_(r[13]), materialOther: text_(r[14])
@@ -537,8 +608,9 @@ function setupSystem() {
  */
 function verifyLiveMatchingData() {
   const rows = openFarmersWithCoordinates_();
+  const rule = marketHideRule_();
   return 'PASS: API ' + APP_VERSION + ' returns ' + rows.length +
-    ' Open farmer record(s) with coordinates; harvest expiry and Map_Visible are ignored';
+    ' Open farmer record(s) with coordinates on the market (' + (rule.days ? 'until ' + rule.days + ' days after harvest' : 'no harvest limit') + ')';
 }
 
 /** Adds the new buyers column without moving or rewriting any existing column. */
@@ -644,7 +716,7 @@ function restoreLegacyExpiredFarmers_() {
       restored++;
     }
     if (status === 'Open') {
-      sh.getRange(row, 16).setValue('');
+      // 2.8.0: P (Map_Expire_Date) now holds the "ยังมีวัสดุอยู่" date — kept
       sh.getRange(row, 17).setFormula('=L' + row + '="Open"');
     }
   });
@@ -652,8 +724,7 @@ function restoreLegacyExpiredFarmers_() {
 }
 
 function setFarmerFormulas_(sh, row) {
-  // Keep the existing P/Q columns for schema compatibility, but do not expire by harvest date.
-  sh.getRange(row, 16).setValue('');
+  // P (Map_Expire_Date) = "ยังมีวัสดุอยู่" shown-until date (2.8.0) — never cleared here; Q kept for schema compatibility.
   sh.getRange(row, 17).setFormula('=L' + row + '="Open"');
 }
 

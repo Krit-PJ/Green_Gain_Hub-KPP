@@ -16,8 +16,8 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.7.0">
-  <link rel="stylesheet" href="assets/market.css?v=2.7.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.8.0">
+  <link rel="stylesheet" href="assets/market.css?v=2.8.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -231,7 +231,7 @@
               <div>
                 <h3 class="font-bold text-emerald-900">ช่วงเวลาเก็บเกี่ยวผลผลิต</h3>
                 <p class="text-xs text-emerald-700">สำหรับผู้รับซื้อ: ระบบแสดงเฉพาะหมุดสีเขียวของแปลงเกษตรกร</p>
-                <p class="text-xs text-emerald-800 font-medium mt-1">เมื่อเลือก “ทั้งหมด” ระบบจะแสดงเกษตรกรสถานะ Open ที่มีพิกัดทั้งหมด โดยไม่กรองวันเก็บเกี่ยว ปี หรือเดือน</p>
+                <p class="text-xs text-emerald-800 font-medium mt-1">เมื่อเลือก “ทั้งหมด” ระบบจะแสดงทุกแปลงที่ยังประกาศขายอยู่ โดยไม่กรองปีหรือเดือน (แปลงที่เก็บเกี่ยวนานเกินกำหนดจะไม่แสดง จนกว่าเกษตรกรยืนยันว่ายังมีวัสดุอยู่)</p>
               </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -357,11 +357,11 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=2.7.0"></script>
+  <script src="assets/config.js?v=2.8.0"></script>
   <script src="assets/api-client.js?v=2.4.0"></script>
   <script src="https://krit-pj.github.io/TH-Agri-Risk-Maps-Burning/js/kpp-id.js"></script>
-  <script src="assets/sso-client.js?v=2.7.0"></script>
-  <script src="assets/market.js?v=2.7.0" defer></script>
+  <script src="assets/sso-client.js?v=2.8.0"></script>
+  <script src="assets/market.js?v=2.8.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -386,6 +386,46 @@
 
     function safeId(value) {
       return String(value ?? '').replace(/[^0-9A-Za-z_-]/g, '');
+    }
+
+    /* 2.8.0: is this plot on the market? A plot is shown until N days after harvest (set by officers);
+       "ยังมีวัสดุอยู่" shows it N more days from today. */
+    function thaiDate(isoDate) {
+      const d = new Date(String(isoDate || '') + 'T00:00:00');
+      return isNaN(d) ? '' : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    function listingStatusHtml(f) {
+      if (!f || !f.id || !f.hideAfterHarvestDays) return '';
+      const n = Number(f.hideAfterHarvestDays);
+      const renew = `<button type="button" onclick="renewListing('${safeId(f.id)}')" class="mt-2 bg-white text-green-800 border border-green-600 py-2 px-4 rounded-lg font-bold text-sm hover:bg-green-50 transition"><i class="fa-solid fa-rotate-right"></i> ยังมีวัสดุอยู่ แสดงต่ออีก ${n} วัน</button>`;
+      if (f.listed) {
+        return `<div class="listing-status mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900" role="status">
+          <i class="fa-solid fa-eye"></i> แสดงบนตลาดถึงวันที่ <b>${escapeHtml(thaiDate(f.listedUntil))}</b>
+          <span class="block text-xs text-green-800 mt-1">แปลงจะแสดงถึง ${n} วันหลังวันเก็บเกี่ยว ถ้ายังมีวัสดุอยู่หลังจากนั้น กดปุ่มด้านล่างได้</span>${renew}</div>`;
+      }
+      if (f.hiddenReason === 'no_harvest') {
+        return `<div class="listing-status mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900" role="status">
+          <i class="fa-solid fa-eye-slash"></i> <b>ไม่แสดงบนตลาด</b> เพราะยังไม่มีวันเก็บเกี่ยว กรุณาระบุวันเก็บเกี่ยวแล้วกดบันทึก</div>`;
+      }
+      return `<div class="listing-status mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900" role="status">
+        <i class="fa-solid fa-eye-slash"></i> <b>ไม่แสดงบนตลาดแล้ว</b> เลยวันเก็บเกี่ยวมาเกิน ${n} วัน ผู้รับซื้อจะไม่เห็นแปลงนี้
+        <span class="block text-xs mt-1">ถ้ายังมีวัสดุเหลือขาย กดปุ่มด้านล่างเพื่อแสดงต่อ</span>${renew}</div>`;
+    }
+    function renewListing(id) {
+      Swal.showLoading();
+      google.script.run
+        .withSuccessHandler(function (d) {
+          Swal.close();
+          if (d && d.status === 'success') {
+            Swal.fire('สำเร็จ', d.listedUntil ? 'แปลงนี้จะแสดงบนตลาดถึงวันที่ ' + thaiDate(d.listedUntil) : d.message, 'success');
+            miniMaps = {}; miniMarkers = {};
+            loadUserProfile();
+          } else {
+            Swal.fire('เกิดข้อผิดพลาด', (d && d.message) || 'ทำรายการไม่สำเร็จ', 'error');
+          }
+        })
+        .withFailureHandler(function (err) { Swal.close(); Swal.fire('เกิดข้อผิดพลาด', err.message, 'error'); })
+        .renewFarmerServer({ id: id });
     }
 
     function validCoordinates(lat, lng) {
@@ -906,6 +946,7 @@
           </div>
           
         </div>
+        ${listingStatusHtml(f)}
 
         <div class="info-details grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -930,7 +971,7 @@
           </div>
 
           <div><label class="label-text">วันปลูก</label><input type="date" name="plantDate" class="input-field" value="${escapeHtml(f?.plantDate || '')}"></div>
-          <div><label class="label-text">วันเก็บเกี่ยว</label><input type="date" name="harvestDate" class="input-field" value="${escapeHtml(f?.harvestDate || '')}"></div>
+          <div><label class="label-text">วันเก็บเกี่ยว <span class="required-mark">*</span></label><input type="date" name="harvestDate" required class="input-field" value="${escapeHtml(f?.harvestDate || '')}"></div>
         </div>
 
         <label class="label-text my-2">พื้นที่ (ไร่-งาน-ตร.ว.)</label>

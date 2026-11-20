@@ -1,4 +1,4 @@
-/* Green Gain Hub 2.7.0 (since 2.5.0) — front page for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
+/* Green Gain Hub 2.8.0 (since 2.5.0) — front page for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
  *
  * ?api=v1&endpoint=market gives grid cells (~5.5 km) with residue offered (sell) and bought (buy) per material.
  * Public = aggregate only: cell centres, counts, area, price range — no names, phones or real coordinates.
@@ -9,6 +9,7 @@
  * 2.7.0: the page shows only market data (no officer numbers or links). On top: three key numbers.
  *   Materials are summary cards (offered tonnes, buyers and their capacity, harvest timing, price as given by buyers,
  *   a status) that still filter the map. Under the map: all 11 districts; a row filters the map.
+ * 2.8.0: the server leaves out plots more than N days after harvest; the note under the map says so.
  */
 (function () {
   'use strict';
@@ -331,7 +332,7 @@
   }
   function render() {
     renderStats(); renderMats(); renderDistricts(); renderList(); renderMap(); renderDistTable();
-    const pv = $('mkPrivacy'); if (pv && state.data && state.data.notes) pv.textContent = state.data.notes.privacy;
+    const pv = $('mkPrivacy'); if (pv && state.data && state.data.notes) pv.textContent = state.data.notes.privacy + (state.data.notes.listing ? ' · ' + state.data.notes.listing : '');
   }
 
   /* ---------------- interaction ---------------- */
