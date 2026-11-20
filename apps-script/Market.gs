@@ -9,6 +9,11 @@
  * Material groups follow Balance.gs (rice / sugarcane / maize / cassava / other) so the map, the balance
  * table and the GHG settings speak the same language.
  *
+ * 2.8.0: a plot leaves the market N days after its harvest date (Config hide_after_harvest_days, default 20, 0 = off;
+ * set by officers in ABM). Plots without a harvest date are not shown. The farmer can press "ยังมีวัสดุอยู่" to show the
+ * plot again for N days (date kept in farmers!P Map_Expire_Date). Nothing is deleted or re-labelled — only not shown.
+ * The sheet rows stay "Open", so changing N (or turning the rule off) takes effect at once.
+ *
  * 2.7.0: each material also says WHEN the residue is available (sell.timing: now / within 30 days / 31–90 days /
  * later, by harvest date), and the payload lists the province's districts so the page can show all 11, empty ones too.
  */
@@ -27,9 +32,78 @@ const MARKET_GROUPS = [
   { key: 'other', label: 'วัสดุอื่น' }
 ];
 
+/* ---------------- 2.8.0: how long a plot stays on the market after harvest ---------------- */
+const MARKET_CACHE_PREFIX = 'market:v2:';
+const HIDE_DAYS_PARAM = 'hide_after_harvest_days';
+const HIDE_START_PARAM = 'hide_after_harvest_start';
+const HIDE_DAYS_DEFAULT = 20;
+const HIDE_DAYS_MAX = 365;
+
+/** Writes one Config row (Parameter, Value, Unit, Description), adding it when missing. */
+function settingWrite_(key, value, unit, description) {
+  const sh = sheet_('settings');
+  const last = sh.getLastRow();
+  const names = last >= 2 ? sh.getRange(2, 1, last - 1, 1).getValues().map(function (r) { return String(r[0]).trim(); }) : [];
+  const i = names.indexOf(key);
+  const row = [key, value, unit || '', description || ''];
+  if (i >= 0) sh.getRange(i + 2, 1, 1, 4).setValues([row]); else sh.appendRow(row);
+}
+
+function hideDaysValid_(v) {
+  const n = Number(v);
+  if (v === '' || v === null || v === undefined || !isFinite(n) || Math.floor(n) !== n || n < 0 || n > HIDE_DAYS_MAX) {
+    throw new Error('จำนวนวันต้องเป็นจำนวนเต็ม 0–' + HIDE_DAYS_MAX + ' (0 = ไม่ซ่อน)');
+  }
+  return n;
+}
+
+/** { days, start } — the first call after 2.8.0 turns the rule on with 20 days, counted from today for plots already listed. */
+function marketHideRule_() {
+  let days = setting_(HIDE_DAYS_PARAM, null);
+  let start = setting_(HIDE_START_PARAM, null);
+  if (days === null || days === '') {
+    const lock = LockService.getScriptLock();
+    if (lock.tryLock(10000)) {
+      try {
+        days = setting_(HIDE_DAYS_PARAM, null);
+        start = setting_(HIDE_START_PARAM, null);
+        if (days === null || days === '') {
+          days = HIDE_DAYS_DEFAULT;
+          start = dateInput_(new Date());
+          hideRuleWrite_(days, start);
+        }
+      } finally { lock.releaseLock(); }
+    } else {
+      days = HIDE_DAYS_DEFAULT;
+    }
+  }
+  let n = Number(days);
+  if (!isFinite(n) || n < 0) n = HIDE_DAYS_DEFAULT;
+  return { days: Math.min(Math.floor(n), HIDE_DAYS_MAX), start: toDate_(start) };
+}
+
+function hideRuleWrite_(days, start) {
+  settingWrite_(HIDE_DAYS_PARAM, days, 'วัน', 'ซ่อนแปลงจากตลาดเมื่อเลยวันเก็บเกี่ยวกี่วัน (0 = ไม่ซ่อน) — ตั้งค่าที่ ABM');
+  settingWrite_(HIDE_START_PARAM, start, 'วันที่', 'วันที่เริ่มใช้กฎ: แปลงที่ประกาศไว้ก่อนหน้า นับวันจากวันนี้แทนวันเก็บเกี่ยว');
+}
+
+/** Is this farmer row shown on the market today? { listed, until (Date|null), reason: ''|'no_harvest'|'after_harvest' } */
+function farmerListing_(r, rule, today) {
+  if (!rule.days) return { listed: true, until: null, reason: '' };
+  const harvest = toDate_(r[7]);
+  if (!harvest) return { listed: false, until: null, reason: 'no_harvest' };
+  const DAY = 86400000;
+  let until = startOfDay_(harvest).getTime() + rule.days * DAY;
+  if (rule.start) until = Math.max(until, startOfDay_(rule.start).getTime() + rule.days * DAY);
+  const renewed = toDate_(r[15]);   // P Map_Expire_Date = shown until (set by "ยังมีวัสดุอยู่")
+  if (renewed) until = Math.max(until, startOfDay_(renewed).getTime());
+  const listed = startOfDay_(today).getTime() <= until;
+  return { listed: listed, until: new Date(until), reason: listed ? '' : 'after_harvest' };
+}
+
 function getMarketPublic_(p) {
   const cache = CacheService.getScriptCache();
-  const key = 'market:v2:' + APP_VERSION;
+  const key = MARKET_CACHE_PREFIX + APP_VERSION;
   if (!(p && p.refresh === '1')) {
     const hit = cache.get(key);
     if (hit) return JSON.parse(hit);
@@ -49,6 +123,8 @@ function buildMarketPublic_(now) {
   const G = MARKET_GRID_DEG;
   const districts = districtList_();
   const today = startOfDay_(now);
+  const rule = marketHideRule_();
+  let hidden = 0;
   const rates = {};
   // 2.6.0: residue rates (ตัน/ไร่) are ABM's — read from its public residue endpoint (Abm.gs), defaults if unreachable
   try { const r = abmResidueRates_(); Object.keys(r).forEach(function (k) { rates[k] = Number(r[k]); }); } catch (err) { /* defaults unknown */ }
@@ -75,6 +151,7 @@ function buildMarketPublic_(now) {
 
   dataRows_(sheet_('farmers')).forEach(function (r) {
     if (String(r[11] || '').trim().toLowerCase() !== 'open' || !hasCoordinates_(r[9], r[10])) return;
+    if (!farmerListing_(r, rule, today).listed) { hidden++; return; }
     const material = resolvedMaterial_(r[13], r[14], r[5]);
     const g = marketGroupOfListing_(r[5], material);
     const area = parseAreaRai_(r[8]);
@@ -125,6 +202,7 @@ function buildMarketPublic_(now) {
     ok: true, generatedAt: now.toISOString(), province: provinceName_(), gridDeg: G, gridKm: round_(G * 111, 1), readyDays: MARKET_READY_DAYS,
     groups: groupList, cells: cellList,
     districts: districts.map(function (d) { return { code: d.code, districtName: d.name }; }),
+    listing: { hideAfterHarvestDays: rule.days, hiddenPlots: hidden },
     totals: { plots: sum(function (g) { return g.sell.plots; }), readyPlots: sum(function (g) { return g.sell.readyPlots; }),
       areaRai: round_(sum(function (g) { return g.sell.areaRai; }), 2), ton: round_(sum(function (g) { return g.sell.ton || 0; }), 1),
       buyers: sum(function (g) { return g.buy.buyers; }), capacityTonPerDay: round_(sum(function (g) { return g.buy.capacityTonPerDay; }), 1) },
@@ -132,6 +210,7 @@ function buildMarketPublic_(now) {
       privacy: 'แสดงเป็นช่องพื้นที่ประมาณ ' + round_(G * 111, 1) + ' กม. ไม่มีชื่อ เบอร์โทร หรือพิกัดจริง — ดูตำแหน่งและติดต่อได้หลังเข้าสู่ระบบ',
       price: 'ราคาเป็นบาทต่อไร่ ตามที่ผู้รับซื้อระบุ',
       timing: 'ช่วงเวลานับจากวันเก็บเกี่ยวที่เกษตรกรระบุ: เก็บเกี่ยวแล้ว (พร้อมขายตอนนี้) · ภายใน 30 วัน · 31–90 วัน',
+      listing: rule.days ? 'แสดงแปลงจนถึง ' + rule.days + ' วันหลังวันเก็บเกี่ยว (เกษตรกรกด "ยังมีวัสดุอยู่" เพื่อแสดงต่อได้)' : 'แสดงทุกแปลงที่ประกาศขาย',
       ton: 'ตันวัสดุประมาณจากพื้นที่ × อัตราวัสดุต่อไร่ของพืช (ตั้งค่าในหน้าเจ้าหน้าที่)'
     }
   };

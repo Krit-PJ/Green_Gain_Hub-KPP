@@ -51,7 +51,7 @@ const cache = new Map();
 global.SpreadsheetApp = { openById: () => ({ getSheetByName: name => sheets[name] || null }) };
 global.PropertiesService = { getScriptProperties: () => ({ getProperty: () => null }) };
 global.CacheService = { getScriptCache: () => ({ put: (k,v) => cache.set(k,v), get: k => cache.get(k) || null }) };
-global.LockService = { getScriptLock: () => ({ waitLock(){}, releaseLock(){} }) };
+global.LockService = { getScriptLock: () => ({ waitLock(){}, tryLock(){ return true; }, releaseLock(){} }) };
 global.Utilities = {
   getUuid: () => '11111111-2222-4333-8444-555555555555',
   formatDate: (d, tz, fmt) => {
@@ -63,7 +63,8 @@ global.Utilities = {
 global.Session = { getScriptTimeZone: () => 'Asia/Bangkok' };
 global.ScriptApp = { getProjectTriggers: () => [], newTrigger: () => ({ timeBased(){return this;}, everyDays(){return this;}, atHour(){return this;}, create(){} }), deleteTrigger(){} };
 
-const code = fs.readFileSync(require('path').join(__dirname, '..', 'apps-script', 'Code.gs'), 'utf8');
+// 2.8.0: Code.gs uses the market listing rule in Market.gs
+const code = ['Code.gs', 'Market.gs'].map((f) => fs.readFileSync(require('path').join(__dirname, '..', 'apps-script', f), 'utf8')).join('\n');
 const api = new Function(code + '; return { loginServer, getApiInfoServer, getUserProfileServer, saveDataServer, getMatchingDataServer, verifyDatabaseSchema, verifyLiveMatchingData, ensureBuyerHarvestDaysColumn_, ensureSheetDataFormats_, normalizeLegacySheetData_, restoreLegacyExpiredFarmers_, setupDailyTrigger, autoExpireFarmers, normalizePhone_, toDate_, farmerMaterialForCrop_ };')();
 
 function assert(value, message) { if (!value) throw new Error(message); }
@@ -103,8 +104,8 @@ assert(api.farmerMaterialForCrop_('อ้อยโรงงาน', 'ฟาง�
 assert(api.farmerMaterialForCrop_('มันสำปะหลัง', 'ฟางข้าว', '').type === 'เหง้ามันสำปะหลัง', 'cassava mapping failed');
 
 const matches = api.getMatchingDataServer(session);
-assert(matches.apiVersion === '2.7.0', 'matching API version is missing or stale');
-assert(api.getApiInfoServer().apiVersion === '2.7.0', 'public API version check failed');
+assert(matches.apiVersion === '2.8.0', 'matching API version is missing or stale');
+assert(api.getApiInfoServer().apiVersion === '2.8.0', 'public API version check failed');
 assert(api.getApiInfoServer().feature === 'MARKET_ONLY', 'feature flag is missing or stale');
 assert(matches.viewerRole === 'farmer' && matches.visibleRole === 'buyer', 'farmer visibility metadata is incorrect');
 assert(matches.farmers.length === 0, 'farmer must not receive other farmer records');
@@ -112,7 +113,8 @@ assert(matches.buyers.length === 1 && matches.buyers[0].material === 'ฟาง�
 assert(matches.ownPlots.length === 2 && matches.ownPlots.every(f => f.phone === '0812345678'), 'farmer must receive every owned plot and no other farmer plot');
 assert(!('purchaseAfterHarvestDays' in matches.buyers[0]), 'retired buyer harvest-days field must not be exposed');
 
-// ALL must include old and future harvest dates when status is Open and coordinates exist.
+// ALL = Open plots with coordinates that are on the market. 2.8.0: the rule starts today, so plots already listed get
+// N days from today (an old harvest date is still shown during that time).
 sheets.farmers.rows.push(
   ['f-old',new Date(),'เกษตรกร','วันเก่า','0811111111','ข้าว',new Date('2024-01-01'),new Date('2024-06-01'),'2 ไร่',16.41,99.41,'Open','0811111111','ฟางข้าว','','','',''],
   ['f-no-coord',new Date(),'เกษตรกร','ไม่มีพิกัด','0822222222','ข้าว',new Date('2024-01-01'),new Date('2024-06-01'),'2 ไร่','','','Open','0822222222','ฟางข้าว','','','',''],
@@ -123,10 +125,11 @@ const allMatches = api.getMatchingDataServer(buyerViewSession);
 assert(allMatches.viewerRole === 'buyer' && allMatches.visibleRole === 'farmer', 'buyer visibility metadata is incorrect');
 assert(allMatches.buyers.length === 0, 'buyer must not receive other buyer records');
 assert(allMatches.ownPlots.length === 0, 'buyer response must not contain ownPlots');
-assert(allMatches.farmers.some(f => f.id === 'f-old'), 'old harvest date must remain visible when Open with coordinates');
+assert(allMatches.farmers.some(f => f.id === 'f-old'), 'old harvest date still shown while the rule start counts (first 20 days)');
+assert(sheets.Config.rows.some(r => r[0] === 'hide_after_harvest_days' && r[1] === 20) && sheets.Config.rows.some(r => r[0] === 'hide_after_harvest_start'), 'rule switched on with 20 days and a start date');
 assert(!allMatches.farmers.some(f => f.id === 'f-no-coord'), 'farmer without coordinates must remain hidden');
 assert(!allMatches.farmers.some(f => f.id === 'f-deleted'), 'non-Open farmer must remain hidden');
-assert(api.verifyLiveMatchingData().includes('harvest expiry and Map_Visible are ignored'), 'live matching verification failed');
+assert(api.verifyLiveMatchingData().includes('until 20 days after harvest'), 'live matching verification failed');
 
 // setup migration restores only legacy Expired rows and never recreates the expiry trigger.
 sheets.farmers.rows.push(
@@ -134,7 +137,7 @@ sheets.farmers.rows.push(
 );
 assert(api.restoreLegacyExpiredFarmers_().startsWith('PASS: restored 1'), 'legacy Expired row was not restored');
 assert(sheets.farmers.rows.at(-1)[11] === 'Open', 'legacy Expired status must become Open');
-assert(sheets.farmers.rows.at(-1)[15] === '', 'legacy expiry date must be cleared');
+assert(sheets.farmers.rows.at(-1)[15] === '2024-06-11', '2.8.0: column P (shown-until date) is kept, never cleared by setup');
 assert(api.setupDailyTrigger().includes('removed'), 'legacy trigger cleanup failed');
 assert(api.autoExpireFarmers().includes('disabled'), 'legacy expiry entry point must not mutate records');
 
