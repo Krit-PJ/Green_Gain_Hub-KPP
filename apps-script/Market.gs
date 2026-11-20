@@ -8,10 +8,17 @@
  *   - exact pins, names and phone numbers stay in the signed-in market (getMatchingDataServer, unchanged)
  * Material groups follow Balance.gs (rice / sugarcane / maize / cassava / other) so the map, the balance
  * table and the GHG settings speak the same language.
+ *
+ * 2.7.0: each material also says WHEN the residue is available (sell.timing: now / within 30 days / 31–90 days /
+ * later, by harvest date), and the payload lists the province's districts so the page can show all 11, empty ones too.
  */
 const MARKET_GRID_DEG = 0.05;
 const MARKET_CACHE_SECONDS = 300;
 const MARKET_READY_DAYS = 15;   // harvested, or harvesting within 15 days = "พร้อมขาย"
+// 2.7.0 harvest-date buckets: now = harvested (or no date) · d30 = 1–30 days · d90 = 31–90 days · later = beyond 90 days
+const MARKET_TIMING = ['now', 'd30', 'd90', 'later'];
+function marketTimingOf_(days) { return days === null || days <= 0 ? 'now' : days <= 30 ? 'd30' : days <= 90 ? 'd90' : 'later'; }
+function marketEmptyTiming_() { const t = {}; MARKET_TIMING.forEach(function (k) { t[k] = { plots: 0, areaRai: 0, ton: null }; }); return t; }
 const MARKET_GROUPS = [
   { key: 'rice', label: 'ฟางข้าว' },
   { key: 'sugarcane', label: 'ใบและยอดอ้อย' },
@@ -22,7 +29,7 @@ const MARKET_GROUPS = [
 
 function getMarketPublic_(p) {
   const cache = CacheService.getScriptCache();
-  const key = 'market:v1:' + APP_VERSION;
+  const key = 'market:v2:' + APP_VERSION;
   if (!(p && p.refresh === '1')) {
     const hit = cache.get(key);
     if (hit) return JSON.parse(hit);
@@ -48,7 +55,7 @@ function buildMarketPublic_(now) {
   const groups = {};
   MARKET_GROUPS.forEach(function (g) {
     groups[g.key] = { key: g.key, label: g.label, residueTRai: rates[g.key] === undefined ? null : rates[g.key], others: {},
-      sell: { plots: 0, readyPlots: 0, areaRai: 0 }, buy: { buyers: 0, capacityTonPerDay: 0, priceMin: null, priceMax: null } };
+      sell: { plots: 0, readyPlots: 0, areaRai: 0, timing: marketEmptyTiming_() }, buy: { buyers: 0, capacityTonPerDay: 0, priceMin: null, priceMax: null } };
   });
   const cells = {};
   const cellOf = function (lat, lng) {
@@ -79,6 +86,7 @@ function buildMarketPublic_(now) {
     s.plots++; s.areaRai += area; if (ready) s.readyPlots++;
     if (!ready && harvest) { const iso = dateInput_(harvest); if (!s.nextHarvest || iso < s.nextHarvest) s.nextHarvest = iso; }
     const t = groups[g].sell; t.plots++; t.areaRai += area; if (ready) t.readyPlots++;
+    const tb = t.timing[marketTimingOf_(days)]; tb.plots++; tb.areaRai += area;
     if (g === 'other' && material) groups[g].others[material] = true;
   });
 
@@ -107,6 +115,7 @@ function buildMarketPublic_(now) {
   const groupList = MARKET_GROUPS.map(function (x) {
     const g = groups[x.key];
     g.sell.areaRai = round_(g.sell.areaRai, 2); g.sell.ton = ton(x.key, g.sell.areaRai);
+    MARKET_TIMING.forEach(function (k) { const b = g.sell.timing[k]; b.areaRai = round_(b.areaRai, 2); b.ton = ton(x.key, b.areaRai); });
     g.buy.capacityTonPerDay = round_(g.buy.capacityTonPerDay, 1);
     g.others = Object.keys(g.others).slice(0, 6);
     return g;
@@ -115,12 +124,14 @@ function buildMarketPublic_(now) {
   return {
     ok: true, generatedAt: now.toISOString(), province: provinceName_(), gridDeg: G, gridKm: round_(G * 111, 1), readyDays: MARKET_READY_DAYS,
     groups: groupList, cells: cellList,
+    districts: districts.map(function (d) { return { code: d.code, districtName: d.name }; }),
     totals: { plots: sum(function (g) { return g.sell.plots; }), readyPlots: sum(function (g) { return g.sell.readyPlots; }),
       areaRai: round_(sum(function (g) { return g.sell.areaRai; }), 2), ton: round_(sum(function (g) { return g.sell.ton || 0; }), 1),
       buyers: sum(function (g) { return g.buy.buyers; }), capacityTonPerDay: round_(sum(function (g) { return g.buy.capacityTonPerDay; }), 1) },
     notes: {
       privacy: 'แสดงเป็นช่องพื้นที่ประมาณ ' + round_(G * 111, 1) + ' กม. ไม่มีชื่อ เบอร์โทร หรือพิกัดจริง — ดูตำแหน่งและติดต่อได้หลังเข้าสู่ระบบ',
       price: 'ราคาเป็นบาทต่อไร่ ตามที่ผู้รับซื้อระบุ',
+      timing: 'ช่วงเวลานับจากวันเก็บเกี่ยวที่เกษตรกรระบุ: เก็บเกี่ยวแล้ว (พร้อมขายตอนนี้) · ภายใน 30 วัน · 31–90 วัน',
       ton: 'ตันวัสดุประมาณจากพื้นที่ × อัตราวัสดุต่อไร่ของพืช (ตั้งค่าในหน้าเจ้าหน้าที่)'
     }
   };

@@ -1,4 +1,4 @@
-/* 2.5.0 public matching map (endpoint=market): grid aggregation, material groups, privacy, cache invalidation. */
+/* 2.5.0–2.7.0 public matching map (endpoint=market): grid aggregation, material groups, privacy, cache invalidation. */
 const { load, Sheet, HEADERS } = require('./helpers/gas-mock');
 function assert(v, m) { if (!v) throw new Error(m); }
 let n = 0; const check = (v, m) => { n++; assert(v, m); };
@@ -31,7 +31,7 @@ sheets.buyers.rows.push(
   B('b005', 16.0815, 99.7724, 'อื่นๆ', 18, '8', 'Active', '', 'ซังข้าวโพด'));
 
 let p = get({ api: 'v1', endpoint: 'market' });
-check(p.ok && p.apiVersion === '2.6.0' && p.data.ok, 'market endpoint answers');
+check(p.ok && p.apiVersion === '2.7.0' && p.data.ok, 'market endpoint answers');
 const d = p.data;
 check(d.gridDeg === 0.05 && d.gridKm === 5.6, 'grid ~5.5 km');
 const g = Object.fromEntries(d.groups.map((x) => [x.key, x]));
@@ -41,6 +41,15 @@ check(g.sugarcane.sell.plots === 1 && g.sugarcane.buy.buyers === 1 && g.sugarcan
 check(g.maize.sell.plots === 1 && g.maize.buy.buyers === 1, 'maize from crop name and from "อื่นๆ: ซังข้าวโพด" buyer');
 check(g.rice.residueTRai > 0 && g.rice.sell.ton === Math.round(30.5 * g.rice.residueTRai * 10) / 10, 'tonnes from the GHG crop residue rate');
 check(d.totals.plots === 4 && d.totals.buyers === 4, 'totals');
+
+/* 2.7.0: when the residue is available (harvest date buckets) and the district list */
+const tr = g.rice.sell.timing;
+check(tr.now.plots === 1 && tr.now.areaRai === 20 && tr.d30.plots === 0 && tr.d90.plots === 1 && tr.d90.areaRai === 10.5 && tr.later.plots === 0, 'rice timing: harvested now / 31–90 days');
+check(tr.now.ton === Math.round(20 * g.rice.residueTRai * 10) / 10, 'timing tonnes from the same residue rate');
+check(g.sugarcane.sell.timing.d30.plots === 1 && g.maize.sell.timing.d30.plots === 1, 'harvest in 1–30 days → d30');
+check(g.cassava.sell.timing.now.plots === 0 && g.cassava.sell.timing.now.ton !== undefined, 'empty material still has all buckets');
+check(Array.isArray(d.districts) && d.districts.length === 11 && d.districts.every((x) => x.code && x.districtName && !x.geometry), 'all 11 districts listed, no geometry');
+check(d.notes.timing && /30 วัน/.test(d.notes.timing), 'timing note');
 
 /* privacy: cell centres only, no names / phones / real coordinates anywhere in the payload */
 const body = JSON.stringify(d);

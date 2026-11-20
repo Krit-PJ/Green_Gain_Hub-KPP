@@ -1,5 +1,5 @@
-/* 2.6.0 homepage = market for farmers and buyers only. The results page and officer sign-in moved to ABM;
-   old links and admin.html bookmarks lead there. */
+/* 2.6.0–2.7.0 homepage = market for farmers and buyers only. The results page and officer sign-in moved to ABM;
+   old links and admin.html bookmarks lead there. 2.7.0: no officer/ABM link is shown to farmers and buyers. */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 function assert(v, m) { if (!v) throw new Error(m); }
 const front = path.join(__dirname, '..', 'frontend');
@@ -19,12 +19,12 @@ assert(sso.includes("aud: 'GGH'") && !/function staff\(|ssoStaffLoginServer/.tes
 // officer side is gone from this site and points to ABM
 ['id="loginPage"', 'id="staffAuth"', 'dashboard.js', 'staff-auth.js', 'STAFF_ACCOUNT', 'MARKET_ACCOUNT', 'ABM_STAFF', 'GGH_STAFF'].forEach((x) => assert(!html.includes(x), 'officer part must be gone: ' + x));
 ['admin.js', 'admin.css', 'crop-import.js', 'staff-auth.js', 'dashboard.js'].forEach((f) => assert(!fs.existsSync(path.join(front, 'assets', f)), 'officer asset removed: ' + f));
-assert(/class="ggh-mk-perf" href="https:\/\/krit-pj\.github\.io\/KPP-Agri-Byproduct-Management\/" data-abm-link/.test(html), 'ผลการดำเนินงาน · เจ้าหน้าที่ opens ABM');
-assert(/<footer[\s\S]*data-abm-link[^>]*>ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร</.test(html), 'footer link for officers and executives');
+const visible = html.replace(/<!--[\s\S]*?-->/g, '').replace(/<script[\s\S]*?<\/script>/g, '');
+assert(!/ggh-mk-perf|data-abm-link|ผลการดำเนินงาน|เจ้าหน้าที่และผู้บริหาร|KPP-Agri-Byproduct-Management/.test(visible), '2.7.0: farmers and buyers see no officer / ABM link');
 assert(inline.includes("function openStaff(tab) { location.href = ABM_URL") && inline.includes("window.GGH_CONFIG?.ABM_URL"), 'any remaining staff door goes to ABM');
 assert(admin.includes("location.replace(base + (location.hash || ''))") && admin.includes(ABM + 'admin.html') && /noindex/.test(admin), 'admin.html bookmarks redirect to ABM');
 const cfg = {}; new vm.Script(config).runInNewContext({ window: cfg });
-assert(cfg.GGH_CONFIG.BUILD_VERSION === '2.6.0' && cfg.GGH_CONFIG.ABM_URL === ABM && /\/macros\/s\/AKfycby7nbXM[^/]+\/exec$/.test(cfg.GGH_CONFIG.ABM_API_URL), 'config 2.6.0 with ABM links');
-assert(html.includes('assets/market.js?v=2.6.0') && html.includes('assets/config.js?v=2.6.0') && html.includes('assets/sso-client.js?v=2.6.0'), 'asset versions 2.6.0');
+assert(cfg.GGH_CONFIG.BUILD_VERSION === '2.7.0' && cfg.GGH_CONFIG.ABM_URL === ABM && /\/macros\/s\/AKfycby7nbXM[^/]+\/exec$/.test(cfg.GGH_CONFIG.ABM_API_URL), 'config 2.7.0 with ABM links (redirects only)');
+assert(html.includes('assets/market.js?v=2.7.0') && html.includes('assets/config.js?v=2.7.0') && html.includes('assets/sso-client.js?v=2.7.0'), 'asset versions 2.7.0');
 assert(!/เศษวัสดุ/.test(html), 'wording: วัสดุเหลือใช้ทางการเกษตร');
-console.log('PASS: 2.6.0 homepage — market for farmers and buyers, officer side points to ABM, admin.html redirects');
+console.log('PASS: 2.7.0 homepage — market for farmers and buyers only, no officer links shown, old links and admin.html redirect to ABM');

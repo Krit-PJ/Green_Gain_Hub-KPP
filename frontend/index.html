@@ -16,8 +16,8 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.6.0">
-  <link rel="stylesheet" href="assets/market.css?v=2.6.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=2.7.0">
+  <link rel="stylesheet" href="assets/market.css?v=2.7.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -84,13 +84,16 @@
           <button type="button" data-door="login" data-role="farmer" class="ggh-mk-door is-sell"><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i><span class="ggh-mk-door-name">ฉันมีวัสดุจะขาย</span><span class="ggh-mk-door-hint">ประกาศขาย และดูผู้รับซื้อใกล้แปลง</span></button>
           <button type="button" data-door="login" data-role="buyer" class="ggh-mk-door is-buy"><i class="fa-solid fa-truck" aria-hidden="true"></i><span class="ggh-mk-door-name">ฉันรับซื้อวัสดุ</span><span class="ggh-mk-door-hint">ปักจุดรับซื้อ และดูแปลงพร้อมขาย</span></button>
         </nav>
-        <p class="ggh-mk-stats" id="mkStats" aria-live="polite">กำลังโหลดข้อมูลตลาด…</p>
-        <a class="ggh-mk-perf" href="https://krit-pj.github.io/KPP-Agri-Byproduct-Management/" data-abm-link><i class="fa-solid fa-chart-column" aria-hidden="true"></i>ผลการดำเนินงาน · เจ้าหน้าที่</a>
+        <!-- 2.7.0: three numbers that say how the market stands today -->
+        <div class="ggh-mk-stats" id="mkStats" aria-live="polite">กำลังโหลดข้อมูลตลาด…</div>
       </header>
 
       <section class="ggh-mk-board" aria-labelledby="mkBoardTitle">
         <div class="ggh-mk-board-head">
-          <h2 id="mkBoardTitle" class="ggh-mk-h2">ตลาดวัสดุเหลือใช้ จังหวัด<span data-province>กำแพงเพชร</span></h2>
+          <div class="ggh-mk-board-title">
+            <h2 id="mkBoardTitle" class="ggh-mk-h2">ตลาดวัสดุเหลือใช้ จังหวัด<span data-province>กำแพงเพชร</span></h2>
+            <p class="ggh-mk-board-sub" id="mkUpdated">แต่ละชนิดวัสดุ: มีให้ขายเท่าไร มีผู้รับซื้อไหม และพร้อมเมื่อไร · แตะการ์ดเพื่อกรองแผนที่</p>
+          </div>
           <div class="ggh-mk-filters">
             <div class="ggh-mk-mats" id="mkMats" role="group" aria-label="ชนิดวัสดุ"></div>
             <div class="ggh-mk-row">
@@ -119,6 +122,11 @@
           </div>
           <div class="ggh-mk-list" id="mkList" aria-live="polite"></div>
         </div>
+        <!-- 2.7.0: all 11 districts at a glance; a row filters the map -->
+        <details class="ggh-mk-dist" id="mkDistWrap" open>
+          <summary><span class="ggh-mk-h3">สรุปรายอำเภอ</span><span class="ggh-mk-dist-hint" id="mkDistHint">แตะชื่ออำเภอเพื่อดูบนแผนที่</span></summary>
+          <div class="ggh-mk-dist-body" id="mkDistTable"></div>
+        </details>
       </section>
 
       <section class="ggh-mk-how" aria-labelledby="mkHowTitle">
@@ -335,7 +343,6 @@
   <footer class="bg-green-900 text-white text-center py-6 mt-auto">
     <div class="container mx-auto px-4">
       <p class="text-xs md:text-sm opacity-90 mb-2">ระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร จังหวัดกำแพงเพชร</p>
-      <p class="text-xs md:text-sm opacity-90 mb-2">เจ้าหน้าที่และผู้บริหาร: <a class="underline" href="https://krit-pj.github.io/KPP-Agri-Byproduct-Management/" data-abm-link>ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร</a></p>
       <h4 class="font-bold text-sm md:text-base mb-1">สำนักงานเกษตรจังหวัดกำแพงเพชร</h4>
       <p class="text-xs md:text-sm opacity-80 mb-3">กรมส่งเสริมการเกษตร กระทรวงเกษตรและสหกรณ์</p>
       <p class="ggh-counter" id="visitCounter" aria-live="polite" hidden>
@@ -350,11 +357,11 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=2.6.0"></script>
+  <script src="assets/config.js?v=2.7.0"></script>
   <script src="assets/api-client.js?v=2.4.0"></script>
   <script src="https://krit-pj.github.io/TH-Agri-Risk-Maps-Burning/js/kpp-id.js"></script>
-  <script src="assets/sso-client.js?v=2.6.0"></script>
-  <script src="assets/market.js?v=2.6.0" defer></script>
+  <script src="assets/sso-client.js?v=2.7.0"></script>
+  <script src="assets/market.js?v=2.7.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -570,7 +577,6 @@
 
     // --- 2.2.1 sign-in popup for farmers/buyers (#hubAuth); 2.6.0: officers sign in at ABM ---
     const ABM_URL = window.GGH_CONFIG?.ABM_URL || 'https://krit-pj.github.io/KPP-Agri-Byproduct-Management/';
-    document.querySelectorAll('[data-abm-link]').forEach((a) => { a.href = ABM_URL; });
     const AUTH = { opener: null };
     function setMsg(id, html, kind) {
       const el = document.getElementById(id);

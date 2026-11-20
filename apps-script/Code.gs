@@ -1,5 +1,5 @@
 /**
- * Green Gain Hub 2.6.0 — ตลาดวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ (API-only bridge from GitHub Pages to Google Sheets).
+ * Green Gain Hub 2.7.0 — ตลาดวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ (API-only bridge from GitHub Pages to Google Sheets).
  *
  * 19 Nov 2026: the officer side moved to ABM — ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร
  * (records, GHG, value, targets, reports, crop data, officer accounts, executive dashboard):
@@ -14,12 +14,12 @@
  *
  * Endpoints (same /exec URL):
  *   ?action=rpc&method=...            JSONP RPC used by the logged-in market app (unchanged)
- *   ?api=v1&endpoint=market           Public matching map (aggregate grid, no personal data)
+ *   ?api=v1&endpoint=market           Public matching map (aggregate grid, no personal data; 2.7.0 + harvest timing, districts)
  *   ?api=v1&endpoint=hit | visits     Visit counter (count once per session | read)
  *   ?api=v1&endpoint=health           Public version check
  *   POST {action:'abm_feed', key}     Server-to-server feed for ABM (2.5.1)
  */
-const APP_VERSION = '2.6.0';
+const APP_VERSION = '2.7.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
