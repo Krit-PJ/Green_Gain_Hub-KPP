@@ -1,4 +1,4 @@
-# Green Gain Hub API 2.6.0
+# Green Gain Hub API 2.7.0
 
 **19 พ.ย. 2569:** ส่วนเจ้าหน้าที่ย้ายไป ABM (ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร) — API ของการบันทึก รายงาน และ Dashboard ดูที่ `API.md` ของ repo `KPP-Agri-Byproduct-Management`
 
@@ -7,9 +7,9 @@
 | ช่องทาง | หมายเหตุ |
 | --- | --- |
 | `GET ?action=rpc&method=…` | แอปเกษตรกร/ผู้รับซื้อ (login, register, ssoLogin, ssoProvision, profile, save, delete, matching) — ไม่เปลี่ยน |
-| `GET ?api=v1&endpoint=market` | แผนที่จับคู่สาธารณะ (กริด ~5.6 กม. ไม่มีข้อมูลส่วนบุคคล) |
+| `GET ?api=v1&endpoint=market` | แผนที่จับคู่สาธารณะ (กริด ~5.6 กม. ไม่มีข้อมูลส่วนบุคคล) · 2.7.0 เพิ่ม `groups[].sell.timing.{now,d30,d90,later}` = `{plots, areaRai, ton}` ตามวันเก็บเกี่ยว (now = เก็บเกี่ยวแล้ว/ไม่ระบุ, d30 = 1–30 วัน, d90 = 31–90 วัน) และ `districts: [{code, districtName}]` ครบ 11 อำเภอ |
 | `GET ?api=v1&endpoint=hit` / `visits` | ตัวนับผู้เข้าชมหน้าตลาด |
-| `GET ?api=v1&endpoint=health` | `{ apiVersion: "2.6.0", feature: "MARKET_ONLY", system: "GGH" }` |
+| `GET ?api=v1&endpoint=health` | `{ apiVersion: "2.7.0", feature: "MARKET_ONLY", system: "GGH" }` |
 | `GET ?api=v1&endpoint=summary\|residue\|balance\|crop` | ย้ายแล้ว: `{ ok:false, moved:"ABM", url }` |
 | `POST {action:"abm_feed", key}` | feed ฝั่ง Server ให้ ABM (2.5.1): แถว farmers + buyers ตรวจกุญแจด้วย SHA-256 ใน `Config!abm_feed_key_sha256` |
 | `POST` อื่น | ปฏิเสธ พร้อมที่อยู่ ABM (Admin API เดิมย้ายไป ABM) |

@@ -1,4 +1,4 @@
-/* Green Gain Hub 2.6.0 (since 2.5.0) — front page for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
+/* Green Gain Hub 2.7.0 (since 2.5.0) — front page for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
  *
  * ?api=v1&endpoint=market gives grid cells (~5.5 km) with residue offered (sell) and bought (buy) per material.
  * Public = aggregate only: cell centres, counts, area, price range — no names, phones or real coordinates.
@@ -6,6 +6,9 @@
  *
  * 2.6.0: the results page and officer sign-in moved to ABM (ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร).
  *   Old links #performance #overview #crops #market #staff #staff-register open ABM (same view).
+ * 2.7.0: the page shows only market data (no officer numbers or links). On top: three key numbers.
+ *   Materials are summary cards (offered tonnes, buyers and their capacity, harvest timing, price as given by buyers,
+ *   a status) that still filter the map. Under the map: all 11 districts; a row filters the map.
  */
 (function () {
   'use strict';
@@ -14,10 +17,9 @@
   const API_BASE = cfg.SUMMARY_API_URL || cfg.SHEETS_API_URL || '';
   const API_KEY = cfg.SUMMARY_API_KEY || '';
   const TIMEOUT = Number(cfg.REQUEST_TIMEOUT_MS) || 30000;
-  const CACHE_KEY = 'ggh_market_v1';
+  const CACHE_KEY = 'ggh_market_v2';
   const GEO_URL = 'assets/kpp-districts.geojson?v=1.5.0';
   const ABM_URL = cfg.ABM_URL || 'https://krit-pj.github.io/KPP-Agri-Byproduct-Management/';
-  const ABM_API = cfg.ABM_API_URL || '';
   // old links to the results page / officer sign-in → the same place in ABM
   const MOVED = { performance: '', overview: '', crops: '#crops', market: '#market', staff: '#staff', 'staff-register': '#staff-register' };
   const NEAR_KM = 40;   // "ผู้รับซื้อใกล้สุด" is searched within this distance
@@ -37,7 +39,7 @@
   const fmt = (n, d) => (n === null || n === undefined || !isFinite(n) ? '–' : new Intl.NumberFormat('th-TH', { maximumFractionDigits: d ?? 0 }).format(n));
   const thDate = (iso) => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }); };
 
-  const state = { data: null, results: null, geo: null, mat: 'all', side: 'all', district: '', view: 'map', me: null, map: null, layer: null, outline: null, markers: {} };
+  const state = { data: null, geo: null, mat: 'all', side: 'all', district: '', view: 'map', me: null, map: null, layer: null, outline: null, markers: {} };
 
   /* ---------------- routing between the market page and the results page ---------------- */
   function loggedIn() { const app = $('mainApp'); return app && !app.classList.contains('hidden'); }
@@ -74,7 +76,7 @@
   const call = (params) => { const u = apiUrl(params); return getJson(u).catch(() => jsonp(u)); };
 
   function load() {
-    try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c && c.data) { state.data = c.data; state.results = c.results || null; render(); } } catch (e) { /* ignore */ }
+    try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c && c.data) { state.data = c.data; render(); } } catch (e) { /* ignore */ }
     if (!API_BASE) { stats('ยังไม่ได้ตั้งค่า API ใน assets/config.js', true); return; }
     call({ api: 'v1', endpoint: 'market' }).then((p) => {
       if (!p || !p.ok || !p.data || !p.data.ok) throw new Error((p && p.error) || 'ระบบยังไม่รองรับแผนที่ตลาด');
@@ -83,13 +85,8 @@
       console.warn('[GGH market]', err);
       if (!state.data) { stats('โหลดข้อมูลตลาดไม่สำเร็จ ', true, true); renderList(); }
     });
-    // the one number that says "this works": area managed without burning (officer records, current fiscal year)
-    // 2.6.0: officer records live in ABM — its public residue endpoint (aggregate only)
-    if (ABM_API) getJson(ABM_API + '?api=v1&endpoint=residue').then((p) => {
-      if (p && p.ok && p.data && p.data.ok) { state.results = { areaRai: p.data.totals.areaRai, value: p.data.totals.value, fy: p.data.fy }; renderStats(); save(); }
-    }).catch(() => { /* optional */ });
   }
-  function save() { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data: state.data, results: state.results })); } catch (e) { /* ignore */ } }
+  function save() { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data: state.data })); } catch (e) { /* ignore */ } }
 
   /* ---------------- helpers on cells ---------------- */
   const groups = () => (state.data ? state.data.groups : []);
@@ -170,26 +167,108 @@
     el.textContent = text;
     if (retry) { const b = document.createElement('button'); b.type = 'button'; b.className = 'ggh-retry'; b.textContent = 'ลองใหม่'; b.addEventListener('click', load); el.appendChild(b); }
   }
+  /** the province's districts: from the API (2.7.0), else the boundary file, else the cells */
+  function districtNames() {
+    const names = {};
+    if (state.data && state.data.districts && state.data.districts.length) state.data.districts.forEach((d) => { names[d.code] = d.districtName; });
+    else if (state.geo) state.geo.features.forEach((f) => { names[f.properties.code] = f.properties.name; });
+    else if (state.data) state.data.cells.forEach((c) => { if (c.district) names[c.district] = c.districtName; });
+    return names;
+  }
+  /** per district, for the chosen material: plots / rai / tonnes offered, buyers / capacity */
+  function districtRows(mat) {
+    const want = (g) => !mat || mat === 'all' || mat === g;
+    const names = districtNames();
+    const rows = {};
+    Object.keys(names).forEach((k) => { rows[k] = { code: k, title: names[k], plots: 0, rai: 0, ton: 0, buyers: 0, cap: 0 }; });
+    (state.data ? state.data.cells : []).forEach((c) => {
+      if (!c.district) return;
+      const r = rows[c.district] || (rows[c.district] = { code: c.district, title: c.districtName, plots: 0, rai: 0, ton: 0, buyers: 0, cap: 0 });
+      Object.keys(c.sell).forEach((g) => { if (!want(g)) return; const v = c.sell[g]; r.plots += v.plots; r.rai += v.areaRai || 0; r.ton += v.ton || 0; });
+      Object.keys(c.buy).forEach((g) => { if (!want(g)) return; const v = c.buy[g]; r.buyers += v.buyers; r.cap += v.capacityTonPerDay || 0; });
+    });
+    return Object.values(rows);
+  }
+  const STATUS = {   // short = phones
+    both: { cls: 'is-ok', text: 'มีทั้งผู้ขายและผู้รับซื้อ', short: 'มีคู่ค้า' },
+    sellOnly: { cls: 'is-warn', text: 'มีวัสดุ ยังไม่มีผู้รับซื้อ', short: 'ไม่มีผู้ซื้อ' },
+    buyOnly: { cls: 'is-buy', text: 'ผู้รับซื้อรอวัสดุ', short: 'รอวัสดุ' },
+    none: { cls: 'is-none', text: 'ยังไม่มีประกาศ', short: '–' }
+  };
+  const statusOf = (sell, buy) => STATUS[sell && buy ? 'both' : sell ? 'sellOnly' : buy ? 'buyOnly' : 'none'];
+
   function renderStats() {
     const d = state.data; if (!d) return;
     const t = d.totals;
-    const parts = [];
-    parts.push(`<span><b>${fmt(t.buyers)}</b> จุดรับซื้อ</span>`);
-    parts.push(`<span><b>${fmt(t.plots)}</b> แปลงประกาศขาย · ${fmt(t.areaRai, 1)} ไร่${t.ton ? ' (~' + fmt(t.ton, 0) + ' ตัน)' : ''}</span>`);
-    if (state.results && state.results.areaRai) parts.push(`<span><b>${fmt(state.results.areaRai, 0)}</b> ไร่ จัดการแล้วไม่เผา (ปีงบ ${state.results.fy})</span>`);
-    const el = $('mkStats'); el.classList.remove('is-error'); el.innerHTML = parts.join('');
+    const rows = districtRows('all');
+    const active = rows.filter((r) => r.plots || r.buyers).length;
+    const total = rows.length;
+    const tile = (cls, ico, value, unit, name, sub) => `<div class="ggh-mk-key-tile ${cls}"><i class="fa-solid ${ico}" aria-hidden="true"></i>
+      <p class="ggh-mk-key-num"><b>${value}</b> ${unit}</p><p class="ggh-mk-key-name">${name}</p><p class="ggh-mk-key-sub">${sub}</p></div>`;
+    const el = $('mkStats'); el.classList.remove('is-error');
+    el.innerHTML =
+      tile('is-sell', 'fa-wheat-awn', t.ton ? '~' + fmt(t.ton, 0) : fmt(t.plots), t.ton ? 'ตัน' : 'แปลง', 'วัสดุประกาศขาย', `${fmt(t.plots)} แปลง · ${fmt(t.areaRai, 0)} ไร่`) +
+      tile('is-buy', 'fa-truck', fmt(t.buyers), 'ราย', 'ผู้รับซื้อ', t.capacityTonPerDay ? `รับได้รวม ${fmt(t.capacityTonPerDay, 0)} ตัน/วัน` : 'ยังไม่ระบุปริมาณที่รับ') +
+      tile('is-area', 'fa-map-location-dot', fmt(active), total ? `/ ${fmt(total)} อำเภอ` : 'อำเภอ', 'อำเภอที่มีการซื้อขาย', 'มีวัสดุประกาศขายหรือผู้รับซื้อ');
+  }
+
+  function priceLine(b) {
+    if (!b.buyers) return '';
+    if (b.priceMin === null || b.priceMin === undefined) return '<p class="ggh-mk-mat-price">ราคาตกลงกัน</p>';
+    const v = b.priceMin === b.priceMax ? fmt(b.priceMin) : fmt(b.priceMin) + '–' + fmt(b.priceMax);
+    return `<p class="ggh-mk-mat-price">ราคา ${v} บาท/ไร่ <span>ตามที่ผู้รับซื้อระบุ</span></p>`;
+  }
+  /** when the offered residue is available: a bar by area, and the plots in each bucket */
+  function timingHtml(sell) {
+    const tm = sell.timing; if (!tm || !sell.plots) return '';
+    const parts = [['now', 'ตอนนี้'], ['d30', 'ใน 30 วัน'], ['d90', '31–90 วัน']];
+    if (tm.later && tm.later.plots) parts.push(['later', 'หลัง 90 วัน']);
+    const sum = parts.reduce((a, [k]) => a + (tm[k].areaRai || 0), 0) || 1;
+    const bar = parts.filter(([k]) => tm[k].areaRai > 0).map(([k, n]) => `<span class="is-${k}" style="width:${(100 * tm[k].areaRai / sum).toFixed(1)}%" title="${n}: ${fmt(tm[k].plots)} แปลง · ${fmt(tm[k].areaRai, 1)} ไร่"></span>`).join('');
+    const text = parts.map(([k, n]) => `<span class="${tm[k].plots ? '' : 'is-zero'}"><i class="is-${k}" aria-hidden="true"></i>${n} <b>${fmt(tm[k].plots)}</b></span>`).join('');
+    return `<div class="ggh-mk-timing"><span class="ggh-mk-mat-k">พร้อมขายเมื่อไร (แปลง)</span><div class="ggh-mk-timing-bar">${bar}</div><p class="ggh-mk-timing-keys">${text}</p></div>`;
   }
   function renderMats() {
     const box = $('mkMats'); if (!box || !state.data) return;
-    const chip = (key, name, ico, sell, buy) => `<button type="button" data-mat="${key}" aria-pressed="${state.mat === key}"${key !== 'all' && !sell && !buy ? ' class="is-empty"' : ''}>${ico ? `<span class="ggh-mk-ico">${ico}</span>` : ''}<span>${esc(name)}</span>` +
-      (key === 'all' ? '' : `<small>ขาย ${fmt(sell)} · ซื้อ ${fmt(buy)}</small>`) + '</button>';
-    box.innerHTML = chip('all', 'ทุกวัสดุ', '', 0, 0) + groups().map((g) => chip(g.key, g.label, icon(g.key), g.sell.plots, g.buy.buyers)).join('');
+    const t = state.data.totals;
+    const allCard = `<button type="button" class="ggh-mk-mat is-all" data-mat="all" aria-pressed="${state.mat === 'all'}"><span class="ggh-mk-mat-name">ทุกวัสดุ</span>
+      <span class="ggh-mk-mat-all">${fmt(t.plots)} แปลง<br>${fmt(t.buyers)} ผู้รับซื้อ</span></button>`;
+    const card = (g) => {
+      const s = g.sell, b = g.buy, st = statusOf(s.plots, b.buyers);
+      const badge = b.buyers ? { cls: 'is-ok', text: 'มีผู้รับซื้อรอ — ประกาศขายได้เลย' } : s.plots ? { cls: 'is-warn', text: 'มีวัสดุแต่ยังไม่มีผู้รับซื้อ' } : { cls: 'is-none', text: 'ยังไม่มีประกาศ' };
+      const sellBig = s.plots ? (s.ton ? `~${fmt(s.ton, 0)} <small>ตัน</small>` : `${fmt(s.areaRai, 0)} <small>ไร่</small>`) : '–';
+      const sellSub = s.plots ? `${fmt(s.plots)} แปลง${s.ton ? ' · ' + fmt(s.areaRai, 0) + ' ไร่' : ''}` : 'ยังไม่มีแปลง';
+      const buyBig = b.buyers ? `${fmt(b.buyers)} <small>ราย</small>` : '–';
+      const buySub = b.buyers ? (b.capacityTonPerDay ? `รับได้ ${fmt(b.capacityTonPerDay, 0)} ตัน/วัน` : 'ไม่ระบุปริมาณ') : 'ยังไม่มีผู้รับซื้อ';
+      return `<button type="button" class="ggh-mk-mat ${st.cls}${!s.plots && !b.buyers ? ' is-empty' : ''}" data-mat="${g.key}" aria-pressed="${state.mat === g.key}">
+        <span class="ggh-mk-mat-head"><span class="ggh-mk-ico">${icon(g.key)}</span><span class="ggh-mk-mat-name">${esc(g.label)}</span></span>
+        <span class="ggh-mk-mat-badge ${badge.cls}">${badge.text}</span>
+        <span class="ggh-mk-mat-sides">
+          <span class="is-sell"><span class="ggh-mk-mat-k">ประกาศขาย</span><span class="ggh-mk-mat-v">${sellBig}</span><span class="ggh-mk-mat-s">${sellSub}</span></span>
+          <span class="is-buy"><span class="ggh-mk-mat-k"><i class="fa-solid fa-truck" aria-hidden="true"></i> ผู้รับซื้อ</span><span class="ggh-mk-mat-v">${buyBig}</span><span class="ggh-mk-mat-s">${buySub}</span></span>
+        </span>
+        ${timingHtml(s)}${priceLine(b)}
+      </button>`;
+    };
+    box.innerHTML = allCard + groups().map(card).join('');
+  }
+  function renderDistTable() {
+    const box = $('mkDistTable'); if (!box || !state.data) return;
+    const rows = districtRows(state.mat).sort((a, b) => ((b.plots || b.buyers ? 1 : 0) - (a.plots || a.buyers ? 1 : 0)) || (b.rai - a.rai) || (b.buyers - a.buyers) || a.title.localeCompare(b.title, 'th'));
+    const what = state.mat === 'all' ? 'ทุกวัสดุ' : label(state.mat);
+    const hint = $('mkDistHint'); if (hint) hint.textContent = `${what} · แตะชื่ออำเภอเพื่อดูบนแผนที่`;
+    box.innerHTML = `<table class="ggh-mk-dist-table"><thead><tr><th scope="col">อำเภอ</th><th scope="col" class="is-num">ประกาศขาย</th><th scope="col" class="is-num">ผู้รับซื้อ</th><th scope="col">สถานะ</th></tr></thead><tbody>` +
+      rows.map((r) => {
+        const st = statusOf(r.plots, r.buyers);
+        const sell = r.plots ? `${fmt(r.plots)} แปลง<small>${fmt(r.rai, 0)} ไร่${r.ton ? ' · ~' + fmt(r.ton, 0) + ' ตัน' : ''}</small>` : '<span class="is-zero">–</span>';
+        const buy = r.buyers ? `${fmt(r.buyers)} ราย${r.cap ? `<small>${fmt(r.cap, 0)} ตัน/วัน</small>` : ''}` : '<span class="is-zero">–</span>';
+        return `<tr class="${state.district === r.code ? 'is-on' : ''}${r.plots || r.buyers ? '' : ' is-quiet'}"><th scope="row"><button type="button" data-district="${esc(r.code)}" aria-pressed="${state.district === r.code}">${esc(r.title)}</button></th>
+          <td class="is-num">${sell}</td><td class="is-num">${buy}</td><td><span class="ggh-mk-status ${st.cls}"><span class="is-full">${st.text}</span><span class="is-short" aria-hidden="true">${st.short}</span></span></td></tr>`;
+      }).join('') + '</tbody></table>';
   }
   function renderDistricts() {
     const sel = $('mkDistrict'); if (!sel || sel.options.length > 1) return;
-    const names = {};
-    if (state.geo) state.geo.features.forEach((f) => { names[f.properties.code] = f.properties.name; });
-    if (!Object.keys(names).length && state.data) state.data.cells.forEach((c) => { if (c.district) names[c.district] = c.districtName; });
+    const names = districtNames();
     Object.keys(names).sort((a, b) => names[a].localeCompare(names[b], 'th')).forEach((k) => { const o = document.createElement('option'); o.value = k; o.textContent = names[k]; sel.appendChild(o); });
   }
   function renderList() {
@@ -251,7 +330,7 @@
     if (state.district && shown.length) map.fitBounds(shown, { padding: [40, 40], maxZoom: 11 });
   }
   function render() {
-    renderStats(); renderMats(); renderDistricts(); renderList(); renderMap();
+    renderStats(); renderMats(); renderDistricts(); renderList(); renderMap(); renderDistTable();
     const pv = $('mkPrivacy'); if (pv && state.data && state.data.notes) pv.textContent = state.data.notes.privacy;
   }
 
@@ -262,7 +341,20 @@
       const b = e.target.closest('[data-side]'); if (!b) return; state.side = b.dataset.side;
       $('mkSide').querySelectorAll('[data-side]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); renderList(); renderMap();
     });
-    $('mkDistrict').addEventListener('change', (e) => { state.district = e.target.value; renderList(); renderMap(); if (!state.district && state.outline) state.map.fitBounds(state.outline.getBounds(), { padding: [8, 8] }); });
+    const setDistrict = (code) => {
+      state.district = code; $('mkDistrict').value = code;
+      renderList(); renderMap(); renderDistTable();
+      if (!state.district && state.outline) state.map.fitBounds(state.outline.getBounds(), { padding: [8, 8] });
+    };
+    $('mkDistrict').addEventListener('change', (e) => setDistrict(e.target.value));
+    // a district row filters the map (tap again to show all); brings the map into view
+    $('mkDistTable').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-district]'); if (!b) return;
+      setDistrict(state.district === b.dataset.district ? '' : b.dataset.district);
+      const top = $('mkBoardTitle'); if (top && top.scrollIntoView) top.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    // phones: the table starts folded so the map stays near the top
+    if (window.matchMedia && window.matchMedia('(max-width: 899px)').matches) $('mkDistWrap').open = false;
     $('mkView').addEventListener('click', (e) => {
       const b = e.target.closest('[data-view]'); if (!b) return; state.view = b.dataset.view; $('mkBody').dataset.view = state.view;
       $('mkView').querySelectorAll('[data-view]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
@@ -301,7 +393,7 @@
   function init() {
     if (!$('marketPage')) return;
     route(); bind(); render();
-    fetch(GEO_URL).then((r) => r.json()).then((geo) => { state.geo = geo; renderDistricts(); renderMap(); }).catch(() => { /* boundaries optional */ });
+    fetch(GEO_URL).then((r) => r.json()).then((geo) => { state.geo = geo; renderDistricts(); renderMap(); renderDistTable(); }).catch(() => { /* boundaries optional */ });
     load();
     window.GGH_MARKET = { state, route, reload: load };
   }
