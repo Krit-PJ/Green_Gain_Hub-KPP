@@ -2,8 +2,8 @@
  * Green Gain Hub 2.6.0 (since 2.4.0) — farmer/buyer sign-in through the central identity (SSO) shared with Agri-Risk Map,
  * KPP Smart Agri-Materials and ABM. Officers sign in at ABM since 19 Nov 2026 (aud ABM there).
  *
- * Who signs in how (decided 18 Nov 2026):
- *   - farmers and buyers: phone number only; one registration works in every connected system
+ * Who signs in how (decided 18 Nov 2026; 21 Nov 2026: farmers and buyers use Green Gain Hub only):
+ *   - farmers and buyers: phone number only; registered here = identity scope "market" at Agri-Risk (Green Gain Hub only)
  *   - officers, Mini Super Admin and Super Admin: ABM (since 19 Nov 2026)
  *
  * Agri-Risk Map holds the identity ("this person owns this phone"). Rights stay here: the users sheet

@@ -12,6 +12,6 @@ window.GGH_CONFIG = {
   // 2.6.0: เจ้าหน้าที่/ผู้บริหาร และผลการดำเนินงาน ย้ายไปที่ ABM — ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร
   ABM_URL: 'https://krit-pj.github.io/KPP-Agri-Byproduct-Management/',
   ABM_API_URL: 'https://script.google.com/macros/s/AKfycby7nbXMQ3_WvA7y_Mp0DTE_wMX9eyiJQbfYBlpaQBOshpUyurOFgoM7MxWMN0wLvjkdqw/exec',
-  BUILD_VERSION: '2.8.0',
+  BUILD_VERSION: '2.9.0',
   MINIMUM_API_VERSION: '1.3.1'
 };

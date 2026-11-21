@@ -1,4 +1,4 @@
-# Green Gain Hub API 2.8.0
+# Green Gain Hub API 2.9.0
 
 **19 พ.ย. 2569:** ส่วนเจ้าหน้าที่ย้ายไป ABM (ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร) — API ของการบันทึก รายงาน และ Dashboard ดูที่ `API.md` ของ repo `KPP-Agri-Byproduct-Management`
 
@@ -9,7 +9,7 @@
 | `GET ?action=rpc&method=…` | แอปเกษตรกร/ผู้รับซื้อ (login, register, ssoLogin, ssoProvision, profile, save, delete, matching) — ไม่เปลี่ยน |
 | `GET ?api=v1&endpoint=market` | แผนที่จับคู่สาธารณะ (กริด ~5.6 กม. ไม่มีข้อมูลส่วนบุคคล) · 2.7.0 เพิ่ม `groups[].sell.timing.{now,d30,d90,later}` = `{plots, areaRai, ton}` ตามวันเก็บเกี่ยว (now = เก็บเกี่ยวแล้ว/ไม่ระบุ, d30 = 1–30 วัน, d90 = 31–90 วัน) และ `districts: [{code, districtName}]` ครบ 11 อำเภอ · 2.8.0 นับเฉพาะแปลงที่แสดงบนตลาด + `listing: {hideAfterHarvestDays, hiddenPlots}` · feed เพิ่ม `market` (กฎ + id ที่ซ่อน) |
 | `GET ?api=v1&endpoint=hit` / `visits` | ตัวนับผู้เข้าชมหน้าตลาด |
-| `GET ?api=v1&endpoint=health` | `{ apiVersion: "2.8.0", feature: "MARKET_ONLY", system: "GGH" }` |
+| `GET ?api=v1&endpoint=health` | `{ apiVersion: "2.9.0", feature: "MARKET_ONLY", system: "GGH" }` |
 | `GET ?api=v1&endpoint=summary\|residue\|balance\|crop` | ย้ายแล้ว: `{ ok:false, moved:"ABM", url }` |
 | `POST {action:"abm_feed", key}` | feed ฝั่ง Server ให้ ABM (2.5.1): แถว farmers + buyers ตรวจกุญแจด้วย SHA-256 ใน `Config!abm_feed_key_sha256` |
 | `POST {action:"abm_config", key, hideAfterHarvestDays?, by?}` | 2.8.0: ABM ตั้ง/อ่านระยะเวลาแสดงแปลงหลังเก็บเกี่ยว (0–365, 0 = ไม่ซ่อน) ตอบ `{hideAfterHarvestDays, startDate, listedPlots, hiddenPlots, hidden:[{id, reason}]}` — เก็บใน `Config!hide_after_harvest_days / hide_after_harvest_start` |
