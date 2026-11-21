@@ -1,4 +1,4 @@
-/* Green Gain Hub 2.5.0–2.7.0 — front page for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
+/* Green Gain Hub 2.5.0–2.9.1 — front page (2.9.1: readable colours and sizes — WCAG AA text contrast, no faded cards, 13px+ details) for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
    Two sides, two colours used everywhere on this page: green = residue offered (ผู้ขาย),
    straw = buyer (ผู้รับซื้อ, with a truck). Materials keep the drawings of the results page. */
 .ggh-mk { display: grid; gap: 1rem; color: var(--ggh-ink); margin-top: .25rem; }
@@ -14,7 +14,7 @@
   min-height: 68px; padding: .7rem .95rem; border-radius: 12px; border: 2px solid; font: inherit; text-align: left; cursor: pointer; }
 .ggh-mk-door i { grid-area: icon; font-size: 1.35rem; width: 1.6rem; text-align: center; }
 .ggh-mk-door-name { grid-area: name; font-weight: 700; font-size: 1.08rem; line-height: 1.25; }
-.ggh-mk-door-hint { grid-area: hint; font-size: .82rem; line-height: 1.3; opacity: .9; }
+.ggh-mk-door-hint { grid-area: hint; font-size: .85rem; line-height: 1.35; }
 .ggh-mk-door.is-sell { background: var(--ggh-green); border-color: var(--ggh-green); color: #fff; }
 .ggh-mk-door.is-sell:hover { background: var(--ggh-green-dark); border-color: var(--ggh-green-dark); }
 .ggh-mk-door.is-buy { background: #fffaf0; border-color: var(--ggh-straw); color: var(--ggh-straw-ink); }
@@ -45,7 +45,7 @@
 }
 @media (max-width: 479px) {
   .ggh-mk-door { grid-template-columns: minmax(0, 1fr); grid-template-areas: "icon" "name" "hint"; justify-items: center; text-align: center; row-gap: .2rem; padding: .6rem .4rem; }
-  .ggh-mk-door-hint { font-size: .76rem; }
+  .ggh-mk-door-hint { font-size: .8rem; }
 }
 
 /* ---------- board: filters, map + list ---------- */
@@ -62,39 +62,41 @@
 .ggh-mk-mat { flex: 1 1 0; min-width: 228px; scroll-snap-align: start; display: grid; align-content: start; gap: .5rem; padding: .75rem .85rem .8rem;
   border: 1px solid var(--ggh-line); border-radius: 12px; background: #fff; font: inherit; text-align: left; cursor: pointer; color: var(--ggh-ink); }
 .ggh-mk-mat:hover { border-color: #b9c9bd; }
-.ggh-mk-mat[aria-pressed="true"] { border-color: var(--ggh-green); box-shadow: inset 0 0 0 1px var(--ggh-green); background: #fbfdfb; }
+.ggh-mk-mat[aria-pressed="true"] { border-color: var(--ggh-green); border-style: solid; box-shadow: inset 0 0 0 2px var(--ggh-green); background: #f1f8f2; }
 .ggh-mk-mat.is-all { flex: 0 0 auto; min-width: 104px; align-content: center; justify-items: start; background: #f6f8f6; }
 .ggh-mk-mat.is-all[aria-pressed="true"] { background: #eaf5ec; }
 .ggh-mk-mat-all { font-size: .82rem; color: var(--ggh-muted); line-height: 1.5; }
-.ggh-mk-mat.is-empty { opacity: .7; }
-.ggh-mk-mat.is-empty[aria-pressed="true"] { opacity: 1; }
+.ggh-mk-mat.is-empty { background: #f7f9f7; border-style: dashed; border-color: #c9d4cc; }
+.ggh-mk-mat.is-empty .ggh-mk-mat-v { color: #6b7a70; }
+.ggh-mk-mat.is-empty .ggh-mk-mat-sides > span { border-left-color: #c9d4cc; }
 .ggh-mk-mat-head { display: flex; align-items: center; gap: .45rem; }
 .ggh-mk-mat-name { font-weight: 700; font-size: 1rem; }
-.ggh-mk-mat-badge { justify-self: start; font-size: .76rem; line-height: 1.3; padding: .18rem .55rem; border-radius: 999px; font-weight: 600; }
-.ggh-mk-mat-badge.is-ok, .ggh-mk-status.is-ok { background: #e3f2e6; color: #14532d; }
-.ggh-mk-mat-badge.is-warn, .ggh-mk-status.is-warn { background: #fdf0d5; color: #7a4a00; }
-.ggh-mk-mat-badge.is-none, .ggh-mk-status.is-none { background: #eef1ef; color: #5c6b62; }
-.ggh-mk-status.is-buy { background: #fff7e6; color: var(--ggh-straw-ink); }
+.ggh-mk-mat-badge { justify-self: start; font-size: .82rem; line-height: 1.3; padding: .18rem .55rem; border-radius: 999px; font-weight: 600; }
+.ggh-mk-mat-badge.is-ok, .ggh-mk-status.is-ok { background: #e3f2e6; color: #14532d; box-shadow: inset 0 0 0 1px #9fd0ac; }
+.ggh-mk-mat-badge.is-warn, .ggh-mk-status.is-warn { background: #fdf0d5; color: #6b4100; box-shadow: inset 0 0 0 1px #e9c172; }
+.ggh-mk-mat-badge.is-none, .ggh-mk-status.is-none { background: #eef1ef; color: #44524a; box-shadow: inset 0 0 0 1px #d0d9d3; }
+.ggh-mk-status.is-buy { background: #fff7e6; color: var(--ggh-straw-ink); box-shadow: inset 0 0 0 1px #e3c98a; }
 .ggh-mk-mat-sides { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
 .ggh-mk-mat-sides > span { display: grid; gap: .05rem; padding-left: .55rem; border-left: 3px solid var(--ggh-green); min-width: 0; }
 .ggh-mk-mat-sides > span.is-buy { border-left-color: var(--ggh-straw); }
-.ggh-mk-mat-k { font-size: .76rem; color: var(--ggh-muted); }
+.ggh-mk-mat-k { font-size: .82rem; color: #44524a; }
 .ggh-mk-mat-v { font-size: 1.3rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.ggh-mk-mat-v small { font-size: .78rem; font-weight: 500; color: var(--ggh-muted); }
-.ggh-mk-mat-s { font-size: .78rem; color: var(--ggh-muted); line-height: 1.3; }
+.ggh-mk-mat-v small { font-size: .82rem; font-weight: 500; color: #44524a; }
+.ggh-mk-mat-s { font-size: .82rem; color: #44524a; line-height: 1.35; }
 .ggh-mk-timing { display: grid; gap: .3rem; }
-.ggh-mk-timing-bar { display: flex; gap: 2px; height: 8px; border-radius: 4px; overflow: hidden; background: #eef1ef; }
+.ggh-mk-timing-bar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; background: #e3e8e4; }
 .ggh-mk-timing-bar span { display: block; height: 100%; }
 .ggh-mk-timing .is-now { background: #14532d; }
 .ggh-mk-timing .is-d30 { background: #2f8a4c; }
-.ggh-mk-timing .is-d90 { background: #8cc49c; }
-.ggh-mk-timing .is-later { background: #cfe5d6; }
-.ggh-mk-timing-keys { margin: 0; display: flex; flex-wrap: wrap; gap: .1rem .65rem; font-size: .76rem; color: var(--ggh-muted); }
+.ggh-mk-timing .is-d90 { background: #5f9e70; }
+.ggh-mk-timing .is-later { background: #9cc8a8; }
+.ggh-mk-timing-keys { margin: 0; display: flex; flex-wrap: wrap; gap: .15rem .75rem; font-size: .82rem; color: #44524a; }
 .ggh-mk-timing-keys > span { display: inline-flex; align-items: center; gap: .3rem; }
 .ggh-mk-timing-keys i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 .ggh-mk-timing-keys b { color: var(--ggh-ink); }
-.ggh-mk-timing-keys .is-zero { opacity: .65; }
-.ggh-mk-mat-price { margin: 0; font-size: .78rem; color: #44524a; }
+.ggh-mk-timing-keys .is-zero { color: #5b6b60; }
+.ggh-mk-timing-keys .is-zero b { color: #5b6b60; font-weight: 600; }
+.ggh-mk-mat-price { margin: 0; font-size: .82rem; color: #33413a; }
 .ggh-mk-mat-price span { color: var(--ggh-muted); }
 
 /* 2.7.0 districts under the map */
@@ -107,22 +109,22 @@
 .ggh-mk-dist-body { overflow-x: auto; margin-top: .5rem; }
 .ggh-mk-dist-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .ggh-mk-dist-table th, .ggh-mk-dist-table td { padding: .45rem .55rem; border-bottom: 1px solid var(--ggh-line); text-align: left; vertical-align: top; }
-.ggh-mk-dist-table thead th { font-size: .78rem; font-weight: 600; color: var(--ggh-muted); border-bottom-width: 2px; }
+.ggh-mk-dist-table thead th { font-size: .82rem; font-weight: 700; color: #44524a; border-bottom-width: 2px; }
 .ggh-mk-dist-table .is-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ggh-mk-dist-table td small { display: block; font-size: .76rem; color: var(--ggh-muted); }
+.ggh-mk-dist-table td small { display: block; font-size: .82rem; color: #44524a; }
 .ggh-mk-dist-table tbody th button { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--ggh-green-dark); cursor: pointer; text-align: left; min-height: 28px; }
 .ggh-mk-dist-table tbody th button:hover { text-decoration: underline; }
 .ggh-mk-dist-table tr.is-on { background: #eaf5ec; }
 .ggh-mk-dist-table tr.is-quiet th button { color: #5c6b62; font-weight: 500; }
-.ggh-mk-dist-table .is-zero { color: #a3aea7; }
-.ggh-mk-status { display: inline-block; font-size: .76rem; line-height: 1.3; padding: .15rem .5rem; border-radius: 999px; white-space: nowrap; }
+.ggh-mk-dist-table .is-zero { color: #6b7a70; }
+.ggh-mk-status { display: inline-block; font-size: .82rem; font-weight: 600; line-height: 1.3; padding: .15rem .5rem; border-radius: 999px; white-space: nowrap; }
 .ggh-mk-status .is-short { display: none; }
 @media (max-width: 599px) {
   .ggh-mk-dist-table { font-size: .85rem; }
   .ggh-mk-dist-table th, .ggh-mk-dist-table td { padding: .4rem .35rem; }
   .ggh-mk-status .is-full { display: none; }
   .ggh-mk-status .is-short { display: inline; }
-  .ggh-mk-status.is-none { background: none; color: #a3aea7; padding: 0; }
+  .ggh-mk-status.is-none { background: none; color: #6b7a70; padding: 0; }
 }
 .ggh-mk-ico { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; color: var(--ggh-green-dark); }
 .ggh-mk-ico svg { width: 100%; height: 100%; fill: currentColor; }
@@ -143,7 +145,7 @@
 .ggh-mk-map { height: 60vh; min-height: 360px; max-height: 620px; border-radius: 10px; border: 1px solid var(--ggh-line); background: #eef3ef; z-index: 0; }
 .ggh-mk-legend { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem 1.1rem; margin-top: .5rem; font-size: .85rem; color: var(--ggh-muted); }
 .ggh-mk-legend > span { display: inline-flex; align-items: center; gap: .4rem; }
-.ggh-mk-legend-note { flex-basis: 100%; font-size: .8rem; }
+.ggh-mk-legend-note { flex-basis: 100%; font-size: .85rem; color: #44524a; }
 .ggh-mk-key { display: inline-grid; place-items: center; width: 24px; height: 24px; font-size: .7rem; font-style: normal; }
 .ggh-mk-key.is-sell { border-radius: 50%; background: var(--ggh-green); color: #fff; }
 .ggh-mk-key.is-buy { border-radius: 6px; background: #fff7e6; border: 2px solid var(--ggh-straw); color: var(--ggh-straw-ink); }
@@ -204,7 +206,7 @@
   .ggh-mk-mat { flex: 0 0 78%; min-width: 0; max-width: 300px; }
   .ggh-mk-mat.is-all { flex: 0 0 auto; min-width: 0; padding: .6rem .7rem; }
   .ggh-mk-mat.is-all .ggh-mk-mat-name { font-size: .92rem; }
-  .ggh-mk-mat.is-all .ggh-mk-mat-all { font-size: .76rem; }
+  .ggh-mk-mat.is-all .ggh-mk-mat-all { font-size: .82rem; }
 }
 
 /* how it works (a real sequence, so numbered) */

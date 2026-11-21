@@ -32,7 +32,7 @@ assert(!/ggh-mk-perf|data-abm-link|ผลการดำเนินงาน|�
 assert(inline.includes("function openStaff(tab) { location.href = ABM_URL") && inline.includes("window.GGH_CONFIG?.ABM_URL"), 'any remaining staff door goes to ABM');
 assert(admin.includes("location.replace(base + (location.hash || ''))") && admin.includes(ABM + 'admin.html') && /noindex/.test(admin), 'admin.html bookmarks redirect to ABM');
 const cfg = {}; new vm.Script(config).runInNewContext({ window: cfg });
-assert(cfg.GGH_CONFIG.BUILD_VERSION === '2.9.0' && cfg.GGH_CONFIG.ABM_URL === ABM && /\/macros\/s\/AKfycby7nbXM[^/]+\/exec$/.test(cfg.GGH_CONFIG.ABM_API_URL), 'config 2.9.0 with ABM links (redirects only)');
-assert(html.includes('assets/market.js?v=2.9.0') && html.includes('assets/config.js?v=2.9.0') && html.includes('assets/sso-client.js?v=2.9.0'), 'asset versions 2.9.0');
+assert(cfg.GGH_CONFIG.BUILD_VERSION === '2.9.1' && cfg.GGH_CONFIG.ABM_URL === ABM && /\/macros\/s\/AKfycby7nbXM[^/]+\/exec$/.test(cfg.GGH_CONFIG.ABM_API_URL), 'config 2.9.1 with ABM links (redirects only)');
+assert(html.includes('assets/market.js?v=2.9.1') && html.includes('assets/config.js?v=2.9.1') && html.includes('assets/sso-client.js?v=2.9.1'), 'asset versions 2.9.1');
 assert(!/เศษวัสดุ/.test(html), 'wording: วัสดุเหลือใช้ทางการเกษตร');
 console.log('PASS: 2.9.0 homepage — market for farmers and buyers only, pictured how-to, no officer links shown, old links and admin.html redirect to ABM');
