@@ -1,8 +1,8 @@
-# Deploy Green Gain Hub 2.9.1
+# Deploy Green Gain Hub 2.9.2
 
 สถานะ 21 พ.ย. 2569: **Deploy แล้ว** (ดูเลขเวอร์ชันล่าสุดในประวัติด้านล่าง)
 
-> 2.9.1 เปลี่ยนเฉพาะหน้าเว็บ (สีและตัวอักษรอ่านง่ายขึ้น) — GitHub Pages deploy เอง ไม่ต้องแก้หรือ Deploy Apps Script (ยังเป็นเวอร์ชัน 16)
+> 2.9.2 (ลองใหม่อัตโนมัติเมื่อเชื่อมต่อหลุด) และ 2.9.1 เปลี่ยนเฉพาะหน้าเว็บ (สีและตัวอักษรอ่านง่ายขึ้น) — GitHub Pages deploy เอง ไม่ต้องแก้หรือ Deploy Apps Script (ยังเป็นเวอร์ชัน 16)
 
 - Apps Script: **Green Gain Hub KPP API** (`1JfUtXCoOvrb_Nz2N6xgRBSiT72DSWV92pFepA20eNcGb8WUhDNuRLLSg`, บัญชี noonoy.cmu@gmail.com)
 - Deployment `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` (Execute as: Me, Access: Anyone)
