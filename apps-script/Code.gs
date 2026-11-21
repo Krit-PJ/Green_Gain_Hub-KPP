@@ -1,5 +1,5 @@
 /**
- * Green Gain Hub 2.9.0 — ตลาดวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ (API-only bridge from GitHub Pages to Google Sheets).
+ * Green Gain Hub 2.9.3 — ตลาดวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ (API-only bridge from GitHub Pages to Google Sheets).
  *
  * 19 Nov 2026: the officer side moved to ABM — ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร
  * (records, GHG, value, targets, reports, crop data, officer accounts, executive dashboard):
@@ -25,7 +25,7 @@
  * 2.8.0: a plot is shown until N days after its harvest date (Market.gs farmerListing_, Config hide_after_harvest_days,
  * default 20, set in ABM). A harvest date is required when saving. "ยังมีวัสดุอยู่" (renewFarmerServer) shows it N more days.
  */
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.9.3';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -295,7 +295,7 @@ function invalidateSummary_() {
 
 function loginServer(input) {
   input = input || {};
-  if (typeof ssoGuardLegacy_ === 'function') ssoGuardLegacy_();   // 2.4.0 (Sso.gs): closed only when SSO_MODE = required
+  // 2.9.3: farmers and buyers use Green Gain Hub only — phone sign-in here is always open (SSO_MODE no longer closes it).
   const phone = normalizePhone_(input.phone || input.telephone || input.username || input);
   if (!/^0\d{9}$/.test(phone)) throw new Error('กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก');
   const rows = dataRows_(sheet_('users'));

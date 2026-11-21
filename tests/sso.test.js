@@ -76,7 +76,7 @@ bad(rpc('ssoLoginServer', { ticket: issue('0811111111', 'GGH') }), /ระงั
 /* 7. SSO_MODE */
 check(rpc('loginServer', { username: '0822222222' }).ok, 'optional: old phone sign-in still works');
 props.SSO_MODE = 'required';
-bad(rpc('loginServer', { username: '0822222222' }), /ตัวตนกลาง/, 'required: old market sign-in closed');
+check(rpc('loginServer', { username: '0822222222' }).ok, '2.9.3 required: market phone sign-in stays open (GGH-only users)');
 check(rpc('registerServer', { role: 'farmer', name: 'ลงทะเบียน ใหม่', phone: '0877777777' }).ok, 'required: new registration still possible (no takeover)');
 props.SSO_MODE = 'off';
 bad(rpc('ssoLoginServer', { ticket: issue('0822222222', 'GGH') }), /ปิดใช้งาน/, 'off: SSO closed');
