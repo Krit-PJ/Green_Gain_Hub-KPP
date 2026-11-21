@@ -1,4 +1,4 @@
-/* Green Gain Hub 2.8.0 (since 2.5.0) — front page for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
+/* Green Gain Hub 2.9.0 (since 2.5.0) — front page for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
  *
  * ?api=v1&endpoint=market gives grid cells (~5.5 km) with residue offered (sell) and bought (buy) per material.
  * Public = aggregate only: cell centres, counts, area, price range — no names, phones or real coordinates.
@@ -332,6 +332,10 @@
   }
   function render() {
     renderStats(); renderMats(); renderDistricts(); renderList(); renderMap(); renderDistTable();
+    document.querySelectorAll('[data-hide-days]').forEach((el) => {   // 2.9.0: how-to says how long a plot stays listed
+      const n = state.data && state.data.listing && state.data.listing.hideAfterHarvestDays;
+      if (n) el.textContent = n;
+    });
     const pv = $('mkPrivacy'); if (pv && state.data && state.data.notes) pv.textContent = state.data.notes.privacy + (state.data.notes.listing ? ' · ' + state.data.notes.listing : '');
   }
 
@@ -396,7 +400,23 @@
     route(); bind(); render();
     fetch(GEO_URL).then((r) => r.json()).then((geo) => { state.geo = geo; renderDistricts(); renderMap(); renderDistTable(); }).catch(() => { /* boundaries optional */ });
     load();
-    window.GGH_MARKET = { state, route, reload: load };
+    /* 2.9.0 "ใช้งานอย่างไร": two tabs (sell / buy) — click, or arrow keys between them */
+  (function howTabs() {
+    const tabs = [document.getElementById('howTabSell'), document.getElementById('howTabBuy')];
+    if (!tabs[0] || !tabs[1]) return;
+    const pick = (t, focus) => tabs.forEach((x) => {
+      const on = x === t;
+      x.setAttribute('aria-selected', String(on)); x.tabIndex = on ? 0 : -1;
+      document.getElementById(x.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) x.focus();
+    });
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => pick(t));
+      t.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); pick(tabs[1 - i], true); } });
+    });
+  })();
+
+  window.GGH_MARKET = { state, route, reload: load };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

@@ -36,7 +36,7 @@ assert(get({ api: 'v1', endpoint: 'hit' }).data.today === 4, 'today must not inc
   assert(!r.ok && r.moved === 'ABM' && /KPP-Agri-Byproduct-Management/.test(r.error), ep + ' points to ABM: ' + JSON.stringify(r));
 });
 const h = get({ api: 'v1', endpoint: 'health' });
-assert(h.ok && h.apiVersion === '2.8.0' && h.feature === 'MARKET_ONLY' && h.system === 'GGH', 'health 2.8.0: ' + JSON.stringify(h));
+assert(h.ok && h.apiVersion === '2.9.0' && h.feature === 'MARKET_ONLY' && h.system === 'GGH', 'health 2.9.0: ' + JSON.stringify(h));
 env.api.doPost({ postData: { contents: JSON.stringify({ method: 'adminLoginServer', args: [{}] }) } });
 const pr = JSON.parse(env.out().body);
 assert(!pr.ok && /ABM/.test(pr.error), 'the old admin API answers with the new address: ' + JSON.stringify(pr));

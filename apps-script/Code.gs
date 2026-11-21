@@ -1,5 +1,5 @@
 /**
- * Green Gain Hub 2.8.0 — ตลาดวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ (API-only bridge from GitHub Pages to Google Sheets).
+ * Green Gain Hub 2.9.0 — ตลาดวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ (API-only bridge from GitHub Pages to Google Sheets).
  *
  * 19 Nov 2026: the officer side moved to ABM — ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร
  * (records, GHG, value, targets, reports, crop data, officer accounts, executive dashboard):
@@ -20,10 +20,12 @@
  *   POST {action:'abm_feed', key}     Server-to-server feed for ABM (2.5.1; 2.8.0 + market listing rule)
  *   POST {action:'abm_config', key}   ABM officers set how long a plot stays on the market after harvest (2.8.0)
  *
+ * 2.9.0: farmers and buyers use Green Gain Hub only (Agri-Risk identity scope "market"); the ABM feed carries SHA-256 of
+ * their phone numbers so ABM can refuse them as officers.
  * 2.8.0: a plot is shown until N days after its harvest date (Market.gs farmerListing_, Config hide_after_harvest_days,
  * default 20, set in ABM). A harvest date is required when saving. "ยังมีวัสดุอยู่" (renewFarmerServer) shows it N more days.
  */
-const APP_VERSION = '2.8.0';
+const APP_VERSION = '2.9.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -264,7 +266,11 @@ function abmFeed_(body) {
       rows: lastRow >= 2 && lastCol ? sh.getRange(2, 1, lastRow - 1, lastCol).getValues() : []
     };
   };
-  return { apiVersion: APP_VERSION, generatedAt: new Date().toISOString(), farmers: pack('farmers'), buyers: pack('buyers'), market: marketListingInfo_() };
+  // 2.9.0: farmers and buyers use Green Gain Hub only — ABM refuses these numbers as officers (SHA-256 only, never the numbers)
+  const marketPhones = dataRows_(sheet_('users')).map(function (r) { return normalizePhone_(r[0]); })
+    .filter(function (p) { return /^0\d{9}$/.test(p); }).map(abmSha256Hex_);
+  return { apiVersion: APP_VERSION, generatedAt: new Date().toISOString(), farmers: pack('farmers'), buyers: pack('buyers'), market: marketListingInfo_(),
+    marketPhones: marketPhones };
 }
 
 /** 2.6.0: the only POSTs are from ABM (the officer/admin API moved there): the feed and, 2.8.0, the market listing rule. */
