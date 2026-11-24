@@ -2,6 +2,7 @@
  * Green Gain Hub 3.0.0 — ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ ทุกจังหวัด
  * (API-only bridge from GitHub Pages to Google Sheets).
  *
+ * 3.2.0: executive report for ABM (abm_report — all provinces or one, facts apart from estimates) — Market.gs.
  * 3.1.0: 6-digit PIN for every account, "ขายแล้ว" records (sales sheet) and maize (ซังข้าวโพด) as a material — Pin.gs.
  * 3.0.0: all 77 provinces. Every plot / buyer point carries Province…Subdistrict decided by the server from its pin
  * (Geo.gs, farmers S:X, buyers R:W), every user a province (users J:K, chosen at registration). The public market,
@@ -32,7 +33,7 @@
  * 2.8.0: a plot is shown until N days after its harvest date (Market.gs farmerListing_, Config hide_after_harvest_days,
  * default 20, set in ABM). A harvest date is required when saving. "ยังมีวัสดุอยู่" (renewFarmerServer) shows it N more days.
  */
-const APP_VERSION = '3.1.0';
+const APP_VERSION = '3.2.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -296,6 +297,7 @@ function doPost(e) {
     if (body.action === 'abm_feed') payload = { ok: true, data: abmFeed_(body) };
     else if (body.action === 'abm_config') payload = { ok: true, data: abmConfig_(body) };
     else if (body.action === 'abm_pin_reset') payload = { ok: true, data: abmPinReset_(body) };   // 3.1.0
+    else if (body.action === 'abm_report') payload = { ok: true, data: abmReport_(body) };   // 3.2.0 executive report
     else throw new Error('หน้าเจ้าหน้าที่ย้ายไปที่ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร (ABM): ' + ABM_SITE_URL);
   } catch (err) {
     payload = { ok: false, error: publicError_(err) };

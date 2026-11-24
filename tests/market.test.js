@@ -31,7 +31,7 @@ sheets.buyers.rows.push(
   B('b005', 16.0815, 99.7724, 'อื่นๆ', 18, '8', 'Active', '', 'ซังข้าวโพด'));
 
 let p = get({ api: 'v1', endpoint: 'market' });
-check(p.ok && p.apiVersion === '3.1.0' && p.data.ok, 'market endpoint answers');
+check(p.ok && p.apiVersion === '3.2.0' && p.data.ok, 'market endpoint answers');
 const d = p.data;
 check(d.gridDeg === 0.05 && d.gridKm === 5.6, 'grid ~5.5 km');
 const g = Object.fromEntries(d.groups.map((x) => [x.key, x]));
