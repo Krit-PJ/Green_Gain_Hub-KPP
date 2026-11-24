@@ -1,0 +1,69 @@
+/* Green Gain Hub 3.1.0 — signed-in record page (บันทึกข้อมูล) for farmers and buyers.
+   One card per plot / buy point: a header with the material drawing (same as the front page) and where the pin is,
+   then short sections with an icon each (what, when, how big, where), then large actions. Big type and targets for
+   older farmers; colour never carries meaning alone (every status has a word and an icon). */
+.rec-card { background: var(--ggh-surface); border: 1px solid var(--ggh-line); border-radius: var(--ggh-radius-lg); padding: 1rem; display: grid; gap: .85rem; box-shadow: 0 1px 2px rgba(15, 77, 36, .06); }
+.rec-card.is-farmer { border-top: 4px solid var(--ggh-green); }
+.rec-card.is-buyer { border-top: 4px solid var(--ggh-straw); }
+.rec-card.is-sold { background: #f7f9f7; }
+.rec-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .75rem; align-items: center; }
+.rec-ico { display: inline-grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; background: #eaf5ec; color: var(--ggh-green-dark); font-size: 1.35rem; }
+.rec-ico svg { width: 1.9rem; height: 1.9rem; fill: currentColor; }
+.rec-ico.is-sugarcane { background: #eef6e4; color: #3f6b12; }
+.rec-ico.is-maize { background: #fdf5dc; color: #7a5a12; }
+.rec-ico.is-cassava { background: #f4ede4; color: #6b4a22; }
+.rec-ico.is-buy { background: #fff3d6; color: var(--ggh-straw-ink); }
+.rec-title h4 { margin: 0; font-size: 1.12rem; font-weight: 700; color: var(--ggh-ink); line-height: 1.3; }
+.rec-title p { margin: .15rem 0 0; font-size: .92rem; color: #44524a; }
+.rec-title p i { color: var(--ggh-green); }
+.rec-sec { border: 0; margin: 0; padding: .8rem .85rem .85rem; background: #f6f8f6; border-radius: 12px; min-width: 0; }
+.rec-sec legend { float: left; width: 100%; padding: 0; margin: 0 0 .55rem; font-weight: 700; font-size: 1rem; color: var(--ggh-green-dark); display: flex; align-items: center; gap: .45rem; }
+.rec-card.is-buyer .rec-sec legend { color: var(--ggh-straw-ink); }
+.rec-sec legend i { width: 1.4rem; text-align: center; }
+.rec-sec legend + * { clear: both; }
+.rec-sec[disabled] { opacity: 1; }
+.rec-sec[disabled] .input-field { background: #eef2ef; color: #33413a; }
+.rec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.rec-grid > label { display: grid; gap: .25rem; min-width: 0; }
+.rec-help { display: block; font-size: .86rem; color: #44524a; line-height: 1.45; margin: 0; }
+.rec-area { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
+.rec-area label { position: relative; display: block; }
+.rec-area .input-field { padding-right: 3.2rem; font-size: 1.1rem; font-weight: 600; text-align: right; }
+.rec-area span { position: absolute; right: .7rem; top: 50%; transform: translateY(-50%); font-size: .9rem; font-weight: 600; color: #44524a; pointer-events: none; }
+.rec-place { margin: .55rem 0 0; min-height: 1.4em; font-weight: 600; color: var(--ggh-green-dark); font-size: .95rem; }
+.rec-warn { color: #9a3412; }
+.rec-coords { margin-top: .5rem; font-size: .86rem; color: #44524a; }
+.rec-coords summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+.rec-actions { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: .6rem; }
+.rec-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 48px; padding: .55rem 1rem; border-radius: 12px; border: 2px solid transparent;
+  font: inherit; font-weight: 700; font-size: 1rem; cursor: pointer; transition: background-color .15s ease; text-decoration: none; }
+.rec-btn:focus-visible { outline: 3px solid rgba(26, 127, 55, .35); outline-offset: 2px; }
+.rec-btn.is-save { background: var(--ggh-green); color: #fff; font-size: 1.08rem; }
+.rec-btn.is-save:hover { background: var(--ggh-green-dark); }
+.rec-btn.is-sold { background: #fff7e6; border-color: var(--ggh-straw); color: var(--ggh-straw-ink); }
+.rec-btn.is-sold:hover { background: #fbf0d4; }
+.rec-btn.is-delete { background: #fff; border-color: #f1c4c4; color: #b42318; font-size: .92rem; }
+.rec-btn.is-delete:hover { background: #fef2f2; }
+.rec-btn.is-map { background: #fff; border-color: var(--ggh-line); color: #33413a; font-size: .9rem; min-height: 44px; }
+.rec-btn.is-map:hover { background: #f6f8f6; }
+.rec-btn.is-gps { background: #eef2ff; color: #3730a3; border-color: #c7d2fe; width: 100%; }
+.rec-btn.is-ghost { background: #fff; border-color: var(--ggh-line); color: var(--ggh-green-dark); min-height: 44px; font-size: .92rem; }
+.rec-sold { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .3rem .6rem; align-items: start; padding: .75rem .85rem; border-radius: 12px; background: #eaf5ec; border: 1px solid #9fd0ac; color: var(--ggh-green-dark); }
+.rec-sold > i { font-size: 1.3rem; margin-top: .1rem; }
+.rec-sold span { display: block; font-size: .9rem; color: #33413a; margin-top: .15rem; }
+.rec-sold .rec-btn { grid-column: 1 / -1; justify-self: start; }
+.ggh-mk-divicon.is-own .ggh-mk-pin { outline: 3px solid #2563eb; outline-offset: 1px; }
+.ggh-pin { letter-spacing: .4em; }
+.ggh-dhint { font-size: .84rem; color: #44524a; line-height: 1.45; margin: -.1rem 0 .2rem; }
+.ggh-setpin { display: grid; gap: .35rem; padding: .7rem; border-radius: 12px; background: #f6f8f6; border: 1px solid var(--ggh-line); }
+.ggh-setpin.hidden { display: none; }
+.swal-field { display: grid; gap: .25rem; text-align: left; font-weight: 600; font-size: .95rem; margin-top: .6rem; color: #33413a; }
+@media (max-width: 639px) {
+  .rec-card { padding: .8rem; }
+  .rec-head { grid-template-columns: auto minmax(0, 1fr); }
+  .rec-head .rec-btn.is-map { grid-column: 1 / -1; width: 100%; }
+  .rec-grid { grid-template-columns: minmax(0, 1fr); }
+  .rec-actions { grid-template-columns: minmax(0, 1fr); }
+  .rec-area .input-field { padding-right: 2.9rem; font-size: 1rem; }
+  .rec-area span { right: .5rem; font-size: .8rem; }
+}

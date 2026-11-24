@@ -39,6 +39,19 @@
     other: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19C5 10 10 4.5 20 4c0 9.5-5.6 15-15 15z"/><path d="M5 19l8-8" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>'
   };
   const icon = (g) => ICON[g] || ICON.other;
+  /** 3.1.0: crop / material → rice | sugarcane | maize | cassava | other (same rule as the server, Abm.gs) */
+  function groupOf(crop, material) {
+    const c = String(crop || ''), m = String(material || '');
+    if (c.indexOf('ข้าวโพด') === 0) return 'maize';
+    if (c.indexOf('ข้าว') === 0) return 'rice';
+    if (c.indexOf('อ้อย') >= 0) return 'sugarcane';
+    if (c.indexOf('มันสำปะหลัง') >= 0) return 'cassava';
+    if (m.indexOf('ฟาง') >= 0 && m.indexOf('สาลี') < 0) return 'rice';
+    if (m.indexOf('อ้อย') >= 0) return 'sugarcane';
+    if (m.indexOf('ข้าวโพด') >= 0 || m.indexOf('ซัง') >= 0) return 'maize';
+    if (m.indexOf('มันสำปะหลัง') >= 0) return 'cassava';
+    return 'other';
+  }
 
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[c]);
@@ -470,6 +483,8 @@
   })();
 
   window.GGH_MARKET = { state, route, reload: load };
+  // 3.1.0: the signed-in pages draw their pins and card icons the same way as this page
+  window.GGH_ICONS = { svg: icon, pin: pinHtml, groupOf };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
