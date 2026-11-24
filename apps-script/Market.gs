@@ -299,3 +299,112 @@ function buildMarketPublic_(now, provinceCode) {
     }
   };
 }
+
+/* ------------------------------ 3.2.0: executive report for ABM (all provinces) ------------------------------ */
+/**
+ * POST {action:'abm_report', key, province:'ALL'|<code>} — aggregates only (no names, phones or coordinates).
+ * Facts (counts, area, buyers' offers, sales recorded by farmers) are kept apart from estimates (biomass = area × residue
+ * rate; possible value = area × buyers' average offer for the same material in the same province). Costs are not collected.
+ */
+function abmReport_(body) {
+  abmCheckKey_(body);
+  geoMigrateSafe_();
+  const want = String(body.province || DEFAULT_PROVINCE_CODE).toUpperCase() === 'ALL' ? 'ALL' : String(body.province).replace(/\D/g, '').slice(0, 2);
+  let provNames = {};
+  try { geoProvinces_().forEach(function (p) { provNames[p.code] = p.name; }); } catch (err) { provNames[DEFAULT_PROVINCE_CODE] = 'กำแพงเพชร'; }
+  if (want !== 'ALL' && !provNames[want]) throw new Error('ไม่รู้จักจังหวัด ' + want);
+  const byProvince = want === 'ALL';
+  const inScope = function (pc) { return byProvince || pc === want; };
+  const rates = {};
+  try { const r = abmResidueRates_(); Object.keys(r).forEach(function (k) { rates[k] = Number(r[k]); }); } catch (err) { /* none */ }
+  const label = {}; MARKET_GROUPS.forEach(function (g) { label[g.key] = g.label; });
+  const today = startOfDay_(new Date());
+  const rule = marketHideRule_();
+  const blank = function (code, name) { return { code: code, name: name, sellers: {}, plots: 0, areaRai: 0, ton: 0, buyers: 0, capacityTonPerDay: 0, potentialBaht: 0, salesCount: 0, salesSellers: {}, salesTon: 0, salesBaht: 0, salesAreaRai: 0 }; };
+  const areas = {}, mats = {};
+  const areaOf = function (pc, pname, dc, dname) {
+    const k = byProvince ? pc : (dc || '-');
+    return areas[k] || (areas[k] = blank(k, byProvince ? (provNames[pc] || pname || pc) : (dname || 'ไม่ระบุอำเภอ')));
+  };
+  const matOf = function (g) { const m = mats[g] || (mats[g] = blank(g, label[g] || g)); m.prices = m.prices || []; return m; };
+  const prices = {};   // province|group → [baht/rai]
+  const harvest = {};
+  const users = { farmer: 0, buyer: 0 };
+
+  dataRows_(sheet_('users')).forEach(function (r) {
+    if (!inScope(text_(r[USER_GEO_COL - 1]) || DEFAULT_PROVINCE_CODE)) return;
+    const role = String(r[2] || '').trim().toLowerCase(); if (users[role] !== undefined) users[role]++;
+  });
+  const buyerRows = dataRows_(sheet_('buyers')).filter(function (r) { return String(r[11] || '').trim().toLowerCase() === 'active'; });
+  buyerRows.forEach(function (r) {
+    const pc = rowProvince_(r, 'buyers') || DEFAULT_PROVINCE_CODE;
+    const g = materialGroupOf_(resolvedMaterial_(r[13], r[14], r[7]));
+    const v = maybeNumber_(r[9]);
+    if (v !== '' && v > 0) (prices[pc + '|' + g] || (prices[pc + '|' + g] = [])).push(v);
+    if (!inScope(pc)) return;
+    const cap = leadingNumber_(r[10]);
+    const a = areaOf(pc, text_(r[BUYER_GEO_COL]), text_(r[BUYER_GEO_COL + 1]), text_(r[BUYER_GEO_COL + 2]));
+    a.buyers++; a.capacityTonPerDay += cap;
+    const m = matOf(g); m.buyers++; m.capacityTonPerDay += cap; if (v !== '' && v > 0) m.prices.push(v);
+  });
+  const avg = function (xs) { return xs && xs.length ? xs.reduce(function (s, x) { return s + x; }, 0) / xs.length : null; };
+  dataRows_(sheet_('farmers')).forEach(function (r) {
+    if (String(r[11] || '').trim().toLowerCase() !== 'open' || !farmerListing_(r, rule, today).listed) return;
+    const pc = rowProvince_(r, 'farmers') || DEFAULT_PROVINCE_CODE;
+    if (!inScope(pc)) return;
+    const g = marketGroupOfListing_(r[5], resolvedMaterial_(r[13], r[14], r[5]));
+    const area = parseAreaRai_(r[8]);
+    const t = rates[g] === undefined ? 0 : area * rates[g];
+    const p = avg(prices[pc + '|' + g]);
+    const owner = normalizePhone_(r[12]) || normalizePhone_(r[4]) || text_(r[0]);
+    [areaOf(pc, text_(r[FARMER_GEO_COL]), text_(r[FARMER_GEO_COL + 1]), text_(r[FARMER_GEO_COL + 2])), matOf(g)].forEach(function (x) {
+      x.plots++; x.areaRai += area; x.ton += t; x.sellers[owner] = true; if (p !== null) x.potentialBaht += area * p;
+    });
+    const h = toDate_(r[7]);
+    const ym = h ? (h.getTime() < today.getTime() ? 'done' : Utilities.formatDate(h, Session.getScriptTimeZone(), 'yyyy-MM')) : 'none';
+    const hb = harvest[ym] || (harvest[ym] = { month: ym, plots: 0, areaRai: 0, ton: 0 }); hb.plots++; hb.areaRai += area; hb.ton += t;
+  });
+  const sales = [];
+  let sh = null;
+  try { sh = spreadsheet_().getSheetByName(SALES_SHEET); } catch (e) { sh = null; }
+  if (sh && sh.getLastRow() >= 2) dataRows_(sh).forEach(function (r) {
+    const pc = text_(r[10]) || DEFAULT_PROVINCE_CODE;
+    if (!inScope(pc)) return;
+    const g = materialGroupOf_(r[5]) === 'other' ? cropGroupOf_(r[4]) : materialGroupOf_(r[5]);
+    const ton = maybeNumber_(r[7]), baht = maybeNumber_(r[8]), area = Number(r[6]) || 0;
+    [areaOf(pc, text_(r[11]), text_(r[12]), text_(r[13])), matOf(g)].forEach(function (x) {
+      x.salesCount++; x.salesSellers[normalizePhone_(r[3])] = true; x.salesAreaRai += area; if (ton !== '') x.salesTon += ton; if (baht !== '') x.salesBaht += baht;
+    });
+    sales.push({ date: dateInput_(r[1]), area: byProvince ? (provNames[pc] || pc) : (text_(r[13]) || 'ไม่ระบุอำเภอ'), material: text_(r[5]) || label[g], areaRai: round_(area, 2),
+      ton: ton, baht: baht, bahtPerTon: ton !== '' && ton > 0 && baht !== '' ? round_(baht / ton, 0) : '' });
+  });
+  const fin = function (x) {
+    return { code: x.code, name: x.name, farmers: Object.keys(x.sellers).length, plots: x.plots, areaRai: round_(x.areaRai, 2), ton: round_(x.ton, 1),
+      buyers: x.buyers, capacityTonPerDay: round_(x.capacityTonPerDay, 1), avgPriceBahtPerRai: x.prices ? (avg(x.prices) === null ? null : round_(avg(x.prices), 0)) : undefined,
+      potentialBaht: round_(x.potentialBaht, 0), salesCount: x.salesCount, salesFarmers: Object.keys(x.salesSellers).length, salesTon: round_(x.salesTon, 2),
+      salesBaht: round_(x.salesBaht, 0), salesAreaRai: round_(x.salesAreaRai, 2) };
+  };
+  const areaList = Object.keys(areas).map(function (k) { return fin(areas[k]); }).sort(function (a, b) { return b.areaRai - a.areaRai || b.buyers - a.buyers || a.name.localeCompare(b.name, 'th'); });
+  const matList = MARKET_GROUPS.map(function (g) { return mats[g.key] ? fin(mats[g.key]) : null; }).filter(Boolean);
+  const sum = function (f) { return areaList.reduce(function (s, x) { return s + (x[f] || 0); }, 0); };
+  const allSellers = {}; Object.keys(areas).forEach(function (k) { Object.keys(areas[k].sellers).forEach(function (o) { allSellers[o] = true; }); });
+  const allSale = {}; Object.keys(areas).forEach(function (k) { Object.keys(areas[k].salesSellers).forEach(function (o) { allSale[o] = true; }); });
+  return {
+    apiVersion: APP_VERSION, generatedAt: new Date().toISOString(),
+    scope: { code: want, name: byProvince ? 'ทุกจังหวัด' : provNames[want], by: byProvince ? 'province' : 'district' },
+    listing: { hideAfterHarvestDays: rule.days },
+    summary: { usersFarmers: users.farmer, usersBuyers: users.buyer, farmers: Object.keys(allSellers).length, plots: sum('plots'), areaRai: round_(sum('areaRai'), 2),
+      ton: round_(sum('ton'), 1), buyers: sum('buyers'), capacityTonPerDay: round_(sum('capacityTonPerDay'), 1), potentialBaht: round_(sum('potentialBaht'), 0),
+      salesCount: sum('salesCount'), salesFarmers: Object.keys(allSale).length, salesTon: round_(sum('salesTon'), 2), salesBaht: round_(sum('salesBaht'), 0), salesAreaRai: round_(sum('salesAreaRai'), 2),
+      provincesActive: byProvince ? areaList.filter(function (x) { return x.plots || x.buyers; }).length : null },
+    areas: areaList, materials: matList,
+    harvest: Object.keys(harvest).sort().map(function (k) { const h = harvest[k]; return { month: h.month, plots: h.plots, areaRai: round_(h.areaRai, 2), ton: round_(h.ton, 1) }; }),
+    sales: sales.sort(function (a, b) { return a.date < b.date ? 1 : -1; }).slice(0, 500),
+    notes: {
+      facts: 'ข้อมูลจริง: จำนวนผู้ลงทะเบียน แปลงที่ประกาศขาย (แสดงบนตลาดวันนี้) พื้นที่ ผู้รับซื้อ ราคาที่ผู้รับซื้อเสนอ และการขายที่เกษตรกรกด "ขายแล้ว"',
+      estimates: 'ประมาณการ: ชีวมวล = พื้นที่ × อัตราวัสดุเหลือใช้ต่อไร่ของพืช · มูลค่าที่เป็นไปได้ = พื้นที่ × ราคาเฉลี่ยที่ผู้รับซื้อเสนอ (บาท/ไร่) ของวัสดุเดียวกันในจังหวัดเดียวกัน — ยังไม่ใช่รายได้จริง',
+      costs: 'ระบบไม่เก็บต้นทุนหรือค่าใช้จ่าย (ค่าอัด ค่าขนส่ง ค่าแรง) จึงไม่มีในรายงาน',
+      sales: 'การขายจริงมาจากเกษตรกรกรอกเอง (ไม่บังคับ) ตัวเลขจึงเป็นขั้นต่ำของการซื้อขายที่เกิดขึ้น'
+    }
+  };
+}
