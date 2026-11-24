@@ -515,7 +515,10 @@ body.ggh-landing-on main { max-width: 84rem; }
    Data header: title + period + freshness on the left, filters on the right, tabs underneath — one block, one baseline.
    Top bar uses the same width as the page so the logo lines up with the content edge. */
 body.ggh-landing-on > nav > .container { max-width: 84rem; }
-@media (max-width: 479px) { .ggh-topbar-sub { display: none; } }
+@media (max-width: 479px) { .ggh-topbar-sub { font-size: .66rem; } }
+/* 3.0.0: the province seal shows only for its province; an empty box of the same size keeps the title centred */
+.ggh-topbar-spacer { display: none; width: 2.5rem; flex-shrink: 0; }
+[data-province-seal][hidden] + .ggh-topbar-spacer { display: block; }
 
 .ggh-hero { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: .9rem 2rem; padding: 1rem 1.1rem; }
 .ggh-hero-text { min-width: 0; }

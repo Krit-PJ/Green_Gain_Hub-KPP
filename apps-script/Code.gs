@@ -1,5 +1,10 @@
 /**
- * Green Gain Hub 2.9.3 — ตลาดวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ (API-only bridge from GitHub Pages to Google Sheets).
+ * Green Gain Hub 3.0.0 — ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ ทุกจังหวัด
+ * (API-only bridge from GitHub Pages to Google Sheets).
+ *
+ * 3.0.0: all 77 provinces. Every plot / buyer point carries Province…Subdistrict decided by the server from its pin
+ * (Geo.gs, farmers S:X, buyers R:W), every user a province (users J:K, chosen at registration). The public market,
+ * the signed-in map and the district table are per province; ABM (Kamphaeng Phet officers) reads only its province.
  *
  * 19 Nov 2026: the officer side moved to ABM — ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร
  * (records, GHG, value, targets, reports, crop data, officer accounts, executive dashboard):
@@ -8,7 +13,8 @@
  * ABM reads plots and buyers through the server-to-server feed below (abmFeed_); it never copies them.
  *
  * Files: Code.gs (this), Market.gs (public matching map), Sso.gs (farmer/buyer sign-in through the central identity),
- *        Abm.gs (link to ABM: residue rates, managed area, helpers), Counter.gs (visit counter), Districts.gs (boundaries).
+ *        Abm.gs (link to ABM: residue rates, managed area, helpers), Counter.gs (visit counter), Geo.gs (77 provinces:
+ *        which province / district / subdistrict a pin is in), Districts.gs (Kamphaeng Phet only — fallback before 3.0.0).
  * Database: Google Sheets (users, farmers, buyers, Config, visit_stats). The officer sheets that used to live in the same
  * file stay there untouched as an archive (ABM has its own database since 19 Nov 2026).
  *
@@ -25,7 +31,7 @@
  * 2.8.0: a plot is shown until N days after its harvest date (Market.gs farmerListing_, Config hide_after_harvest_days,
  * default 20, set in ABM). A harvest date is required when saving. "ยังมีวัสดุอยู่" (renewFarmerServer) shows it N more days.
  */
-const APP_VERSION = '2.9.3';
+const APP_VERSION = '3.0.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -75,7 +81,7 @@ function apiMethods_() {
     getUserProfileServer: function (args, session) { return getUserProfileServer(session); },
     saveDataServer: function (args, session) { return saveDataServer(args[0], session); },
     deleteDataServer: function (args, session) { return deleteDataServer(args[0], session); },
-    getMatchingDataServer: function (args, session) { return getMatchingDataServer(session); },
+    getMatchingDataServer: function (args, session) { return getMatchingDataServer(session, args[0]); },
     renewFarmerServer: function (args, session) { return renewFarmerServer(args[0], session); }
   };
 }
@@ -258,18 +264,22 @@ function abmConfig_(body) {
 
 function abmFeed_(body) {
   abmCheckKey_(body);
+  // 3.0.0: ABM is the officers' system of one province (default กำแพงเพชร) — it reads only that province's rows
+  const province = text_(body.province) || DEFAULT_PROVINCE_CODE;
+  geoMigrateSafe_();
   const pack = function (kind) {
     const sh = sheet_(kind);
     const lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
+    const rows = lastRow >= 2 && lastCol ? sh.getRange(2, 1, lastRow - 1, lastCol).getValues() : [];
     return {
       headers: lastCol ? sh.getRange(1, 1, 1, lastCol).getValues()[0] : [],
-      rows: lastRow >= 2 && lastCol ? sh.getRange(2, 1, lastRow - 1, lastCol).getValues() : []
+      rows: rows.filter(function (r) { return (rowProvince_(r, kind) || DEFAULT_PROVINCE_CODE) === province; })
     };
   };
   // 2.9.0: farmers and buyers use Green Gain Hub only — ABM refuses these numbers as officers (SHA-256 only, never the numbers)
   const marketPhones = dataRows_(sheet_('users')).map(function (r) { return normalizePhone_(r[0]); })
     .filter(function (p) { return /^0\d{9}$/.test(p); }).map(abmSha256Hex_);
-  return { apiVersion: APP_VERSION, generatedAt: new Date().toISOString(), farmers: pack('farmers'), buyers: pack('buyers'), market: marketListingInfo_(),
+  return { apiVersion: APP_VERSION, generatedAt: new Date().toISOString(), province: province, farmers: pack('farmers'), buyers: pack('buyers'), market: marketListingInfo_(),
     marketPhones: marketPhones };
 }
 
@@ -290,7 +300,8 @@ function doPost(e) {
 /** Saves change the dashboard immediately instead of waiting for the cache to expire. */
 function invalidateSummary_() {
   // 2.8.0 fix: 2.7.0 renamed the market cache (market:v2) but this still removed the old name, so saves waited up to 5 min
-  try { CacheService.getScriptCache().remove(MARKET_CACHE_PREFIX + APP_VERSION); } catch (err) { /* best effort */ }
+  // 3.0.0: one cache per province — clear every one that was built
+  try { const c = CacheService.getScriptCache(); c.removeAll([MARKET_CACHE_PREFIX + APP_VERSION].concat(marketCacheKeys_())); } catch (err) { /* best effort */ }
 }
 
 function loginServer(input) {
@@ -298,14 +309,16 @@ function loginServer(input) {
   // 2.9.3: farmers and buyers use Green Gain Hub only — phone sign-in here is always open (SSO_MODE no longer closes it).
   const phone = normalizePhone_(input.phone || input.telephone || input.username || input);
   if (!/^0\d{9}$/.test(phone)) throw new Error('กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก');
+  geoMigrateSafe_();
   const rows = dataRows_(sheet_('users'));
   const found = rows.find(function (r) { return normalizePhone_(r[0]) === phone; });
   if (!found) throw new Error('ไม่พบหมายเลขโทรศัพท์นี้ในระบบ กรุณาลงทะเบียน');
   const role = normalizeRole_(found[2]);
   const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-  const session = { phone: phone, role: role, name: cleanText_(found[3], 150) };
+  const province = userProvince_(found);
+  const session = { phone: phone, role: role, name: cleanText_(found[3], 150), province: province.code };
   CacheService.getScriptCache().put('session:' + token, JSON.stringify(session), sessionTtlSeconds_());
-  return { status: 'success', success: true, token: token, phone: phone, role: role, name: session.name };
+  return { status: 'success', success: true, token: token, phone: phone, role: role, name: session.name, province: province };
 }
 
 function registerServer(input) {
@@ -315,6 +328,7 @@ function registerServer(input) {
   const name = cleanText_(input.name, 150);
   if (!/^0\d{9}$/.test(phone)) throw new Error('กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก');
   if (!name) throw new Error('กรุณากรอกชื่อ');
+  const province = registerProvince_(input.provinceCode || input.province);   // 3.0.0: required
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -324,26 +338,53 @@ function registerServer(input) {
       throw new Error('หมายเลขโทรศัพท์นี้ลงทะเบียนแล้ว');
     }
     const now = new Date();
-    // A:I = Telephone, Password(legacy/unused), Role, Name, System,
-    // Consent, Consent_Timestamp, Created_At, Updated_At
-    sh.appendRow([phone, '', role, name, false, true, now, now, now]);
+    ensureGeoColumns_();
+    // A:I = Telephone, Password(legacy/unused), Role, Name, System, Consent, Consent_Timestamp, Created_At, Updated_At
+    // J:K (3.0.0) = Province_Code, Province
+    sh.appendRow([phone, '', role, name, false, true, now, now, now, province.code, province.name]);
   } finally {
     lock.releaseLock();
   }
   // 2.2.1: signed in at once (same session as loginServer), so a new farmer or buyer goes straight to the form.
   const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-  CacheService.getScriptCache().put('session:' + token, JSON.stringify({ phone: phone, role: role, name: name }), sessionTtlSeconds_());
-  return { status: 'success', success: true, token: token, phone: phone, role: role, name: name, message: 'ลงทะเบียนสำเร็จ เข้าใช้งานได้ทันที' };
+  CacheService.getScriptCache().put('session:' + token, JSON.stringify({ phone: phone, role: role, name: name, province: province.code }), sessionTtlSeconds_());
+  return { status: 'success', success: true, token: token, phone: phone, role: role, name: name, province: province, message: 'ลงทะเบียนสำเร็จ เข้าใช้งานได้ทันที' };
+}
+
+/** 3.0.0: { code, name } of a registered user (users J:K), กำแพงเพชร for rows not filled yet. */
+function userProvince_(row) {
+  const code = text_(row[USER_GEO_COL - 1]) || DEFAULT_PROVINCE_CODE;
+  let name = text_(row[USER_GEO_COL]);
+  if (!name) { try { const p = geoProvinceByCode_(code); name = p ? p.name : ''; } catch (e) { /* offline */ } }
+  return { code: code, name: name || (code === DEFAULT_PROVINCE_CODE ? 'กำแพงเพชร' : '') };
+}
+
+function registerProvince_(code) {
+  code = text_(code);
+  if (!code) throw new Error('กรุณาเลือกจังหวัด');
+  const p = geoProvinceByCode_(code);
+  if (!p) throw new Error('กรุณาเลือกจังหวัดจากรายการ');
+  return { code: p.code, name: p.name };
+}
+
+/** Fills provinces once after 3.0.0 is deployed; never stops the request that triggered it. */
+function geoMigrateSafe_() {
+  try {
+    if (PropertiesService.getScriptProperties().getProperty(GEO_MIGRATION_PROP) === GEO_MIGRATION_VERSION) return;
+    console.log(geoMigrate_(false));
+  } catch (err) { console.warn('geoMigrate_: ' + err); }
 }
 
 function getUserProfileServer(session) {
+  const user = dataRows_(sheet_('users')).find(function (r) { return normalizePhone_(r[0]) === session.phone; });
+  const province = user ? userProvince_(user) : { code: session.province || DEFAULT_PROVINCE_CODE, name: '' };
   if (session.role === 'farmer') {
     const farmers = farmerRecords_(session.phone);
-    return { status: farmers.length ? 'success' : 'not_found', success: true, role: 'farmer', name: session.name, farmers: farmers,
+    return { status: farmers.length ? 'success' : 'not_found', success: true, role: 'farmer', name: session.name, province: province, farmers: farmers,
       message: farmers.length ? '' : 'ยังไม่มีข้อมูลแปลง กรุณาเพิ่มข้อมูล' };
   }
   const buyers = buyerRecords_(session.phone);
-  return { status: buyers.length ? 'success' : 'not_found', success: true, role: 'buyer', name: session.name, buyers: buyers,
+  return { status: buyers.length ? 'success' : 'not_found', success: true, role: 'buyer', name: session.name, province: province, buyers: buyers,
     message: buyers.length ? '' : 'ยังไม่มีข้อมูลการรับซื้อ กรุณาเพิ่มข้อมูล' };
 }
 
@@ -390,17 +431,21 @@ function renewFarmerServer(input, session) {
     message: 'แสดงแปลงบนตลาดต่อถึงวันที่ ' + dateInput_(until) };
 }
 
-function getMatchingDataServer(session) {
+function getMatchingDataServer(session, input) {
   // Enforce partner-only visibility at the API layer. Empty arrays are retained
   // for backward compatibility with the existing Frontend response structure.
+  // 3.0.0: partners of one province (asked for, else the user's own) — contacts are never sent for the whole country.
   const isFarmer = session.role === 'farmer';
-  const farmers = isFarmer ? [] : openFarmersWithCoordinates_().map(farmerPublic_);
-  const buyers = isFarmer ? activeBuyersWithCoordinates_().map(buyerPublic_) : [];
+  const province = text_(input && input.province) || session.province || DEFAULT_PROVINCE_CODE;
+  const inProvince = function (kind) { return function (r) { return (rowProvince_(r, kind) || DEFAULT_PROVINCE_CODE) === province; }; };
+  const farmers = isFarmer ? [] : openFarmersWithCoordinates_().filter(inProvince('farmers')).map(farmerPublic_);
+  const buyers = isFarmer ? activeBuyersWithCoordinates_().filter(inProvince('buyers')).map(buyerPublic_) : [];
   const ownPlots = isFarmer ? ownFarmerPlotsWithCoordinates_(session.phone).map(farmerPublic_) : [];
   return {
     status: 'success',
     success: true,
     apiVersion: APP_VERSION,
+    province: province,
     viewerRole: session.role,
     visibleRole: isFarmer ? 'buyer' : 'farmer',
     farmers: farmers,
@@ -459,6 +504,8 @@ function saveFarmer_(data, session) {
     '', '', now
   ];
   requireFields_(rowValues, [[2, 'ชื่อ'], [4, 'โทรศัพท์'], [5, 'ชนิดพืช'], [8, 'พื้นที่']]);
+  const loc = locationForSave_(rowValues[9], rowValues[10]);   // 3.0.0: S:X province…subdistrict from the pin
+  geoRowValues_(loc).forEach(function (v) { rowValues.push(v); });
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -468,7 +515,7 @@ function saveFarmer_(data, session) {
     if (row) {
       rowValues[1] = sh.getRange(row, 2).getValue() || now;
       rowValues[15] = sh.getRange(row, 16).getValue() || '';   // 2.8.0: keep "ยังมีวัสดุอยู่" (shown-until date)
-      sh.getRange(row, 1, 1, 18).setValues([rowValues]);
+      sh.getRange(row, 1, 1, rowValues.length).setValues([rowValues]);
     } else {
       sh.appendRow(rowValues);
       row = sh.getLastRow();
@@ -479,7 +526,15 @@ function saveFarmer_(data, session) {
     lock.releaseLock();
   }
   invalidateSummary_();
-  return { status: 'success', success: true, id: id, message: 'บันทึกข้อมูลเกษตรกรสำเร็จ' };
+  return { status: 'success', success: true, id: id, location: loc || null, message: 'บันทึกข้อมูลเกษตรกรสำเร็จ' };
+}
+
+/** 3.0.0: where the pin is (server-side, from the boundary files). Outside Thailand → error; files unreadable → blanks. */
+function locationForSave_(lat, lng) {
+  ensureGeoColumns_();
+  const loc = geoLocateSafe_(lat, lng);
+  if (loc === null) throw new Error('ตำแหน่งที่ปักหมุดอยู่นอกประเทศไทย กรุณาปักหมุดใหม่');
+  return loc || null;
 }
 
 function saveBuyer_(data, session) {
@@ -496,6 +551,8 @@ function saveBuyer_(data, session) {
     'Active', session.phone, material.type, material.other, now, 'ALL'
   ];
   requireFields_(rowValues, [[2, 'ชื่อ'], [4, 'โทรศัพท์'], [8, 'คุณภาพ'], [10, 'ปริมาณ']]);
+  const loc = locationForSave_(rowValues[5], rowValues[6]);   // 3.0.0: R:W province…subdistrict from the pin
+  geoRowValues_(loc).forEach(function (v) { rowValues.push(v); });
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -504,7 +561,7 @@ function saveBuyer_(data, session) {
     if (occupiedRow && !row) throw new Error('ไม่มีสิทธิ์แก้ไขข้อมูลนี้');
     if (row) {
       rowValues[1] = sh.getRange(row, 2).getValue() || now;
-      sh.getRange(row, 1, 1, 17).setValues([rowValues]);
+      sh.getRange(row, 1, 1, rowValues.length).setValues([rowValues]);
     } else {
       sh.appendRow(rowValues);
       row = sh.getLastRow();
@@ -514,7 +571,7 @@ function saveBuyer_(data, session) {
     lock.releaseLock();
   }
   invalidateSummary_();
-  return { status: 'success', success: true, id: id, message: 'บันทึกข้อมูลผู้ซื้อสำเร็จ' };
+  return { status: 'success', success: true, id: id, location: loc || null, message: 'บันทึกข้อมูลผู้ซื้อสำเร็จ' };
 }
 
 function farmerRecords_(phone) {
@@ -528,7 +585,8 @@ function farmerRecords_(phone) {
       listed: l.listed, listedUntil: l.until ? dateInput_(l.until) : '', hiddenReason: l.reason, hideAfterHarvestDays: rule.days,
       id: text_(r[0]), timestamp: dateTime_(r[1]), fname: text_(r[2]), lname: text_(r[3]), phone: displayPhone_(r[4]),
       crop: text_(r[5]), plantDate: dateInput_(r[6]), harvestDate: dateInput_(r[7]), area: text_(r[8]),
-      lat: maybeNumber_(r[9]), lng: maybeNumber_(r[10]), recordStatus: text_(r[11]), materialType: text_(r[13]), materialOther: text_(r[14])
+      lat: maybeNumber_(r[9]), lng: maybeNumber_(r[10]), recordStatus: text_(r[11]), materialType: text_(r[13]), materialOther: text_(r[14]),
+      location: recordLocation_(r, FARMER_GEO_COL)
     };
   });
 }
@@ -540,9 +598,15 @@ function buyerRecords_(phone) {
     return {
       id: text_(r[0]), timestamp: dateTime_(r[1]), fname: text_(r[2]), lname: text_(r[3]), phone: displayPhone_(r[4]),
       lat: maybeNumber_(r[5]), lng: maybeNumber_(r[6]), material: text_(r[7]), quality: text_(r[8]), price: maybeNumber_(r[9]), capacity: text_(r[10]),
-      recordStatus: text_(r[11]), materialType: text_(r[13]), materialOther: text_(r[14])
+      recordStatus: text_(r[11]), materialType: text_(r[13]), materialOther: text_(r[14]),
+      location: recordLocation_(r, BUYER_GEO_COL)
     };
   });
+}
+
+/** 3.0.0 { province, district, subdistrict } names of a row ('' when not filled). */
+function recordLocation_(r, col) {
+  return { provinceCode: text_(r[col - 1]), province: text_(r[col]), district: text_(r[col + 2]), subdistrict: text_(r[col + 4]) };
 }
 
 function farmerPublic_(r) {
@@ -603,7 +667,9 @@ function setupSystem() {
   const visits = ensureVisitSchema_();
   invalidateSummary_();
   const abm = verifyAbmLink();
-  const out = [migration, formats, normalized, schema, restored, trigger, visits, abm].join('\n');
+  let geo;   // 3.0.0: province columns, then fill provinces from pins (needs the boundary files on GitHub Pages)
+  try { geo = ensureGeoColumns_() + '\n' + geoMigrate_(false) + '\n' + verifyGeo(); } catch (err) { geo = 'INFO: provinces not filled yet — ' + err; }
+  const out = [migration, formats, normalized, schema, restored, trigger, visits, abm, geo].join('\n');
   console.log(out);
   return out;
 }

@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1a7f37">
-  <meta name="description" content="Green Gain Hub กำแพงเพชร ตลาดและศูนย์จัดการวัสดุเหลือใช้ทางการเกษตร: เกษตรกรประกาศขายฟางและใบอ้อย ผู้รับซื้อหาแปลงใกล้ตัว และข้อมูลการจัดการวัสดุเหลือใช้ทางการเกษตรรายอำเภอ (ระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร จังหวัดกำแพงเพชร)">
+  <meta name="description" content="Green Gain Hub ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร ทุกจังหวัด: เกษตรกรประกาศขายฟางข้าว ใบอ้อย ซังข้าวโพด เหง้ามัน ผู้รับซื้อหาแปลงใกล้ตัว แทนการเผา">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Green Gain Hub Kamphaeng Phet</title>
+  <title>Green Gain Hub: ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -16,8 +16,8 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=2.9.3">
-  <link rel="stylesheet" href="assets/market.css?v=2.9.3">
+  <link rel="stylesheet" href="assets/dashboard.css?v=3.0.0">
+  <link rel="stylesheet" href="assets/market.css?v=3.0.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -63,11 +63,11 @@
     <div class="container mx-auto px-3 sm:px-4 py-2 flex justify-between items-center gap-2 max-w-5xl" style="padding-top: max(.5rem, env(safe-area-inset-top));">
       <img src="https://doaenews.doae.go.th/wp-content/uploads/2021/03/DOAE-2.png" class="h-8 sm:h-10 w-auto shrink-0" alt="กรมส่งเสริมการเกษตร">
       <div class="text-center min-w-0">
-        <h1 class="ggh-topbar-title text-green-800 font-bold leading-tight">Green Gain Hub <span data-province>กำแพงเพชร</span></h1>
-        <p class="ggh-topbar-sub">ตลาดและศูนย์จัดการวัสดุเหลือใช้ทางการเกษตร</p>
-        <!-- <p class="text-[10px] md:text-xs text-gray-500 font-medium">จังหวัดกำแพงเพชร</p> -->
+        <h1 class="ggh-topbar-title text-green-800 font-bold leading-tight">Green Gain Hub: จังหวัด<span data-province>กำแพงเพชร</span></h1>
+        <p class="ggh-topbar-sub">ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร</p>
       </div>
-      <img src="https://upload.wikimedia.org/wikipedia/commons/f/fd/Seal_of_Kamphaeng_Phet_Province_%28color_version%2C_Thai_Fine_Art_Department%29.png" class="h-8 sm:h-10 w-auto shrink-0" alt="ตราจังหวัดกำแพงเพชร">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/f/fd/Seal_of_Kamphaeng_Phet_Province_%28color_version%2C_Thai_Fine_Art_Department%29.png" class="h-8 sm:h-10 w-auto shrink-0" alt="ตราจังหวัดกำแพงเพชร" data-province-seal="62">
+      <span class="ggh-topbar-spacer" aria-hidden="true"></span>
     </div>
   </nav>
 
@@ -77,14 +77,14 @@
     <div id="marketPage" class="ggh-mk">
       <header class="ggh-mk-top">
         <div class="ggh-mk-intro">
-          <h1 class="ggh-mk-title">ขายวัสดุเหลือใช้ทางการเกษตร แทนการเผา</h1>
-          <p class="ggh-mk-lede">ดูว่าใกล้คุณมีใครรับซื้อฟาง ใบอ้อย ซังข้าวโพด เหง้ามัน หรือมีวัสดุพร้อมขายที่ไหน แล้วลงทะเบียนด้วยเบอร์โทรเพื่อดูตำแหน่งและติดต่อกันโดยตรง</p>
+          <h1 class="ggh-mk-title">สร้างรายได้จากฟางข้าว ใบอ้อย ซังข้าวโพด แทนการเผา</h1>
+          <p class="ggh-mk-lede">ศูนย์รวมผู้รับซื้อฟาง ใบอ้อย ซังข้าวโพด เหง้ามัน เก็บเกี่ยวเมื่อใด ต้องการขายหรือต้องการซื้อ ลงทะเบียนแล้วดูตำแหน่งและติดต่อกันได้โดยตรง</p>
         </div>
         <nav class="ggh-mk-doors" aria-label="เริ่มใช้งาน">
           <button type="button" data-door="login" data-role="farmer" class="ggh-mk-door is-sell"><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i><span class="ggh-mk-door-name">ฉันมีวัสดุจะขาย</span><span class="ggh-mk-door-hint">ประกาศขาย และดูผู้รับซื้อใกล้แปลง</span></button>
           <button type="button" data-door="login" data-role="buyer" class="ggh-mk-door is-buy"><i class="fa-solid fa-truck" aria-hidden="true"></i><span class="ggh-mk-door-name">ฉันรับซื้อวัสดุ</span><span class="ggh-mk-door-hint">ปักจุดรับซื้อ และดูแปลงพร้อมขาย</span></button>
         </nav>
-        <!-- 2.7.0: three numbers that say how the market stands today -->
+        <!-- 3.0.0: three numbers of the chosen province — area, how many sellers, estimated biomass -->
         <div class="ggh-mk-stats" id="mkStats" aria-live="polite">กำลังโหลดข้อมูลตลาด…</div>
       </header>
 
@@ -92,10 +92,12 @@
         <div class="ggh-mk-board-head">
           <div class="ggh-mk-board-title">
             <h2 id="mkBoardTitle" class="ggh-mk-h2">ตลาดวัสดุเหลือใช้ จังหวัด<span data-province>กำแพงเพชร</span></h2>
-            <p class="ggh-mk-board-sub" id="mkUpdated">แต่ละชนิดวัสดุ: มีให้ขายเท่าไร มีผู้รับซื้อไหม และพร้อมเมื่อไร · แตะการ์ดเพื่อกรองแผนที่</p>
+            <label class="ggh-mk-province"><span>เปลี่ยนจังหวัด</span><select id="mkProvince" data-province-select aria-label="เลือกจังหวัด"><option value="62">กำแพงเพชร</option></select></label>
           </div>
+          <p class="ggh-mk-board-sub" id="mkUpdated">แตะการ์ดวัสดุเพื่อกรองแผนที่ แตะซ้ำเพื่อดูทุกวัสดุ</p>
           <div class="ggh-mk-filters">
             <div class="ggh-mk-mats" id="mkMats" role="group" aria-label="ชนิดวัสดุ"></div>
+            <button type="button" class="ggh-mk-allmats" id="mkAllMats" hidden><i class="fa-solid fa-layer-group" aria-hidden="true"></i>ดูทุกวัสดุ</button>
             <div class="ggh-mk-row">
               <div class="ggh-mk-seg" id="mkSide" role="group" aria-label="แสดง">
                 <button type="button" data-side="all" aria-pressed="true">ทั้งหมด</button>
@@ -122,9 +124,9 @@
           </div>
           <div class="ggh-mk-list" id="mkList" aria-live="polite"></div>
         </div>
-        <!-- 2.7.0: all 11 districts at a glance; a row filters the map -->
+        <!-- 3.0.0: every district of the chosen province — area, sellers, biomass, buyers; a row filters the map -->
         <details class="ggh-mk-dist" id="mkDistWrap" open>
-          <summary><span class="ggh-mk-h3">สรุปรายอำเภอ</span><span class="ggh-mk-dist-hint" id="mkDistHint">แตะชื่ออำเภอเพื่อดูบนแผนที่</span></summary>
+          <summary><span class="ggh-mk-h3">สรุปรายอำเภอ จังหวัด<span data-province>กำแพงเพชร</span></span><span class="ggh-mk-dist-hint" id="mkDistHint">แตะชื่ออำเภอเพื่อดูบนแผนที่</span></summary>
           <div class="ggh-mk-dist-body" id="mkDistTable"></div>
         </details>
       </section>
@@ -356,7 +358,7 @@
         <header class="ggh-dialog-head">
           <div>
             <p class="ggh-dialog-kicker">สำหรับเกษตรกรและผู้รับซื้อ</p>
-            <h2 id="hubAuthTitle">Green Gain Hub <span data-province>กำแพงเพชร</span></h2>
+            <h2 id="hubAuthTitle">Green Gain Hub: จังหวัด<span data-province>กำแพงเพชร</span></h2>
           </div>
           <button type="button" class="ggh-dialog-close" data-close aria-label="ปิดหน้าต่าง">✕</button>
         </header>
@@ -382,6 +384,9 @@
           <input type="text" id="regName" name="name" class="input-field" maxlength="150" autocomplete="name">
           <label class="label-text" for="regPhone">หมายเลขโทรศัพท์ 10 หลัก (ใช้เข้าสู่ระบบ)</label>
           <input type="tel" id="regPhone" name="phone" class="input-field font-bold tracking-wider" placeholder="08XXXXXXXX" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <!-- 3.0.0: the province the user trades in (the page opens on it after sign-in) -->
+          <label class="label-text" for="regProvince">จังหวัดของคุณ (ที่ตั้งแปลงหรือจุดรับซื้อ)</label>
+          <select id="regProvince" name="province" class="input-field" required><option value="">เลือกจังหวัด</option></select>
           <details class="ggh-consent">
             <summary>อ่านเอกสารแสดงความยินยอม (Consent Form)</summary>
             <p class="ggh-consent-sub">สำหรับใช้ประกอบในการประเมินสถานการณ์ของกลุ่มเป้าหมาย</p>
@@ -404,8 +409,8 @@
 
   <footer class="bg-green-900 text-white text-center py-6 mt-auto">
     <div class="container mx-auto px-4">
-      <p class="text-xs md:text-sm opacity-90 mb-2">ระบบศูนย์กลางเชื่อมโยงการจัดการวัสดุเหลือใช้ทางการเกษตร จังหวัดกำแพงเพชร</p>
-      <h4 class="font-bold text-sm md:text-base mb-1">สำนักงานเกษตรจังหวัดกำแพงเพชร</h4>
+      <p class="text-xs md:text-sm opacity-90 mb-2">Green Gain Hub: ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร</p>
+      <h4 class="font-bold text-sm md:text-base mb-1">สำนักงานเกษตรจังหวัด<span data-province>กำแพงเพชร</span></h4>
       <p class="text-xs md:text-sm opacity-80 mb-3">กรมส่งเสริมการเกษตร กระทรวงเกษตรและสหกรณ์</p>
       <p class="ggh-counter" id="visitCounter" aria-live="polite" hidden>
         <span>ผู้เข้าชม</span>
@@ -419,9 +424,10 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=2.9.3"></script>
-  <script src="assets/api-client.js?v=2.9.3"></script>
-  <script src="assets/market.js?v=2.9.3" defer></script>
+  <script src="assets/config.js?v=3.0.0"></script>
+  <script src="assets/api-client.js?v=3.0.0"></script>
+  <script src="assets/province.js?v=3.0.0"></script>
+  <script src="assets/market.js?v=3.0.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -726,6 +732,8 @@
       const f = document.getElementById('hubPanelRegister');
       if (role) { const r = f.querySelector(`input[name="role"][value="${role}"]`); if (r) r.checked = true; }
       if (phone) { document.getElementById('loginPhone').value = phone; f.phone.value = phone; }
+      // 3.0.0: the 77 provinces, the one the page shows chosen already
+      if (window.GGH_PROVINCE && f.province.options.length < 2) window.GGH_PROVINCE.fillSelect(f.province, { placeholder: 'เลือกจังหวัด', value: window.GGH_PROVINCE.code }).catch(() => {});
       setMsg('hubLoginMsg', ''); setMsg('hubRegMsg', '');
       selectTab(dlg, 'hub', tab || 'login');
     }
@@ -802,6 +810,7 @@
       const miss = [];
       if (!f.name.value.trim()) miss.push('ชื่อ');
       if (u.length !== 10) miss.push('หมายเลขโทรศัพท์ 10 หลัก');
+      if (!f.province.value) miss.push('จังหวัด');
       if (miss.length) return setMsg('hubRegMsg', 'กรุณากรอก: ' + miss.join(', '));
       if (!document.getElementById('pdpaCheck').checked) return setMsg('hubRegMsg', 'กรุณาอ่านและติ๊กยินยอมการใช้ข้อมูลส่วนบุคคล (PDPA) ก่อนลงทะเบียน');
       const btn = document.getElementById('regBtn');
@@ -823,11 +832,13 @@
             document.querySelector('#hubRegMsg [data-to-login]').addEventListener('click', () => openHub('login', '', u));
           } else setMsg('hubRegMsg', escapeHtml(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่'));
         })
-        .registerServer({ role: role, name: f.name.value.trim(), phone: u, password: '' });
+        .registerServer({ role: role, name: f.name.value.trim(), phone: u, password: '', provinceCode: f.province.value });
     }
 
     // --- UI SETUP ---
     function setupUI(user) {
+      // 3.0.0: the page names the user's own province (chosen at registration), not the one last browsed
+      if (user.province && user.province.code && window.GGH_PROVINCE) window.GGH_PROVINCE.set(user.province, { save: false });
       document.getElementById('marketPage')?.classList.add('hidden');
       document.getElementById('mainApp').classList.remove('hidden');
       document.getElementById('userNameDisplay').innerText = user.name;
@@ -1411,7 +1422,7 @@
         .withFailureHandler(function(err) {
           Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
         })
-        .getMatchingDataServer(); 
+.getMatchingDataServer({ province: window.GGH_PROVINCE ? window.GGH_PROVINCE.code : '' }); 
     }
 
     function focusMarker(id, lat, lng) {

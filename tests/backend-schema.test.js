@@ -49,7 +49,7 @@ const sheets = {
 
 const cache = new Map();
 global.SpreadsheetApp = { openById: () => ({ getSheetByName: name => sheets[name] || null }) };
-global.PropertiesService = { getScriptProperties: () => ({ getProperty: () => null }) };
+const testProps = {}; global.PropertiesService = { getScriptProperties: () => ({ getProperty: (k) => testProps[k] ?? null, setProperty: (k, v) => { testProps[k] = String(v); } }) };
 global.CacheService = { getScriptCache: () => ({ put: (k,v) => cache.set(k,v), get: k => cache.get(k) || null }) };
 global.LockService = { getScriptLock: () => ({ waitLock(){}, tryLock(){ return true; }, releaseLock(){} }) };
 global.Utilities = {
@@ -63,8 +63,13 @@ global.Utilities = {
 global.Session = { getScriptTimeZone: () => 'Asia/Bangkok' };
 global.ScriptApp = { getProjectTriggers: () => [], newTrigger: () => ({ timeBased(){return this;}, everyDays(){return this;}, atHour(){return this;}, create(){} }), deleteTrigger(){} };
 
+// 3.0.0: the server reads the boundary files (frontend/geo) to know where each pin is
+global.UrlFetchApp = { fetch: (url) => {
+  const m = String(url).match(/\/geo\/([^?]+)/); const f = require('path').join(__dirname, '..', 'frontend', 'geo', m ? m[1] : 'x');
+  return { getResponseCode: () => (fs.existsSync(f) ? 200 : 404), getContentText: () => fs.readFileSync(f, 'utf8') };
+} };
 // 2.8.0: Code.gs uses the market listing rule in Market.gs
-const code = ['Code.gs', 'Market.gs'].map((f) => fs.readFileSync(require('path').join(__dirname, '..', 'apps-script', f), 'utf8')).join('\n');
+const code = ['Code.gs', 'Market.gs', 'Geo.gs', 'Districts.gs'].map((f) => fs.readFileSync(require('path').join(__dirname, '..', 'apps-script', f), 'utf8')).join('\n');
 const api = new Function(code + '; return { loginServer, getApiInfoServer, getUserProfileServer, saveDataServer, getMatchingDataServer, verifyDatabaseSchema, verifyLiveMatchingData, ensureBuyerHarvestDaysColumn_, ensureSheetDataFormats_, normalizeLegacySheetData_, restoreLegacyExpiredFarmers_, setupDailyTrigger, autoExpireFarmers, normalizePhone_, toDate_, farmerMaterialForCrop_ };')();
 
 function assert(value, message) { if (!value) throw new Error(message); }
@@ -96,7 +101,13 @@ const saved = api.saveDataServer({
 }, session);
 assert(saved.status === 'success', 'farmer upload failed');
 const newFarmer = sheets.farmers.rows.at(-1);
-assert(newFarmer[12] === '0812345678' && newFarmer[13] === 'เหง้ามันสำปะหลัง' && newFarmer.length === 18, 'farmer column mapping failed');
+assert(newFarmer[12] === '0812345678' && newFarmer[13] === 'เหง้ามันสำปะหลัง' && newFarmer.length === 24, 'farmer column mapping failed');
+// 3.0.0: S:X province…subdistrict decided by the server from the pin (16.40, 99.40 is in Kamphaeng Phet)
+assert(newFarmer[18] === '62' && newFarmer[19] === 'กำแพงเพชร' && /^62\d\d$/.test(newFarmer[20]) && newFarmer[21] && /^62\d{4}$/.test(newFarmer[22]) && newFarmer[23], '3.0.0 farmer location S:X: ' + newFarmer.slice(18));
+assert(sheets.farmers.rows[0][18] === 'Province_Code' && sheets.farmers.rows[0][23] === 'Subdistrict' && sheets.users.rows[0][9] === 'Province_Code', '3.0.0 headers added at the end');
+assert(saved.location && saved.location.province === 'กำแพงเพชร', 'save answers with the location');
+let outside = ''; try { api.saveDataServer({ role:'farmer', fname:'x', phone:'0812345678', crop:'ข้าวนาปี', harvestDate:'2026-08-01', area:'1 ไร่', lat:35.6, lng:139.7 }, session); } catch (e) { outside = e.message; }
+assert(/นอกประเทศไทย/.test(outside), 'a pin outside Thailand is refused');
 assert(newFarmer[14] === '', 'automatic material mapping must clear stale free text');
 assert(api.farmerMaterialForCrop_('ข้าวนาปี', 'ใบอ้อย', '').type === 'ฟางข้าว', 'annual rice mapping failed');
 assert(api.farmerMaterialForCrop_('ข้าวนาปรัง', 'ใบอ้อย', '').type === 'ฟางข้าว', 'off-season rice mapping failed');
@@ -104,8 +115,8 @@ assert(api.farmerMaterialForCrop_('อ้อยโรงงาน', 'ฟาง�
 assert(api.farmerMaterialForCrop_('มันสำปะหลัง', 'ฟางข้าว', '').type === 'เหง้ามันสำปะหลัง', 'cassava mapping failed');
 
 const matches = api.getMatchingDataServer(session);
-assert(matches.apiVersion === '2.9.3', 'matching API version is missing or stale');
-assert(api.getApiInfoServer().apiVersion === '2.9.3', 'public API version check failed');
+assert(matches.apiVersion === '3.0.0', 'matching API version is missing or stale');
+assert(api.getApiInfoServer().apiVersion === '3.0.0', 'public API version check failed');
 assert(api.getApiInfoServer().feature === 'MARKET_ONLY', 'feature flag is missing or stale');
 assert(matches.viewerRole === 'farmer' && matches.visibleRole === 'buyer', 'farmer visibility metadata is incorrect');
 assert(matches.farmers.length === 0, 'farmer must not receive other farmer records');
@@ -149,7 +160,8 @@ const buyerSaved = api.saveDataServer({
 }, buyerSession);
 assert(buyerSaved.status === 'success', 'buyer upload failed');
 const newBuyer = sheets.buyers.rows.at(-1);
-assert(newBuyer.length === 17 && newBuyer[16] === 'ALL', 'retired buyer harvest-days field must always save as neutral ALL');
+assert(newBuyer.length === 23 && newBuyer[16] === 'ALL', 'retired buyer harvest-days field must always save as neutral ALL');
+assert(newBuyer[17] === '62' && newBuyer[18] === 'กำแพงเพชร' && newBuyer[20], '3.0.0 buyer location R:W');
 const buyerProfile = api.getUserProfileServer(buyerSession);
 assert(!('purchaseAfterHarvestDays' in buyerProfile.buyers.at(-1)), 'retired buyer field must not appear in the profile');
 
