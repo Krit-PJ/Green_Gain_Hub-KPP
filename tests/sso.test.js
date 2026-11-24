@@ -77,7 +77,11 @@ bad(rpc('ssoLoginServer', { ticket: issue('0811111111', 'GGH') }), /ระงั
 check(rpc('loginServer', { username: '0822222222' }).ok, 'optional: old phone sign-in still works');
 props.SSO_MODE = 'required';
 check(rpc('loginServer', { username: '0822222222' }).ok, '2.9.3 required: market phone sign-in stays open (GGH-only users)');
-check(rpc('registerServer', { role: 'farmer', name: 'ลงทะเบียน ใหม่', phone: '0877777777' }).ok, 'required: new registration still possible (no takeover)');
+check(!rpc('registerServer', { role: 'farmer', name: 'ไม่มีจังหวัด', phone: '0877777770' }).ok, '3.0.0: registration needs a province');
+check(!rpc('registerServer', { role: 'farmer', name: 'จังหวัดผิด', phone: '0877777771', provinceCode: '99' }).ok, '3.0.0: province must be one of the 77');
+const reg = rpc('registerServer', { role: 'farmer', name: 'ลงทะเบียน ใหม่', phone: '0877777777', provinceCode: '50' });
+check(reg.ok && reg.result.province.code === '50' && reg.result.province.name === 'เชียงใหม่', 'required: new registration still possible (no takeover) · 3.0.0 province kept');
+check(rpc('loginServer', { username: '0877777777' }).result.province.name === 'เชียงใหม่', '3.0.0: sign-in answers with the user province');
 props.SSO_MODE = 'off';
 bad(rpc('ssoLoginServer', { ticket: issue('0822222222', 'GGH') }), /ปิดใช้งาน/, 'off: SSO closed');
 check(rpc('loginServer', { username: '0822222222' }).ok, 'off: old sign-in works');

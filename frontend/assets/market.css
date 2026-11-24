@@ -1,4 +1,4 @@
-/* Green Gain Hub 2.5.0–2.9.1 — front page (2.9.1: readable colours and sizes — WCAG AA text contrast, no faded cards, 13px+ details) for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
+/* Green Gain Hub 2.5.0–3.0.0 — front page (3.0.0: province picker, area / sellers / biomass tiles, district table by province) (2.9.1: readable colours and sizes — WCAG AA text contrast, no faded cards, 13px+ details) for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
    Two sides, two colours used everywhere on this page: green = residue offered (ผู้ขาย),
    straw = buyer (ผู้รับซื้อ, with a truck). Materials keep the drawings of the results page. */
 .ggh-mk { display: grid; gap: 1rem; color: var(--ggh-ink); margin-top: .25rem; }
@@ -33,6 +33,10 @@
 .ggh-mk-key-num { color: var(--ggh-ink); font-size: .95rem; line-height: 1.2; }
 .ggh-mk-key-num b { font-size: clamp(1.35rem, 1.1rem + 1vw, 1.9rem); font-weight: 700; font-variant-numeric: tabular-nums; }
 .ggh-mk-key-name { font-weight: 600; color: var(--ggh-ink); font-size: .92rem; margin-top: .1rem !important; }
+.ggh-mk-key-tile.is-area { background: #eef4f8; }
+.ggh-mk-key-tile.is-area > i { color: #2f5d7c; }
+.ggh-mk-key-tile.is-mass { background: #fbf6e8; }
+.ggh-mk-key-tile.is-mass > i { color: var(--ggh-straw-ink); }
 .ggh-mk-key-sub { font-size: .8rem; line-height: 1.35; }
 @media (min-width: 900px) {
   .ggh-mk-top { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); padding: 1.2rem 1.4rem; }
@@ -53,7 +57,13 @@
 .ggh-mk-board-head { display: grid; gap: .7rem; }
 .ggh-mk-h2 { font-size: 1.12rem; font-weight: 700; margin: 0; }
 .ggh-mk-filters { display: grid; gap: .6rem; }
-.ggh-mk-board-title { display: grid; gap: .15rem; }
+.ggh-mk-board-title { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem .8rem; }
+/* 3.0.0 province picker — a plain select, labelled, big enough for a thumb */
+.ggh-mk-province { display: inline-flex; align-items: center; gap: .45rem; font-size: .9rem; font-weight: 600; color: #33413a; white-space: nowrap; }
+.ggh-mk-province select { min-height: 40px; max-width: 22rem; padding: .35rem 2rem .35rem .65rem; border: 1px solid #b9c7bd; border-radius: 10px; background-color: #fff; font: inherit; font-weight: 600; color: var(--ggh-green-dark); }
+.ggh-mk-allmats { justify-self: start; display: inline-flex; align-items: center; gap: .4rem; min-height: 36px; padding: .3rem .8rem; border: 1px solid #b9c7bd; border-radius: 999px; background: #fff; font: inherit; font-size: .88rem; font-weight: 600; color: var(--ggh-green-dark); cursor: pointer; }
+.ggh-mk-allmats[hidden] { display: none; }
+@media (max-width: 599px) { .ggh-mk-province { width: 100%; } .ggh-mk-province select { flex: 1; max-width: none; } }
 .ggh-mk-board-sub { margin: 0; font-size: .86rem; color: var(--ggh-muted); }
 .ggh-mk-h3 { font-size: 1rem; font-weight: 700; }
 
@@ -117,6 +127,8 @@
 .ggh-mk-dist-table tr.is-on { background: #eaf5ec; }
 .ggh-mk-dist-table tr.is-quiet th button { color: #5c6b62; font-weight: 500; }
 .ggh-mk-dist-table .is-zero { color: #6b7a70; }
+.ggh-mk-dist-table thead th small { display: block; font-weight: 500; font-size: .78rem; color: #5b6b60; }
+.ggh-mk-dist-table tfoot th, .ggh-mk-dist-table tfoot td { font-weight: 700; border-top: 2px solid var(--ggh-line); border-bottom: 0; background: #f6f8f6; }
 .ggh-mk-status { display: inline-block; font-size: .82rem; font-weight: 600; line-height: 1.3; padding: .15rem .5rem; border-radius: 999px; white-space: nowrap; }
 .ggh-mk-status .is-short { display: none; }
 @media (max-width: 599px) {

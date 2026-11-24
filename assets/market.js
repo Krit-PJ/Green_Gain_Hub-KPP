@@ -1,4 +1,9 @@
-/* Green Gain Hub 2.9.0 (since 2.5.0) — front page for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
+/* Green Gain Hub 3.0.0 (since 2.5.0) — front page for farmers and buyers (ตลาดวัสดุเหลือใช้ทางการเกษตร).
+ *
+ * 3.0.0: every province. The market shows one province (GGH_PROVINCE, province.js) — picked on the page, or the user's
+ *   own after sign-in. On top: area / sellers / estimated biomass. The "ทุกวัสดุ" card is gone (tap a material again to
+ *   see all). The district table lists every district of the province (area, sellers, biomass, buyers) from byDistrict.
+ *   District outlines come from geo/p/<code>.json (same boundary files as the server).
  *
  * ?api=v1&endpoint=market gives grid cells (~5.5 km) with residue offered (sell) and bought (buy) per material.
  * Public = aggregate only: cell centres, counts, area, price range — no names, phones or real coordinates.
@@ -18,8 +23,8 @@
   const API_BASE = cfg.SUMMARY_API_URL || cfg.SHEETS_API_URL || '';
   const API_KEY = cfg.SUMMARY_API_KEY || '';
   const TIMEOUT = Number(cfg.REQUEST_TIMEOUT_MS) || 30000;
-  const CACHE_KEY = 'ggh_market_v2';
-  const GEO_URL = 'assets/kpp-districts.geojson?v=1.5.0';
+  const CACHE_KEY = 'ggh_market_v3:';   // + province code
+  const PROV = window.GGH_PROVINCE;
   const ABM_URL = cfg.ABM_URL || 'https://krit-pj.github.io/KPP-Agri-Byproduct-Management/';
   // old links to the results page / officer sign-in → the same place in ABM
   const MOVED = { performance: '', overview: '', crops: '#crops', market: '#market', staff: '#staff', 'staff-register': '#staff-register' };
@@ -40,7 +45,7 @@
   const fmt = (n, d) => (n === null || n === undefined || !isFinite(n) ? '–' : new Intl.NumberFormat('th-TH', { maximumFractionDigits: d ?? 0 }).format(n));
   const thDate = (iso) => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }); };
 
-  const state = { data: null, geo: null, mat: 'all', side: 'all', district: '', view: 'map', me: null, map: null, layer: null, outline: null, markers: {} };
+  const state = { province: PROV ? PROV.code : '62', data: null, geo: null, mat: 'all', side: 'all', district: '', view: 'map', me: null, map: null, layer: null, outline: null, markers: {} };
 
   /* ---------------- routing between the market page and the results page ---------------- */
   function loggedIn() { const app = $('mainApp'); return app && !app.classList.contains('hidden'); }
@@ -77,17 +82,51 @@
   const call = (params) => { const u = apiUrl(params); return getJson(u).catch(() => jsonp(u)); };
 
   function load() {
-    try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c && c.data) { state.data = c.data; render(); } } catch (e) { /* ignore */ }
+    const code = state.province;
+    try { const c = JSON.parse(localStorage.getItem(CACHE_KEY + code) || 'null'); if (c && c.data && c.data.provinceCode === code) { state.data = c.data; render(); } } catch (e) { /* ignore */ }
     if (!API_BASE) { stats('ยังไม่ได้ตั้งค่า API ใน assets/config.js', true); return; }
-    call({ api: 'v1', endpoint: 'market' }).then((p) => {
+    call({ api: 'v1', endpoint: 'market', province: code }).then((p) => {
       if (!p || !p.ok || !p.data || !p.data.ok) throw new Error((p && p.error) || 'ระบบยังไม่รองรับแผนที่ตลาด');
-      state.data = p.data; render(); save();
+      if (code !== state.province) return;   // the province changed while loading
+      state.data = p.data; render(); save(); renderProvincePicker();
     }).catch((err) => {
       console.warn('[GGH market]', err);
       if (!state.data) { stats('โหลดข้อมูลตลาดไม่สำเร็จ ', true, true); renderList(); }
     });
   }
-  function save() { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data: state.data })); } catch (e) { /* ignore */ } }
+  function save() { try { localStorage.setItem(CACHE_KEY + state.province, JSON.stringify({ data: state.data })); } catch (e) { /* ignore */ } }
+
+  /* ---------------- 3.0.0 province: outlines, picker, switching ---------------- */
+  function loadGeo() {
+    if (!PROV) return;
+    const code = state.province;
+    PROV.province(code).then((P) => {
+      if (code !== state.province) return;
+      state.geo = { type: 'FeatureCollection', features: P.districts.map((d) => ({ type: 'Feature', properties: { code: d.code, name: d.name }, geometry: d.geometry })) };
+      if (state.outline && state.map) { state.map.removeLayer(state.outline); state.outline = null; }
+      renderDistricts(true); renderMap(); renderDistTable();
+    }).catch(() => { /* outlines are optional */ });
+  }
+  /** provinces with plots or buyers first (with counts), then all 77 */
+  function renderProvincePicker() {
+    const sel = $('mkProvince'); if (!sel || !PROV) return;
+    PROV.list().then((ps) => {
+      const act = {}; ((state.data && state.data.provinces) || []).forEach((x) => { if (x.plots || x.buyers) act[x.code] = x; });
+      const opt = (p) => `<option value="${p.code}">${esc(p.name)}${act[p.code] ? ` (${fmt(act[p.code].plots)} แปลง · ${fmt(act[p.code].buyers)} ผู้รับซื้อ)` : ''}</option>`;
+      const active = ps.filter((p) => act[p.code]);
+      sel.innerHTML = (active.length ? `<optgroup label="จังหวัดที่มีประกาศ">${active.map(opt).join('')}</optgroup>` : '') +
+        `<optgroup label="ทุกจังหวัด">${ps.filter((p) => !act[p.code]).map(opt).join('')}</optgroup>`;
+      sel.value = state.province;
+    }).catch(() => { /* keep the single option */ });
+  }
+  function switchProvince(p) {
+    if (!p || p.code === state.province) return;
+    state.province = p.code; state.data = null; state.mat = 'all'; state.district = ''; state.me = null; state.geo = null;
+    if (state.outline && state.map) { state.map.removeLayer(state.outline); state.outline = null; }
+    const sel = $('mkDistrict'); if (sel) { sel.innerHTML = '<option value="">ทุกอำเภอ</option>'; sel.value = ''; }
+    stats('กำลังโหลดข้อมูลตลาด…'); render(); loadGeo(); load();
+    if (state.map && PROV) PROV.list().then((ps) => { const x = ps.find((q) => q.code === p.code); if (x && !state.outline) state.map.fitBounds([[x.bbox[1], x.bbox[0]], [x.bbox[3], x.bbox[2]]], { padding: [8, 8] }); }).catch(() => {});
+  }
 
   /* ---------------- helpers on cells ---------------- */
   const groups = () => (state.data ? state.data.groups : []);
@@ -176,17 +215,25 @@
     else if (state.data) state.data.cells.forEach((c) => { if (c.district) names[c.district] = c.districtName; });
     return names;
   }
-  /** per district, for the chosen material: plots / rai / tonnes offered, buyers / capacity */
+  /** per district, for the chosen material: area, sellers, biomass, buyers (3.0.0 byDistrict; cells for older answers) */
   function districtRows(mat) {
-    const want = (g) => !mat || mat === 'all' || mat === g;
+    const all = !mat || mat === 'all';
     const names = districtNames();
     const rows = {};
-    Object.keys(names).forEach((k) => { rows[k] = { code: k, title: names[k], plots: 0, rai: 0, ton: 0, buyers: 0, cap: 0 }; });
+    Object.keys(names).forEach((k) => { rows[k] = { code: k, title: names[k], plots: 0, farmers: 0, rai: 0, ton: 0, buyers: 0, cap: 0 }; });
+    if (state.data && state.data.byDistrict) {
+      state.data.byDistrict.forEach((d) => {
+        const r = rows[d.code] || (rows[d.code] = { code: d.code, title: d.name, plots: 0, farmers: 0, rai: 0, ton: 0, buyers: 0, cap: 0 });
+        const s = all ? d : (d.sell[mat] || {}), b = all ? d : (d.buy[mat] || {});
+        r.plots = s.plots || 0; r.farmers = s.farmers || 0; r.rai = s.areaRai || 0; r.ton = s.ton || 0; r.buyers = b.buyers || 0; r.cap = b.capacityTonPerDay || 0;
+      });
+      return Object.values(rows);
+    }
     (state.data ? state.data.cells : []).forEach((c) => {
       if (!c.district) return;
-      const r = rows[c.district] || (rows[c.district] = { code: c.district, title: c.districtName, plots: 0, rai: 0, ton: 0, buyers: 0, cap: 0 });
-      Object.keys(c.sell).forEach((g) => { if (!want(g)) return; const v = c.sell[g]; r.plots += v.plots; r.rai += v.areaRai || 0; r.ton += v.ton || 0; });
-      Object.keys(c.buy).forEach((g) => { if (!want(g)) return; const v = c.buy[g]; r.buyers += v.buyers; r.cap += v.capacityTonPerDay || 0; });
+      const r = rows[c.district] || (rows[c.district] = { code: c.district, title: c.districtName, plots: 0, farmers: 0, rai: 0, ton: 0, buyers: 0, cap: 0 });
+      Object.keys(c.sell).forEach((g) => { if (!all && mat !== g) return; const v = c.sell[g]; r.plots += v.plots; r.farmers += v.plots; r.rai += v.areaRai || 0; r.ton += v.ton || 0; });
+      Object.keys(c.buy).forEach((g) => { if (!all && mat !== g) return; const v = c.buy[g]; r.buyers += v.buyers; r.cap += v.capacityTonPerDay || 0; });
     });
     return Object.values(rows);
   }
@@ -198,19 +245,17 @@
   };
   const statusOf = (sell, buy) => STATUS[sell && buy ? 'both' : sell ? 'sellOnly' : buy ? 'buyOnly' : 'none'];
 
+  /** 3.0.0: พื้นที่รวม · จำนวนราย · ประมาณการชีวมวล — of the province on show */
   function renderStats() {
     const d = state.data; if (!d) return;
     const t = d.totals;
-    const rows = districtRows('all');
-    const active = rows.filter((r) => r.plots || r.buyers).length;
-    const total = rows.length;
     const tile = (cls, ico, value, unit, name, sub) => `<div class="ggh-mk-key-tile ${cls}"><i class="fa-solid ${ico}" aria-hidden="true"></i>
       <p class="ggh-mk-key-num"><b>${value}</b> ${unit}</p><p class="ggh-mk-key-name">${name}</p><p class="ggh-mk-key-sub">${sub}</p></div>`;
     const el = $('mkStats'); el.classList.remove('is-error');
     el.innerHTML =
-      tile('is-sell', 'fa-wheat-awn', t.ton ? '~' + fmt(t.ton, 0) : fmt(t.plots), t.ton ? 'ตัน' : 'แปลง', 'วัสดุประกาศขาย', `${fmt(t.plots)} แปลง · ${fmt(t.areaRai, 0)} ไร่`) +
-      tile('is-buy', 'fa-truck', fmt(t.buyers), 'ราย', 'ผู้รับซื้อ', t.capacityTonPerDay ? `รับได้รวม ${fmt(t.capacityTonPerDay, 0)} ตัน/วัน` : 'ยังไม่ระบุปริมาณที่รับ') +
-      tile('is-area', 'fa-map-location-dot', fmt(active), total ? `/ ${fmt(total)} อำเภอ` : 'อำเภอ', 'อำเภอที่มีการซื้อขาย', 'มีวัสดุประกาศขายหรือผู้รับซื้อ');
+      tile('is-area', 'fa-map-location-dot', fmt(t.areaRai, 0), 'ไร่', 'พื้นที่รวม', `${fmt(t.plots)} แปลงประกาศขาย`) +
+      tile('is-sell', 'fa-people-group', fmt(t.farmers ?? t.plots), 'ราย', 'จำนวนเกษตรกรผู้ขาย', t.buyers ? `ผู้รับซื้อ ${fmt(t.buyers)} ราย` : 'ยังไม่มีผู้รับซื้อ') +
+      tile('is-mass', 'fa-wheat-awn', t.ton ? fmt(t.ton, 0) : '–', 'ตัน', 'ประมาณการชีวมวล', 'จากพื้นที่ × อัตราวัสดุต่อไร่');
   }
 
   function priceLine(b) {
@@ -231,9 +276,6 @@
   }
   function renderMats() {
     const box = $('mkMats'); if (!box || !state.data) return;
-    const t = state.data.totals;
-    const allCard = `<button type="button" class="ggh-mk-mat is-all" data-mat="all" aria-pressed="${state.mat === 'all'}"><span class="ggh-mk-mat-name">ทุกวัสดุ</span>
-      <span class="ggh-mk-mat-all">${fmt(t.plots)} แปลง<br>${fmt(t.buyers)} ผู้รับซื้อ</span></button>`;
     const card = (g) => {
       const s = g.sell, b = g.buy, st = statusOf(s.plots, b.buyers);
       const badge = b.buyers ? { cls: 'is-ok', text: 'มีผู้รับซื้อรอ — ประกาศขายได้เลย' } : s.plots ? { cls: 'is-warn', text: 'มีวัสดุแต่ยังไม่มีผู้รับซื้อ' } : { cls: 'is-none', text: 'ยังไม่มีประกาศ' };
@@ -251,24 +293,29 @@
         ${timingHtml(s)}${priceLine(b)}
       </button>`;
     };
-    box.innerHTML = allCard + groups().map(card).join('');
+    box.innerHTML = groups().map(card).join('');
+    const all = $('mkAllMats'); if (all) all.hidden = state.mat === 'all';
   }
   function renderDistTable() {
     const box = $('mkDistTable'); if (!box || !state.data) return;
     const rows = districtRows(state.mat).sort((a, b) => ((b.plots || b.buyers ? 1 : 0) - (a.plots || a.buyers ? 1 : 0)) || (b.rai - a.rai) || (b.buyers - a.buyers) || a.title.localeCompare(b.title, 'th'));
     const what = state.mat === 'all' ? 'ทุกวัสดุ' : label(state.mat);
     const hint = $('mkDistHint'); if (hint) hint.textContent = `${what} · แตะชื่ออำเภอเพื่อดูบนแผนที่`;
-    box.innerHTML = `<table class="ggh-mk-dist-table"><thead><tr><th scope="col">อำเภอ</th><th scope="col" class="is-num">ประกาศขาย</th><th scope="col" class="is-num">ผู้รับซื้อ</th><th scope="col">สถานะ</th></tr></thead><tbody>` +
-      rows.map((r) => {
-        const st = statusOf(r.plots, r.buyers);
-        const sell = r.plots ? `${fmt(r.plots)} แปลง<small>${fmt(r.rai, 0)} ไร่${r.ton ? ' · ~' + fmt(r.ton, 0) + ' ตัน' : ''}</small>` : '<span class="is-zero">–</span>';
-        const buy = r.buyers ? `${fmt(r.buyers)} ราย${r.cap ? `<small>${fmt(r.cap, 0)} ตัน/วัน</small>` : ''}` : '<span class="is-zero">–</span>';
-        return `<tr class="${state.district === r.code ? 'is-on' : ''}${r.plots || r.buyers ? '' : ' is-quiet'}"><th scope="row"><button type="button" data-district="${esc(r.code)}" aria-pressed="${state.district === r.code}">${esc(r.title)}</button></th>
-          <td class="is-num">${sell}</td><td class="is-num">${buy}</td><td><span class="ggh-mk-status ${st.cls}"><span class="is-full">${st.text}</span><span class="is-short" aria-hidden="true">${st.short}</span></span></td></tr>`;
-      }).join('') + '</tbody></table>';
+    const num = (v, d) => (v ? fmt(v, d) : '<span class="is-zero">–</span>');
+    const sum = rows.reduce((a, r) => ({ rai: a.rai + r.rai, farmers: a.farmers + r.farmers, ton: a.ton + r.ton, buyers: a.buyers + r.buyers }), { rai: 0, farmers: 0, ton: 0, buyers: 0 });
+    // a farmer with plots in two districts counts once in the province total (same number as the tile on top)
+    const g = state.mat === 'all' ? null : groups().find((x) => x.key === state.mat);
+    const distinct = g ? g.sell.farmers : state.data.totals.farmers;
+    if (distinct !== undefined && distinct !== null) sum.farmers = distinct;
+    box.innerHTML = `<table class="ggh-mk-dist-table"><thead><tr><th scope="col">อำเภอ</th><th scope="col" class="is-num">พื้นที่รวม<small>ไร่</small></th><th scope="col" class="is-num">จำนวน<small>ราย</small></th><th scope="col" class="is-num">ชีวมวล<small>ตัน (ประมาณ)</small></th><th scope="col" class="is-num">ผู้รับซื้อ<small>ราย</small></th></tr></thead><tbody>` +
+      rows.map((r) => `<tr class="${state.district === r.code ? 'is-on' : ''}${r.plots || r.buyers ? '' : ' is-quiet'}"><th scope="row"><button type="button" data-district="${esc(r.code)}" aria-pressed="${state.district === r.code}">${esc(r.title)}</button></th>
+          <td class="is-num">${num(r.rai, 0)}</td><td class="is-num">${num(r.farmers)}</td><td class="is-num">${num(r.ton, 0)}</td><td class="is-num">${num(r.buyers)}</td></tr>`).join('') +
+      `</tbody><tfoot><tr><th scope="row">รวม</th><td class="is-num">${fmt(sum.rai, 0)}</td><td class="is-num">${fmt(sum.farmers)}</td><td class="is-num">${fmt(sum.ton, 0)}</td><td class="is-num">${fmt(sum.buyers)}</td></tr></tfoot></table>`;
   }
-  function renderDistricts() {
-    const sel = $('mkDistrict'); if (!sel || sel.options.length > 1) return;
+  function renderDistricts(force) {
+    const sel = $('mkDistrict'); if (!sel) return;
+    if (force) { sel.innerHTML = '<option value="">ทุกอำเภอ</option>'; }
+    if (sel.options.length > 1) return;
     const names = districtNames();
     Object.keys(names).sort((a, b) => names[a].localeCompare(names[b], 'th')).forEach((k) => { const o = document.createElement('option'); o.value = k; o.textContent = names[k]; sel.appendChild(o); });
   }
@@ -294,9 +341,10 @@
     state.map = L.map('mkMap', { scrollWheelZoom: false, zoomSnap: 0.25 });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 13, className: 'ggh-basemap',
-      attribution: '&copy; OpenStreetMap contributors · ขอบเขตอำเภอ: OpenGISData-Thailand (CC BY 4.0)'
+      attribution: '&copy; OpenStreetMap contributors · ขอบเขตการปกครอง: ชุดข้อมูล Thailand Agri-Risk Map'
     }).addTo(state.map);
     state.map.setView([16.3, 99.6], 9);
+    if (PROV) PROV.list().then((ps) => { const x = ps.find((q) => q.code === state.province); if (x && !state.outline) state.map.fitBounds([[x.bbox[1], x.bbox[0]], [x.bbox[3], x.bbox[2]]], { padding: [8, 8] }); }).catch(() => {});
     return state.map;
   }
   function renderMap() {
@@ -341,7 +389,12 @@
 
   /* ---------------- interaction ---------------- */
   function bind() {
-    $('mkMats').addEventListener('click', (e) => { const b = e.target.closest('[data-mat]'); if (!b) return; state.mat = b.dataset.mat; render(); });
+    // 3.0.0: tap a material to filter, tap it again (or "ดูทุกวัสดุ") to see all
+    $('mkMats').addEventListener('click', (e) => { const b = e.target.closest('[data-mat]'); if (!b) return; state.mat = state.mat === b.dataset.mat ? 'all' : b.dataset.mat; render(); });
+    const allBtn = $('mkAllMats'); if (allBtn) allBtn.addEventListener('click', () => { state.mat = 'all'; render(); });
+    const provSel = $('mkProvince');
+    if (provSel && PROV) provSel.addEventListener('change', () => { const o = provSel.selectedOptions[0]; PROV.set({ code: provSel.value, name: o ? o.textContent.replace(/\s*\(.*\)$/, '') : '' }); });
+    if (PROV) PROV.onChange((p) => switchProvince(p));
     $('mkSide').addEventListener('click', (e) => {
       const b = e.target.closest('[data-side]'); if (!b) return; state.side = b.dataset.side;
       $('mkSide').querySelectorAll('[data-side]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); renderList(); renderMap();
@@ -398,7 +451,7 @@
   function init() {
     if (!$('marketPage')) return;
     route(); bind(); render();
-    fetch(GEO_URL).then((r) => r.json()).then((geo) => { state.geo = geo; renderDistricts(); renderMap(); renderDistTable(); }).catch(() => { /* boundaries optional */ });
+    loadGeo(); renderProvincePicker();
     load();
     /* 2.9.0 "ใช้งานอย่างไร": two tabs (sell / buy) — click, or arrow keys between them */
   (function howTabs() {

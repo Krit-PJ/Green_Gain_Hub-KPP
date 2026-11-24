@@ -33,7 +33,14 @@ assert(!/ggh-mk-perf|data-abm-link|ผลการดำเนินงาน|�
 assert(inline.includes("function openStaff(tab) { location.href = ABM_URL") && inline.includes("window.GGH_CONFIG?.ABM_URL"), 'any remaining staff door goes to ABM');
 assert(admin.includes("location.replace(base + (location.hash || ''))") && admin.includes(ABM + 'admin.html') && /noindex/.test(admin), 'admin.html bookmarks redirect to ABM');
 const cfg = {}; new vm.Script(config).runInNewContext({ window: cfg });
-assert(cfg.GGH_CONFIG.BUILD_VERSION === '2.9.3' && cfg.GGH_CONFIG.ABM_URL === ABM && /\/macros\/s\/AKfycby7nbXM[^/]+\/exec$/.test(cfg.GGH_CONFIG.ABM_API_URL), 'config 2.9.3 with ABM links (redirects only)');
-assert(html.includes('assets/market.js?v=2.9.3') && html.includes('assets/config.js?v=2.9.3') && html.includes('assets/api-client.js?v=2.9.3'), 'asset versions 2.9.3');
+assert(cfg.GGH_CONFIG.BUILD_VERSION === '3.0.0' && cfg.GGH_CONFIG.GEO_BASE === 'geo/' && cfg.GGH_CONFIG.ABM_URL === ABM && /\/macros\/s\/AKfycby7nbXM[^/]+\/exec$/.test(cfg.GGH_CONFIG.ABM_API_URL), 'config 3.0.0 with ABM links (redirects only)');
+assert(['market.js', 'config.js', 'api-client.js', 'province.js', 'market.css', 'dashboard.css'].every((f) => html.includes('assets/' + f + '?v=3.0.0')), 'asset versions 3.0.0');
+// 3.0.0: every province — the name follows the province on show / the signed-in user
+assert(html.includes('Green Gain Hub: จังหวัด<span data-province>') && html.includes('<p class="ggh-topbar-sub">ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร</p>'), '3.0.0 name and second line');
+assert(html.includes('สร้างรายได้จากฟางข้าว ใบอ้อย ซังข้าวโพด แทนการเผา') && html.includes('ศูนย์รวมผู้รับซื้อฟาง ใบอ้อย ซังข้าวโพด เหง้ามัน เก็บเกี่ยวเมื่อใด ต้องการขายหรือต้องการซื้อ ลงทะเบียนแล้วดูตำแหน่งและติดต่อกันได้โดยตรง'), '3.0.0 hero text');
+assert(html.includes('id="mkProvince" data-province-select') && html.includes('id="regProvince" name="province"') && /data-province-seal="62"/.test(html), 'province picker, registration province, seal only for its province');
+assert(/if \(!f\.province\.value\) miss\.push\('จังหวัด'\)/.test(inline) && /provinceCode: f\.province\.value/.test(inline) && /GGH_PROVINCE\.set\(user\.province, \{ save: false \}\)/.test(inline), 'registration sends the province; sign-in switches to the user province');
+assert(/getMatchingDataServer\(\{ province: window\.GGH_PROVINCE/.test(inline), 'signed-in map asks for one province');
+assert(!fs.existsSync(path.join(front, 'assets', 'kpp-districts.geojson')) && fs.existsSync(path.join(front, 'geo', 'provinces.json')) && fs.readdirSync(path.join(front, 'geo', 'p')).length === 77, '77 province boundary files replace the Kamphaeng Phet-only file');
 assert(!/เศษวัสดุ/.test(html), 'wording: วัสดุเหลือใช้ทางการเกษตร');
-console.log('PASS: 2.9.3 homepage — direct phone sign-in; — market for farmers and buyers only, pictured how-to, no officer links shown, old links and admin.html redirect to ABM');
+console.log('PASS: 3.0.0 homepage — every province (name, picker, registration), direct phone sign-in; — market for farmers and buyers only, pictured how-to, no officer links shown, old links and admin.html redirect to ABM');

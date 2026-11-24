@@ -91,9 +91,21 @@ function load(options) {
   global.Session = { getScriptTimeZone: () => 'Asia/Bangkok' };
   global.ScriptApp = { getProjectTriggers: () => [], deleteTrigger() {} };
   global.ContentService = { MimeType: { JSON: 'json', JAVASCRIPT: 'js' }, createTextOutput: (b) => (last = { body: b, setMimeType(m) { this.mime = m; return this; } }) };
-  global.UrlFetchApp = options.urlFetch || { fetchAll: () => { throw new Error('no network in tests'); } };
+  // 3.0.0: the boundary files (geo/) are served from frontend/geo, everything else has no network
+  const geoDir = path.join(__dirname, '..', '..', 'frontend', 'geo');
+  const geoFetch = (url) => {
+    const m = String(url).match(/\/geo\/([^?]+)/);
+    if (!m || options.geoOffline) throw new Error('no network in tests: ' + url);
+    const f = path.join(geoDir, m[1]);
+    const ok = fs.existsSync(f);
+    return { getResponseCode: () => (ok ? 200 : 404), getContentText: () => (ok ? fs.readFileSync(f, 'utf8') : 'not found') };
+  };
+  const custom = options.urlFetch;
+  global.UrlFetchApp = custom
+    ? Object.assign({}, custom, { fetch: (url, o) => (/\/geo\//.test(String(url)) ? geoFetch(url) : custom.fetch(url, o)) })
+    : { fetch: geoFetch, fetchAll: () => { throw new Error('no network in tests'); } };
   const dir = path.join(__dirname, '..', '..', 'apps-script');
-  const files = options.files || ['Districts.gs', 'Code.gs', 'Abm.gs', 'Counter.gs', 'Sso.gs', 'Market.gs'];   // 2.6.0: officer files moved to ABM
+  const files = options.files || ['Districts.gs', 'Code.gs', 'Abm.gs', 'Counter.gs', 'Sso.gs', 'Market.gs', 'Geo.gs'];   // 2.6.0: officer files moved to ABM
   const src = files.map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
   const names = options.expose || [];
   const api = new Function(src + '; return { doGet, doPost, setupSystem' + names.map((n) => ', ' + n).join('') + ' };')();
