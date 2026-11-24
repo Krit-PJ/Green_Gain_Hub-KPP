@@ -1,4 +1,4 @@
-# Deploy Green Gain Hub 3.0.0
+# Deploy Green Gain Hub 3.1.0
 
 สถานะ 25 พ.ย. 2569: **Deploy แล้ว** (ดูเลขเวอร์ชันล่าสุดในประวัติด้านล่าง)
 
@@ -6,14 +6,14 @@
 
 - Apps Script: **Green Gain Hub KPP API** (`1JfUtXCoOvrb_Nz2N6xgRBSiT72DSWV92pFepA20eNcGb8WUhDNuRLLSg`, บัญชี noonoy.cmu@gmail.com)
 - Deployment `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` (Execute as: Me, Access: Anyone)
-  - เวอร์ชัน 18 = 3.0.0 ทุกจังหวัด (ไฟล์ใหม่ Geo.gs + Code.gs + Market.gs) · 17 = 2.9.3 เข้าสู่ระบบด้วยเบอร์ที่ GGH โดยตรง ไม่ถูกปิดด้วย SSO_MODE (Code.gs) · 16 = 2.9.0 feed marketPhones (Code.gs + Sso.gs) · 15 = 2.8.0 ซ่อนแปลงหลังเก็บเกี่ยว N วัน (Market.gs + Code.gs) · 14 = 2.7.0 หน้าตลาดแบบ Dashboard (Market.gs + Code.gs) · 13 = 2.6.0 ตลาดอย่างเดียว (แยกส่วนเจ้าหน้าที่ไป ABM) · 12 = 2.5.1 feed สำหรับ ABM · 11 = 2.5.0 หน้าแรกตลาด · 10 = 2.4.0 ตัวตนกลาง
+  - เวอร์ชัน 19 = 3.1.0 PIN + ขายแล้ว (ไฟล์ใหม่ Pin.gs + Code.gs) · 18 = 3.0.0 ทุกจังหวัด (ไฟล์ใหม่ Geo.gs + Code.gs + Market.gs) · 17 = 2.9.3 เข้าสู่ระบบด้วยเบอร์ที่ GGH โดยตรง ไม่ถูกปิดด้วย SSO_MODE (Code.gs) · 16 = 2.9.0 feed marketPhones (Code.gs + Sso.gs) · 15 = 2.8.0 ซ่อนแปลงหลังเก็บเกี่ยว N วัน (Market.gs + Code.gs) · 14 = 2.7.0 หน้าตลาดแบบ Dashboard (Market.gs + Code.gs) · 13 = 2.6.0 ตลาดอย่างเดียว (แยกส่วนเจ้าหน้าที่ไป ABM) · 12 = 2.5.1 feed สำหรับ ABM · 11 = 2.5.0 หน้าแรกตลาด · 10 = 2.4.0 ตัวตนกลาง
 - ABM (ระบบเจ้าหน้าที่): repo `KPP-Agri-Byproduct-Management`, Apps Script `1ZRd2SmPDj6yKB3MuQe7tW1yOMfZwBFULjIDOCnN-hH-YcsqPT6CieYe8`
 
 > ⚠️ `AKfycbxoo4…` เป็นของระบบ **KPP Smart Agri-Materials v2** ห้ามวางโค้ด GGH หรือ Deploy ทับ
 
 ## ไฟล์ในโปรเจกต์ Apps Script (3.0.0)
 
-`Code.gs` (ในตัวแก้ไขภาษาไทยชื่อ "รหัส.gs"), `Districts.gs`, `Counter.gs`, `Market.gs`, `Sso.gs`, `Abm.gs`, `Geo.gs` (ใหม่ 3.0.0)
+`Code.gs` (ในตัวแก้ไขภาษาไทยชื่อ "รหัส.gs"), `Districts.gs`, `Counter.gs`, `Market.gs`, `Sso.gs`, `Abm.gs`, `Geo.gs` (3.0.0), `Pin.gs` (3.1.0)
 
 > 3.0.0 ลำดับ: GitHub Pages ก่อน (ไฟล์ `geo/` ต้องออนไลน์ เพราะเซิร์ฟเวอร์อ่านขอบเขตจากหน้าเว็บ) → เพิ่มไฟล์ `Geo.gs` + วาง Code.gs/Market.gs → Deploy เวอร์ชันใหม่ · การเติมจังหวัดข้อมูลเดิมทำเองในคำขอแรก (หรือ Run `migrateProvinces()`) · ตรวจ `verifyGeo()``
 

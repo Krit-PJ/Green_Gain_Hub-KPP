@@ -30,12 +30,12 @@ sheets.farmers.rows.push(
 let m = get({ api: 'v1', endpoint: 'market', refresh: '1' }).data;
 check(m.totals.plots === 3 && m.listing.hideAfterHarvestDays === 20 && m.listing.hiddenPlots === 3, 'market: d20, future, renewed shown; d21, nodate, other hidden — ' + JSON.stringify(m.listing));
 check(/20 วันหลังวันเก็บเกี่ยว/.test(m.notes.listing), 'note on the page');
-const buyer = rpc('loginServer', [{ username: '0899999999' }]).result;
+const buyer = rpc('setPinServer', [{ phone: '0899999999', pin: '470215' }]).result;   // 3.1.0: first sign-in sets the PIN
 const seen = rpc('getMatchingDataServer', [], buyer.token).result.farmers.map((f) => f.id).sort();
 check(JSON.stringify(seen) === JSON.stringify(['d20', 'future', 'renewed']), 'buyer sees only listed plots: ' + seen);
 
 /* 2. the farmer sees every own plot, with its market status */
-const farmer = rpc('loginServer', [{ username: OWNER }]).result;
+const farmer = rpc('setPinServer', [{ phone: OWNER, pin: '583920' }]).result;
 const mine = Object.fromEntries(rpc('getUserProfileServer', [], farmer.token).result.farmers.map((f) => [f.id, f]));
 check(mine.d20.listed && mine.d20.listedUntil === iso(day(0)) && !mine.d21.listed && mine.d21.hiddenReason === 'after_harvest', 'own plots: listed / until / reason');
 check(!mine.nodate.listed && mine.nodate.hiddenReason === 'no_harvest' && mine.d20.hideAfterHarvestDays === 20, 'no harvest date → hidden, says why');

@@ -49,3 +49,8 @@
 
 รหัสจังหวัด 2 หลัก อำเภอ 4 หลัก ตำบล 6 หลัก ตามชุดข้อมูลขอบเขต (เช่น 62 / 6201 / 620101)
 
+## 3.1.0: PIN และการขาย
+
+- `users!B` (`Password` เดิมที่ไม่ได้ใช้) = `pin1$<salt>$<sha256>` — ไม่เก็บ PIN จริง · ว่าง = ยังไม่ตั้ง PIN (ตั้งตอนเข้าสู่ระบบครั้งถัดไป)
+- ชีตใหม่ `sales` (สร้างอัตโนมัติ): `ID, Sold_At, Plot_ID, Owner_Telephone, Crop, Material, Area_Rai, Quantity_Ton, Amount_Baht, Buyer_Name, Province_Code, Province, District_Code, District, Created_At` · แปลงที่ขายแล้ว `farmers!L = Sold`
+

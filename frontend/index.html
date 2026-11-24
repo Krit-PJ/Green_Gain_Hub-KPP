@@ -16,8 +16,9 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=3.0.0">
-  <link rel="stylesheet" href="assets/market.css?v=3.0.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=3.1.0">
+  <link rel="stylesheet" href="assets/market.css?v=3.1.0">
+  <link rel="stylesheet" href="assets/record.css?v=3.1.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -285,8 +286,10 @@
          <div id="map" class="md:h-[60vh]"></div>
          
          <div class="bg-white p-3 md:p-4 rounded-lg shadow mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs md:text-sm font-bold text-gray-600">
-            <span class="flex items-center gap-2"><i class="fa-solid fa-location-dot text-green-500 text-lg md:text-xl"></i> เกษตรกร</span>
-            <span class="flex items-center gap-2"><i class="fa-solid fa-location-dot text-blue-500 text-lg md:text-xl"></i> ผู้รับซื้อ</span>
+            <!-- 3.1.0: same symbols as the front page -->
+            <span class="flex items-center gap-2"><i class="ggh-mk-key is-sell" aria-hidden="true"><i class="fa-solid fa-wheat-awn"></i></i> แปลงเกษตรกร (วัสดุพร้อมขาย)</span>
+            <span class="flex items-center gap-2"><i class="ggh-mk-key is-buy" aria-hidden="true"><i class="fa-solid fa-truck"></i></i> จุดรับซื้อ</span>
+            <span class="flex items-center gap-2"><i class="ggh-mk-key is-sell" style="outline:3px solid #2563eb" aria-hidden="true"><i class="fa-solid fa-wheat-awn"></i></i> แปลงของฉัน</span>
          </div>
 
          <div id="harvestFilterPanel" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-3 sm:p-4 mt-4">
@@ -370,6 +373,17 @@
           <p class="ggh-dhelp">กรอกหมายเลขโทรศัพท์ที่ลงทะเบียนไว้ เพื่อประกาศแปลงหรือจุดรับซื้อ และดูคู่ค้าใกล้คุณ</p>
           <label class="label-text" for="loginPhone">หมายเลขโทรศัพท์ 10 หลัก</label>
           <input type="tel" id="loginPhone" class="input-field text-lg tracking-widest text-center font-bold" placeholder="08XXXXXXXX" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <!-- 3.1.0: 6-digit PIN (accounts from before 3.1.0 set one at their next sign-in) -->
+          <label class="label-text" for="loginPin">PIN 6 หลัก</label>
+          <input type="password" id="loginPin" class="input-field text-lg tracking-widest text-center font-bold ggh-pin" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="current-password" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <p class="ggh-dhint">ผู้ใช้เดิมที่ยังไม่เคยตั้ง PIN: เว้นช่อง PIN ว่างแล้วกดเข้าสู่ระบบ ระบบจะให้ตั้ง PIN ครั้งเดียว · ลืม PIN ติดต่อสำนักงานเกษตรจังหวัดเพื่อขอล้าง PIN</p>
+          <div class="ggh-setpin hidden" id="setPinBox">
+            <p class="ggh-dhelp"><b>ตั้ง PIN 6 หลัก</b> สำหรับเข้าสู่ระบบครั้งต่อไป (ห้ามใช้เลขเรียงหรือเลขซ้ำ เช่น 123456, 111111)</p>
+            <label class="label-text" for="newPin">PIN ใหม่</label>
+            <input type="password" id="newPin" class="input-field text-lg tracking-widest text-center font-bold ggh-pin" maxlength="6" inputmode="numeric" autocomplete="new-password" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <label class="label-text" for="newPin2">ยืนยัน PIN อีกครั้ง</label>
+            <input type="password" id="newPin2" class="input-field text-lg tracking-widest text-center font-bold ggh-pin" maxlength="6" inputmode="numeric" autocomplete="new-password" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          </div>
           <div class="ggh-dmsg" id="hubLoginMsg" role="alert"></div>
           <button type="submit" id="loginBtn" class="ggh-dbtn">เข้าสู่ระบบ</button>
           <p class="ggh-dswitch">ยังไม่มีบัญชี? <button type="button" data-hubtab="register">ลงทะเบียนใหม่</button></p>
@@ -384,6 +398,10 @@
           <input type="text" id="regName" name="name" class="input-field" maxlength="150" autocomplete="name">
           <label class="label-text" for="regPhone">หมายเลขโทรศัพท์ 10 หลัก (ใช้เข้าสู่ระบบ)</label>
           <input type="tel" id="regPhone" name="phone" class="input-field font-bold tracking-wider" placeholder="08XXXXXXXX" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <label class="label-text" for="regPin">ตั้ง PIN 6 หลัก (ใช้คู่กับเบอร์โทรทุกครั้งที่เข้าสู่ระบบ)</label>
+          <input type="password" id="regPin" name="pin" class="input-field font-bold tracking-widest ggh-pin" maxlength="6" inputmode="numeric" autocomplete="new-password" placeholder="ห้ามใช้ 123456 หรือ 111111" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          <label class="label-text" for="regPin2">ยืนยัน PIN อีกครั้ง</label>
+          <input type="password" id="regPin2" name="pin2" class="input-field font-bold tracking-widest ggh-pin" maxlength="6" inputmode="numeric" autocomplete="new-password" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
           <!-- 3.0.0: the province the user trades in (the page opens on it after sign-in) -->
           <label class="label-text" for="regProvince">จังหวัดของคุณ (ที่ตั้งแปลงหรือจุดรับซื้อ)</label>
           <select id="regProvince" name="province" class="input-field" required><option value="">เลือกจังหวัด</option></select>
@@ -424,18 +442,22 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=3.0.0"></script>
-  <script src="assets/api-client.js?v=3.0.0"></script>
-  <script src="assets/province.js?v=3.0.0"></script>
-  <script src="assets/market.js?v=3.0.0" defer></script>
+  <script src="assets/config.js?v=3.1.0"></script>
+  <script src="assets/api-client.js?v=3.1.0"></script>
+  <script src="assets/province.js?v=3.1.0"></script>
+  <script src="assets/market.js?v=3.1.0" defer></script>
   <script>
-    const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','เหง้ามันสำปะหลัง','อื่นๆ'];
+    const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','ซังข้าวโพด','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
       'ข้าวนาปี': 'ฟางข้าว',
       'ข้าวนาปรัง': 'ฟางข้าว',
       'อ้อยโรงงาน': 'ใบอ้อย',
+      'ข้าวโพดเลี้ยงสัตว์': 'ซังข้าวโพด',
       'มันสำปะหลัง': 'เหง้ามันสำปะหลัง'
     });
+    const CROPS = ['ข้าวนาปี','ข้าวนาปรัง','ข้าวโพดเลี้ยงสัตว์','อ้อยโรงงาน','มันสำปะหลัง','อื่นๆ'];
+    // 3.1.0: default harvest = planting day + typical growing days of the crop (the farmer can change it)
+    const CROP_DAYS = Object.freeze({ 'ข้าวนาปี': 120, 'ข้าวนาปรัง': 120, 'ข้าวโพดเลี้ยงสัตว์': 110, 'อ้อยโรงงาน': 330, 'มันสำปะหลัง': 300, 'อื่นๆ': 100 });
     const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
     const BUILD_VERSION = String(window.GGH_CONFIG?.BUILD_VERSION || '1.5.0');
     const MINIMUM_API_VERSION = String(window.GGH_CONFIG?.MINIMUM_API_VERSION || '1.3.1');
@@ -519,7 +541,13 @@
       return true;
     }
 
-    function getRoleMarkerIcon(role) {
+    /** 3.1.0: pins look like the front page — truck = buyer, material drawing = plot; "own" = my plot (outlined) */
+    function getRoleMarkerIcon(role, group, own) {
+      if (window.GGH_ICONS && window.L && L.divIcon) {
+        const side = role === 'buyer' ? 'buy' : 'sell';
+        return L.divIcon({ className: 'ggh-mk-divicon' + (own ? ' is-own' : ''), html: window.GGH_ICONS.pin(side, group || (role === 'buyer' ? 'rice' : 'rice'), 1, false),
+          iconSize: [44, 44], iconAnchor: [22, 22], popupAnchor: [0, -18] });
+      }
       const color = role === 'buyer' ? 'blue' : 'green';
       return new L.Icon({
         iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
@@ -734,6 +762,7 @@
       if (phone) { document.getElementById('loginPhone').value = phone; f.phone.value = phone; }
       // 3.0.0: the 77 provinces, the one the page shows chosen already
       if (window.GGH_PROVINCE && f.province.options.length < 2) window.GGH_PROVINCE.fillSelect(f.province, { placeholder: 'เลือกจังหวัด', value: window.GGH_PROVINCE.code }).catch(() => {});
+      document.getElementById('setPinBox').classList.add('hidden'); document.getElementById('loginBtn').textContent = 'เข้าสู่ระบบ';
       setMsg('hubLoginMsg', ''); setMsg('hubRegMsg', '');
       selectTab(dlg, 'hub', tab || 'login');
     }
@@ -780,13 +809,21 @@
     // --- AUTH: farmers and buyers sign in by phone only. Messages stay inside the popup. ---
     function login() {
       const u = document.getElementById('loginPhone').value.replace(/\D/g, '');
+      const pin = document.getElementById('loginPin').value.replace(/\D/g, '');
       const btn = document.getElementById('loginBtn');
       if (u.length !== 10) return setMsg('hubLoginMsg', 'กรุณากรอกหมายเลขโทรศัพท์ให้ครบ 10 หลัก');
+      const setBox = document.getElementById('setPinBox');
+      if (!setBox.classList.contains('hidden')) return setPin(u);   // 3.1.0: choosing a PIN for an old account
       setMsg('hubLoginMsg', '');
       btn.textContent = 'กำลังตรวจสอบข้อมูล…'; btn.disabled = true;
       const done = () => { btn.textContent = 'เข้าสู่ระบบ'; btn.disabled = false; };
       const success = (data) => {
         done();
+        if (data.status === 'need_pin') {   // 3.1.0: account from before the PIN — choose one now
+          setBox.classList.remove('hidden'); document.getElementById('loginBtn').textContent = 'ตั้ง PIN และเข้าสู่ระบบ';
+          setMsg('hubLoginMsg', escapeHtml(data.message), 'ok'); document.getElementById('newPin').focus(); return;
+        }
+        if (data.status === 'pin_required') { setMsg('hubLoginMsg', escapeHtml(data.message)); document.getElementById('loginPin').focus(); return; }
         if (data.status === 'success') { closeDialog(document.getElementById('hubAuth')); currentUser = data; setupUI(data); }
         else setMsg('hubLoginMsg', escapeHtml(data.message || 'เข้าสู่ระบบไม่สำเร็จ'));
       };
@@ -799,7 +836,23 @@
           } else setMsg('hubLoginMsg', escapeHtml(msg || 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่'));
       };
       // 2.9.3: farmers and buyers sign in here with their phone number only (no central identity hop).
-      google.script.run.withSuccessHandler(success).withFailureHandler(failure).loginServer({ action: 'login', username: u });
+      google.script.run.withSuccessHandler(success).withFailureHandler(failure).loginServer({ action: 'login', username: u, pin: pin });
+    }
+    function setPin(u) {
+      const a = document.getElementById('newPin').value, b = document.getElementById('newPin2').value;
+      if (!/^\d{6}$/.test(a)) return setMsg('hubLoginMsg', 'PIN ต้องเป็นตัวเลข 6 หลัก');
+      if (a !== b) return setMsg('hubLoginMsg', 'PIN ทั้งสองช่องไม่ตรงกัน');
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true; btn.textContent = 'กำลังตั้ง PIN…';
+      google.script.run
+        .withSuccessHandler((data) => {
+          btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
+          document.getElementById('setPinBox').classList.add('hidden');
+          closeDialog(document.getElementById('hubAuth')); currentUser = data; setupUI(data);
+          Swal.fire({ icon: 'success', title: 'ตั้ง PIN แล้ว', text: 'ครั้งต่อไปเข้าสู่ระบบด้วยเบอร์โทรและ PIN นี้', timer: 3500 });
+        })
+        .withFailureHandler((err) => { btn.disabled = false; btn.textContent = 'ตั้ง PIN และเข้าสู่ระบบ'; setMsg('hubLoginMsg', escapeHtml(err.message)); })
+        .setPinServer({ phone: u, pin: a });
     }
 
     document.getElementById('hubPanelRegister').addEventListener('submit', (e) => { e.preventDefault(); register(); });
@@ -811,7 +864,9 @@
       if (!f.name.value.trim()) miss.push('ชื่อ');
       if (u.length !== 10) miss.push('หมายเลขโทรศัพท์ 10 หลัก');
       if (!f.province.value) miss.push('จังหวัด');
+      if (!/^\d{6}$/.test(f.pin.value)) miss.push('PIN 6 หลัก');
       if (miss.length) return setMsg('hubRegMsg', 'กรุณากรอก: ' + miss.join(', '));
+      if (f.pin.value !== f.pin2.value) return setMsg('hubRegMsg', 'PIN ทั้งสองช่องไม่ตรงกัน');
       if (!document.getElementById('pdpaCheck').checked) return setMsg('hubRegMsg', 'กรุณาอ่านและติ๊กยินยอมการใช้ข้อมูลส่วนบุคคล (PDPA) ก่อนลงทะเบียน');
       const btn = document.getElementById('regBtn');
       setMsg('hubRegMsg', ''); btn.textContent = 'กำลังลงทะเบียน…'; btn.disabled = true;
@@ -821,7 +876,7 @@
           done();
           if (d.status !== 'success') return setMsg('hubRegMsg', escapeHtml(d.message || 'ลงทะเบียนไม่สำเร็จ'));
           closeDialog(document.getElementById('hubAuth'));
-          if (d.token) { currentUser = d; setupUI(d); Swal.fire({ icon: 'success', title: 'ลงทะเบียนสำเร็จ', text: 'เข้าใช้งานได้ทันที ครั้งต่อไปเข้าสู่ระบบด้วยหมายเลขโทรศัพท์นี้', timer: 3500 }); }
+          if (d.token) { currentUser = d; setupUI(d); Swal.fire({ icon: 'success', title: 'ลงทะเบียนสำเร็จ', text: 'เข้าใช้งานได้ทันที ครั้งต่อไปเข้าสู่ระบบด้วยเบอร์โทรและ PIN ที่ตั้งไว้', timer: 3500 }); }
           else { openHub('login', '', u); setMsg('hubLoginMsg', 'ลงทะเบียนสำเร็จ กรุณาเข้าสู่ระบบ', 'ok'); }
         })
         .withFailureHandler(function (err) {
@@ -832,7 +887,7 @@
             document.querySelector('#hubRegMsg [data-to-login]').addEventListener('click', () => openHub('login', '', u));
           } else setMsg('hubRegMsg', escapeHtml(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่'));
         })
-        .registerServer({ role: role, name: f.name.value.trim(), phone: u, password: '', provinceCode: f.province.value });
+        .registerServer({ role: role, name: f.name.value.trim(), phone: u, password: '', provinceCode: f.province.value, pin: f.pin.value });
     }
 
     // --- UI SETUP ---
@@ -902,6 +957,7 @@
 
     function populateUserProfile(d) {
       const id = new Date().getTime().toString();
+      if (currentUser) currentUser.sales = d.sales || [];   // 3.1.0: shown on sold plots
 
       if (d.role === 'farmer') {
         // --- แสดง farmerFields ---
@@ -973,165 +1029,199 @@
       }
     }
 
+    /* ---------- 3.1.0 record page: clear sections with icons, sensible dates, where the pin is, "ขายแล้ว" ---------- */
+    function isoDate(d) { const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; }
+    function addDays(iso, days) { const d = new Date(iso + 'T00:00:00'); if (isNaN(d)) return ''; d.setDate(d.getDate() + days); return isoDate(d); }
+    function cropDays(crop) { return CROP_DAYS[crop] || CROP_DAYS['อื่นๆ']; }
+    function materialIcon(crop, material) {
+      const g = window.GGH_ICONS ? window.GGH_ICONS.groupOf(crop, material) : 'other';
+      return window.GGH_ICONS ? `<span class="rec-ico is-${g}" aria-hidden="true">${window.GGH_ICONS.svg(g)}</span>` : '<i class="fa-solid fa-seedling" aria-hidden="true"></i>';
+    }
+    /** a new plot: planting today, harvest after the crop's usual days; changing crop or planting day moves the harvest
+        day too — until the farmer sets the harvest day by hand */
+    function syncHarvestDefault(el) {
+      const card = el.closest('.record-card'); if (!card) return;
+      const plant = card.querySelector('input[name="plantDate"]'), harvest = card.querySelector('input[name="harvestDate"]');
+      const crop = card.querySelector('select[name="crop"]').value;
+      const hint = card.querySelector('[data-harvest-hint]');
+      if (hint) hint.textContent = `ค่าเริ่มต้น: วันปลูก + ${cropDays(crop)} วัน (${crop}) แก้ไขได้`;
+      if (harvest.dataset.touched === '1' || !plant.value) return;
+      harvest.value = addDays(plant.value, cropDays(crop));
+    }
+    function cropChanged(sel) {
+      syncFarmerMaterial(sel);
+      const card = sel.closest('.record-card');
+      const head = card && card.querySelector('[data-crop-icon]');
+      if (head) head.innerHTML = materialIcon(sel.value, materialForCrop(sel.value, ''));
+      const title = card && card.querySelector('[data-crop-title]'); if (title) title.textContent = sel.value;
+      syncHarvestDefault(sel);
+    }
+    /** "ต.… อ.… จ.…" under the map, from the same boundary files as the server */
+    function showPinPlace(index, lat, lng) {
+      const el = document.getElementById('place-' + index); if (!el || !window.GGH_PROVINCE) return;
+      el.textContent = 'กำลังหาตำบล อำเภอ จังหวัด…';
+      window.GGH_PROVINCE.where(lat, lng).then((loc) => {
+        el.innerHTML = loc ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${escapeHtml(window.GGH_PROVINCE.label(loc))}` : '<span class="rec-warn">ตำแหน่งนี้อยู่นอกประเทศไทย กรุณาปักหมุดใหม่</span>';
+      }).catch(() => { el.textContent = ''; });
+    }
+    function soldHtml(f) {
+      const sale = (currentUser && currentUser.sales || []).find((x) => x.plotId === f.id);
+      const facts = sale ? [sale.soldDate && 'ขายเมื่อ ' + thaiDate(sale.soldDate), sale.quantityTon !== '' && sale.quantityTon != null && fmtNum(sale.quantityTon) + ' ตัน',
+        sale.amountBaht !== '' && sale.amountBaht != null && fmtNum(sale.amountBaht) + ' บาท', sale.buyerName && 'ผู้ซื้อ ' + escapeHtml(sale.buyerName)].filter(Boolean).join(' · ') : '';
+      return `<div class="rec-sold" role="status"><i class="fa-solid fa-circle-check" aria-hidden="true"></i><div><b>ขายแล้ว</b> — ไม่แสดงบนตลาด${facts ? `<span>${facts}</span>` : ''}</div>
+        <button type="button" class="rec-btn is-ghost" onclick="newSeason(${escapeHtml(JSON.stringify(f.crop || ''))}, ${escapeHtml(JSON.stringify(f.area || ''))}, ${coordinateOr(f.lat, 'null')}, ${coordinateOr(f.lng, 'null')})"><i class="fa-solid fa-rotate" aria-hidden="true"></i> ประกาศรอบการผลิตใหม่</button></div>`;
+    }
+    function fmtNum(v) { return new Intl.NumberFormat('th-TH', { maximumFractionDigits: 2 }).format(Number(v)); }
+
     function renderFarmerFieldCard(f, index){
       let rai = '', ngan = '', wah = '';
       const automaticMaterial = materialForCrop(f?.crop, f?.materialType || 'ฟางข้าว');
-      const match = f?.area?.match(/(\d+)\s*ไร่\s*(\d+)\s*งาน\s*(\d+)\s*ตร\.ว\./);
-      if (match) {
-        rai = match[1];
-        ngan = match[2];
-        wah = match[3];
-      }
-
+      const match = f?.area?.match(/(\d+(?:\.\d+)?)\s*ไร่\s*(\d+(?:\.\d+)?)\s*งาน\s*(\d+(?:\.\d+)?)\s*ตร\.ว\./);
+      if (match) { rai = match[1]; ngan = match[2]; wah = match[3]; }
+      const crop = f?.crop || CROPS[0];
+      const isNew = !f?.harvestDate && !f?.plantDate;
+      const plant = f?.plantDate || (isNew ? isoDate(new Date()) : '');
+      const harvest = f?.harvestDate || (isNew ? addDays(plant, cropDays(crop)) : '');
+      const sold = f?.recordStatus === 'Sold';
+      const saved = !!f?.timestamp;
+      const place = f?.location && f.location.province ? escapeHtml([f.location.subdistrict && 'ต.' + f.location.subdistrict, f.location.district && 'อ.' + f.location.district, 'จ.' + f.location.province].filter(Boolean).join(' ')) : '';
       return `
-      <div class="record-card bg-white p-3 sm:p-4 rounded-xl shadow border scroll-mt-28" id="farmer-card-${index}">
-        <div class="record-header flex flex-col md:flex-row justify-between md:items-center gap-2 mb-4">
-          <h4 class="text-green-800 font-bold text-sm md:text-base">
-            <i class="fa-solid fa-seedling"></i> แปลงที่ ${index}
-          </h4>
-
-          <div class="record-actions grid grid-cols-2 gap-2 w-full md:flex md:w-auto">
-            <button id="btn-delete-${index}" type="button" onclick="deleteData('${safeId(f?.id)}')"  
-              class="w-full md:w-auto bg-red-50 text-red-600 py-2.5 px-3 md:px-5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-200 transition border border-red-200">
-              <i class="fa fa-trash"></i> ลบ
-            </button>
-            <button id="btn-map-${index}" type="button" onclick="switchToMap(${coordinateOr(f?.lat,16.48)},${coordinateOr(f?.lng,99.52)})"  
-            class="w-full md:w-auto bg-white text-gray-600 py-2.5 px-3 md:px-5 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-gray-200 transition border border-gray-200">
-            <i class="fa-solid fa-map-location-dot"></i><span>แผนที่ &amp; คู่ค้า</span>
-            </button>
+      <div class="record-card rec-card is-farmer${sold ? ' is-sold' : ''} scroll-mt-28" id="farmer-card-${index}">
+        <header class="rec-head">
+          <span data-crop-icon>${materialIcon(crop, automaticMaterial)}</span>
+          <div class="rec-title"><h4>แปลงที่ ${index} · <span data-crop-title>${escapeHtml(crop)}</span></h4>
+            <p>${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : (saved ? '' : 'แปลงใหม่ — กรอกข้อมูลแล้วกดบันทึก')}</p></div>
+          <button type="button" class="rec-btn is-map" onclick="switchToMap(${coordinateOr(f?.lat,16.48)},${coordinateOr(f?.lng,99.52)})"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>แผนที่ &amp; ผู้รับซื้อ</span></button>
+        </header>
+        ${sold ? soldHtml(f) : listingStatusHtml(f)}
+        <fieldset class="rec-sec" ${sold ? 'disabled' : ''}>
+          <legend><i class="fa-solid fa-seedling" aria-hidden="true"></i> พืชและวัสดุเหลือใช้</legend>
+          <div class="rec-grid">
+            <label><span class="label-text">ชนิดพืช <span class="required-mark">*</span></span>
+              <select class="input-field" name="crop" onchange="cropChanged(this)">
+                ${CROPS.map(opt => `<option ${opt === crop ? 'selected' : ''}>${opt}</option>`).join('')}
+              </select></label>
+            <label><span class="label-text">วัสดุเหลือใช้ทางการเกษตร</span>
+              <select class="input-field bg-gray-100 text-gray-700" name="materialType" disabled aria-label="ชนิดวัสดุเหลือใช้ทางการเกษตรที่ระบบกำหนดอัตโนมัติ">
+                ${MATERIAL_TYPES.map(opt => `<option value="${opt}" ${opt === automaticMaterial ? 'selected' : ''}>${opt}</option>`).join('')}
+              </select>
+              <input type="text" name="materialOther" value="${escapeHtml(f?.materialOther || '')}" class="input-field mt-2 ${(automaticMaterial === 'อื่นๆ') ? '' : 'hidden'}" placeholder="ระบุชนิดวัสดุเหลือใช้ทางการเกษตร">
+              <small class="rec-help">ระบบเลือกให้ตามชนิดพืช</small></label>
           </div>
-          
-        </div>
-        ${listingStatusHtml(f)}
-
-        <div class="info-details grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label class="label-text">ชนิดพืช <span class="required-mark">*</span></label>
-            <select class="input-field" name="crop" onchange="syncFarmerMaterial(this)">
-              ${['ข้าวนาปี','ข้าวนาปรัง','อ้อยโรงงาน','มันสำปะหลัง','อื่นๆ']
-                .map(opt => `<option ${opt === f?.crop ? 'selected' : ''}>${opt}</option>`)
-                .join('')}
-            </select>
+        </fieldset>
+        <fieldset class="rec-sec" ${sold ? 'disabled' : ''}>
+          <legend><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> ช่วงเวลา</legend>
+          <div class="rec-grid">
+            <label><span class="label-text">วันปลูก</span><input type="date" name="plantDate" class="input-field" value="${escapeHtml(plant)}" onchange="syncHarvestDefault(this)"></label>
+            <label><span class="label-text">วันเก็บเกี่ยว <span class="required-mark">*</span></span><input type="date" name="harvestDate" required class="input-field" value="${escapeHtml(harvest)}" ${isNew ? '' : 'data-touched="1"'} oninput="this.dataset.touched='1'">
+              <small class="rec-help" data-harvest-hint>${isNew ? `ค่าเริ่มต้น: วันปลูก + ${cropDays(crop)} วัน (${escapeHtml(crop)}) แก้ไขได้` : 'ผู้รับซื้อเห็นแปลงตามวันเก็บเกี่ยวนี้'}</small></label>
           </div>
-
-          <div>
-            <label class="label-text">ชนิดวัสดุเหลือใช้ทางการเกษตร <span class="required-mark">*</span></label>
-            <select class="input-field bg-gray-100 text-gray-700" name="materialType" disabled aria-label="ชนิดวัสดุเหลือใช้ทางการเกษตรที่ระบบกำหนดอัตโนมัติ">
-              ${MATERIAL_TYPES.map(opt => `<option value="${opt}" ${opt === automaticMaterial ? 'selected' : ''}>${opt}</option>`).join('')}
-            </select>
-            <input type="text" name="materialOther"
-              value="${escapeHtml(f?.materialOther || '')}"
-              class="input-field mt-2 ${(automaticMaterial === 'อื่นๆ') ? '' : 'hidden'}"
-              placeholder="ระบุชนิดวัสดุเหลือใช้ทางการเกษตร">
-            <p class="text-sm text-gray-600 mt-1">ระบบกำหนดอัตโนมัติตามชนิดพืช</p>
+        </fieldset>
+        <fieldset class="rec-sec" ${sold ? 'disabled' : ''}>
+          <legend><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i> ขนาดแปลง</legend>
+          <div class="rec-area">
+            <label><input type="number" value="${rai}" name="rai" class="input-field" inputmode="decimal" min="0" placeholder="0"><span>ไร่</span></label>
+            <label><input type="number" value="${ngan}" name="ngan" class="input-field" inputmode="decimal" min="0" max="3" placeholder="0"><span>งาน</span></label>
+            <label><input type="number" value="${wah}" name="wah" class="input-field" inputmode="decimal" min="0" max="99" placeholder="0"><span>ตร.ว.</span></label>
           </div>
-
-          <div><label class="label-text">วันปลูก</label><input type="date" name="plantDate" class="input-field" value="${escapeHtml(f?.plantDate || '')}"></div>
-          <div><label class="label-text">วันเก็บเกี่ยว <span class="required-mark">*</span></label><input type="date" name="harvestDate" required class="input-field" value="${escapeHtml(f?.harvestDate || '')}"></div>
-        </div>
-
-        <label class="label-text my-2">พื้นที่ (ไร่-งาน-ตร.ว.)</label>
-        <div class="grid grid-cols-3 gap-2 mt-2">
-          <input type="number" value="${rai}" name="rai" class="input-field px-2 sm:px-3" inputmode="decimal" min="0" placeholder="ไร่">
-          <input type="number" value="${ngan}" name="ngan" class="input-field px-2 sm:px-3" inputmode="decimal" min="0" placeholder="งาน">
-          <input type="number" value="${wah}" name="wah" class="input-field px-2 sm:px-3" inputmode="decimal" min="0" placeholder="ตร.ว.">
-        </div>
-
-        <div class="mt-5 sm:mt-6 border-t pt-5 sm:pt-6">
-          <label class="label-text font-bold">พิกัดแปลง <span class="required-mark">*</span></label>
-          <p class="text-sm text-gray-600 mb-3">กดดึงพิกัดปัจจุบัน หรือเลื่อนหมุดสีเขียวบนแผนที่ให้ตรงกับสถานที่ของท่าน</p>
-          
-          <button type="button" onclick="getGPS('miniMap-${index}')" class="w-full md:w-auto bg-indigo-100 text-indigo-700 py-3 px-6 rounded-lg font-bold mb-4 flex items-center justify-center gap-2 hover:bg-indigo-200 transition">
-            <i class="fa-solid fa-location-crosshairs"></i> ดึง GPS ปัจจุบัน
-          </button>
-        
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly 
-              value="${f?.lat??''}">
-              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly 
-              value="${f?.lng??''}">
-          </div>
-          <div id="miniMap-${index}" class="mt-3 rounded border"></div>
-        </div>
-
-        <button type="button" onclick="submitData('${safeId(f?.id)}', ${index})" class="w-full bg-green-600 hover:bg-green-700 text-white py-3.5 sm:py-4 rounded-xl font-bold mt-6 sm:mt-8 shadow-lg text-base sm:text-lg transition">บันทึกข้อมูลเข้าสู่ระบบ</button>
-
+        </fieldset>
+        <fieldset class="rec-sec" ${sold ? 'disabled' : ''}>
+          <legend><i class="fa-solid fa-map-pin" aria-hidden="true"></i> ตำแหน่งแปลง <span class="required-mark">*</span></legend>
+          <p class="rec-help">กด "ใช้ตำแหน่งปัจจุบัน" ขณะอยู่ที่แปลง หรือแตะบนแผนที่ แล้วลากหมุดให้ตรงแปลง</p>
+          <button type="button" onclick="getGPS('miniMap-${index}')" class="rec-btn is-gps"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> ใช้ตำแหน่งปัจจุบัน</button>
+          <p class="rec-place" id="place-${index}" aria-live="polite">${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : ''}</p>
+          <div id="miniMap-${index}" class="mt-2 rounded border"></div>
+          <details class="rec-coords"><summary>พิกัด (ละติจูด, ลองจิจูด)</summary>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly value="${f?.lat??''}">
+              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly value="${f?.lng??''}">
+            </div></details>
+        </fieldset>
+        ${sold ? '' : `<div class="rec-actions">
+          <button type="button" onclick="submitData('${safeId(f?.id)}', ${index})" class="rec-btn is-save"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> บันทึกข้อมูลแปลง</button>
+          ${saved && f?.recordStatus === 'Open' ? `<button type="button" onclick="markSold('${safeId(f?.id)}', ${index})" class="rec-btn is-sold"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> ขายแล้ว</button>` : ''}
+          <button id="btn-delete-${index}" type="button" onclick="deleteData('${safeId(f?.id)}')" class="rec-btn is-delete"><i class="fa-solid fa-trash" aria-hidden="true"></i> ลบแปลง</button>
+        </div>`}
       </div>
       `;
     }
 
+    /** 3.1.0 "ขายแล้ว": what was really sold (all optional) — the plot leaves the market */
+    function markSold(id, index) {
+      Swal.fire({
+        title: 'บันทึกการขาย', confirmButtonText: 'บันทึกว่าขายแล้ว', cancelButtonText: 'ยกเลิก', showCancelButton: true, confirmButtonColor: '#1a7f37', focusConfirm: false,
+        html: `<p class="rec-help" style="text-align:left">กรอกเท่าที่ทราบ ข้อมูลนี้ช่วยให้สำนักงานเกษตรเห็นรายได้จริงของเกษตรกร (ไม่แสดงต่อสาธารณะ)</p>
+          <label class="swal-field">วันที่ขาย<input id="soldDate" type="date" class="input-field" value="${isoDate(new Date())}" max="${isoDate(new Date())}"></label>
+          <label class="swal-field">ปริมาณที่ขาย (ตัน)<input id="soldTon" type="number" min="0" step="0.1" inputmode="decimal" class="input-field" placeholder="เช่น 5.5"></label>
+          <label class="swal-field">ได้เงินรวม (บาท)<input id="soldBaht" type="number" min="0" step="1" inputmode="numeric" class="input-field" placeholder="เช่น 3000"></label>
+          <label class="swal-field">ขายให้ (ชื่อผู้ซื้อ)<input id="soldBuyer" type="text" maxlength="150" class="input-field" placeholder="ไม่บังคับ"></label>`,
+        preConfirm: () => ({ id, soldDate: document.getElementById('soldDate').value, quantityTon: document.getElementById('soldTon').value,
+          amountBaht: document.getElementById('soldBaht').value, buyerName: document.getElementById('soldBuyer').value.trim() })
+      }).then((res) => {
+        if (!res.isConfirmed) return;
+        Swal.showLoading();
+        google.script.run
+          .withSuccessHandler((d) => { Swal.fire('บันทึกแล้ว', d.message, 'success'); miniMaps = {}; miniMarkers = {}; loadUserProfile(); })
+          .withFailureHandler((err) => Swal.fire('เกิดข้อผิดพลาด', err.message, 'error'))
+          .markSoldServer(res.value);
+      });
+    }
+    /** a sold plot, next season: a new card with the same crop, size and pin */
+    function newSeason(crop, area, lat, lng) {
+      const container = document.getElementById('farmerList');
+      const index = container.children.length + 1;
+      container.insertAdjacentHTML('beforeend', renderFarmerFieldCard({ id: String(Date.now()), crop, area, lat: lat ?? '', lng: lng ?? '' }, index));
+      setTimeout(() => {
+        initMiniMap(`miniMap-${index}`, lat, lng);
+        if (validCoordinates(lat, lng)) { setMiniMarker(`miniMap-${index}`, lat, lng); }
+        document.getElementById('farmer-card-' + index)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
+
     function renderBuyerFieldCard(b, index){
+      const type = b?.materialType || 'ฟางข้าว';
+      const place = b?.location && b.location.province ? escapeHtml([b.location.subdistrict && 'ต.' + b.location.subdistrict, b.location.district && 'อ.' + b.location.district, 'จ.' + b.location.province].filter(Boolean).join(' ')) : '';
+      const truck = '<span class="rec-ico is-buy" aria-hidden="true"><i class="fa-solid fa-truck"></i></span>';
       return `
-      <div class="record-card bg-white p-3 sm:p-4 rounded-xl shadow border scroll-mt-28" id="buyer-card-${index}">
-        <div class="record-header flex flex-col md:flex-row justify-between md:items-center gap-2 mb-4">
-            <h4 class="text-blue-800 font-bold text-sm md:text-base">
-              <i class="fa-solid fa-industry"></i> ข้อมูลการรับซื้อ ${index}
-            </h4>
-
-            <div class="record-actions grid grid-cols-2 gap-2 w-full md:flex md:w-auto">
-              <button id="btn-delete-${index}" type="button" onclick="deleteData('${safeId(b?.id)}')"  
-                class="w-full md:w-auto bg-red-50 text-red-600 py-2.5 px-3 md:px-5 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-red-200 transition border border-red-200">
-                <i class="fa fa-trash"></i> ลบ
-              </button>
-
-              <button id="btn-map-${index}" type="button" onclick="switchToMap(${coordinateOr(b?.lat,16.48)},${coordinateOr(b?.lng,99.52)})"  
-                class="w-full md:w-auto bg-white text-gray-600 py-2.5 px-3 md:px-5 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-gray-200 transition border border-gray-200">
-                <i class="fa-solid fa-map-location-dot"></i><span>แผนที่ &amp; คู่ค้า</span>
-              </button>
-            </div>
-
-        </div>
-           
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="label-text">รับซื้อวัสดุ <span class="required-mark">*</span></label>
+      <div class="record-card rec-card is-buyer scroll-mt-28" id="buyer-card-${index}">
+        <header class="rec-head">
+          ${truck}
+          <div class="rec-title"><h4>จุดรับซื้อที่ ${index} · ${escapeHtml(type === 'อื่นๆ' ? (b?.materialOther || 'วัสดุอื่น') : type)}</h4>
+            <p>${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : (b?.timestamp ? '' : 'จุดรับซื้อใหม่ — กรอกข้อมูลแล้วกดบันทึก')}</p></div>
+          <button type="button" class="rec-btn is-map" onclick="switchToMap(${coordinateOr(b?.lat,16.48)},${coordinateOr(b?.lng,99.52)})"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>แผนที่ &amp; แปลงพร้อมขาย</span></button>
+        </header>
+        <fieldset class="rec-sec">
+          <legend><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> วัสดุที่รับซื้อ</legend>
+          <div class="rec-grid">
+            <label><span class="label-text">รับซื้อวัสดุ <span class="required-mark">*</span></span>
               <select name="materialType" class="input-field" onchange="toggleOtherMaterial(this)">
-              ${MATERIAL_TYPES
-                  .map(opt => `<option value="${opt}" ${opt === (b?.materialType || 'ฟางข้าว') ? 'selected' : ''}>${opt}</option>`)
-                  .join('')}
+                ${MATERIAL_TYPES.map(opt => `<option value="${opt}" ${opt === type ? 'selected' : ''}>${opt}</option>`).join('')}
               </select>
-              <input type="text" name="materialOther"
-                value="${escapeHtml(b?.materialOther || '')}"
-                class="input-field mt-2 ${(b?.materialType === 'อื่นๆ') ? '' : 'hidden'}"
-                placeholder="ระบุชนิดวัสดุเหลือใช้ทางการเกษตร">
-            </div>
-            
-            <div>
-              <label class="label-text">ปริมาณที่รับได้ (ตัน/วัน) <span class="required-mark">*</span></label>
-              <input type="text" value="${escapeHtml(b?.capacity??'')}" name="capacity" class="input-field" placeholder="เช่น 50 ตัน">
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:col-span-2">
-                <div>
-                  <label class="label-text">คุณภาพ <span class="required-mark">*</span></label>
-                  <input type="text" value="${escapeHtml(b?.quality??'')}" name="quality" class="input-field" placeholder="เช่น ความชื้น<15%">
-                </div>
-                <div>
-                  <label class="label-text">ราคา (บาท/ไร่) <span class="required-mark">*</span></label>
-                  <input type="number" value="${b?.price??''}" name="price" class="input-field" inputmode="decimal" min="0" step="0.01" placeholder="ระบุราคา">
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-5 sm:mt-6 border-t pt-5 sm:pt-6">
-          <label class="label-text font-bold">พิกัดสถานที่รับซื้อ <span class="required-mark">*</span></label>
-          <p class="text-sm text-gray-600 mb-3">กดดึงพิกัดปัจจุบัน หรือเลื่อนหมุดสีน้ำเงินบนแผนที่ให้ตรงกับสถานที่ของท่าน</p>
-          
-          <button type="button" onclick="getGPS('miniMap-${index}')" class="w-full md:w-auto bg-indigo-100 text-indigo-700 py-3 px-6 rounded-lg font-bold mb-4 flex items-center justify-center gap-2 hover:bg-indigo-200 transition">
-            <i class="fa-solid fa-location-crosshairs"></i> ดึง GPS ปัจจุบัน
-          </button>
-        
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly 
-              value="${b?.lat??''}">
-              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly 
-              value="${b?.lng??''}">
+              <input type="text" name="materialOther" value="${escapeHtml(b?.materialOther || '')}" class="input-field mt-2 ${(type === 'อื่นๆ') ? '' : 'hidden'}" placeholder="ระบุชนิดวัสดุเหลือใช้ทางการเกษตร"></label>
+            <label><span class="label-text">ปริมาณที่รับได้ (ตัน/วัน) <span class="required-mark">*</span></span>
+              <input type="text" value="${escapeHtml(b?.capacity??'')}" name="capacity" class="input-field" placeholder="เช่น 50"></label>
+            <label><span class="label-text">คุณภาพที่ต้องการ <span class="required-mark">*</span></span>
+              <input type="text" value="${escapeHtml(b?.quality??'')}" name="quality" class="input-field" placeholder="เช่น ความชื้นไม่เกิน 15%"></label>
+            <label><span class="label-text">ราคารับซื้อ (บาท/ไร่) <span class="required-mark">*</span></span>
+              <input type="number" value="${b?.price??''}" name="price" class="input-field" inputmode="decimal" min="0" step="0.01" placeholder="เช่น 600"></label>
           </div>
-          <div id="miniMap-${index}" class="mt-3 rounded border"></div>
+        </fieldset>
+        <fieldset class="rec-sec">
+          <legend><i class="fa-solid fa-map-pin" aria-hidden="true"></i> ตำแหน่งจุดรับซื้อ <span class="required-mark">*</span></legend>
+          <p class="rec-help">กด "ใช้ตำแหน่งปัจจุบัน" ขณะอยู่ที่จุดรับซื้อ หรือแตะบนแผนที่ แล้วลากหมุดให้ตรงตำแหน่ง</p>
+          <button type="button" onclick="getGPS('miniMap-${index}')" class="rec-btn is-gps"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> ใช้ตำแหน่งปัจจุบัน</button>
+          <p class="rec-place" id="place-${index}" aria-live="polite">${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : ''}</p>
+          <div id="miniMap-${index}" class="mt-2 rounded border"></div>
+          <details class="rec-coords"><summary>พิกัด (ละติจูด, ลองจิจูด)</summary>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly value="${b?.lat??''}">
+              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly value="${b?.lng??''}">
+            </div></details>
+        </fieldset>
+        <div class="rec-actions">
+          <button type="button" onclick="submitData('${safeId(b?.id)}',${index})" class="rec-btn is-save"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> บันทึกจุดรับซื้อ</button>
+          <button id="btn-delete-${index}" type="button" onclick="deleteData('${safeId(b?.id)}')" class="rec-btn is-delete"><i class="fa-solid fa-trash" aria-hidden="true"></i> ลบ</button>
         </div>
-
-        <button type="button" onclick="submitData('${safeId(b?.id)}',${index})" class="w-full bg-green-600 hover:bg-green-700 text-white py-3.5 sm:py-4 rounded-xl font-bold mt-6 sm:mt-8 shadow-lg text-base sm:text-lg transition">บันทึกข้อมูลเข้าสู่ระบบ</button>
-
       </div>
       `;
     }
@@ -1243,17 +1333,21 @@
       document.getElementById('lng-'+ id).value = Number(lng).toFixed(6);
       if(miniMarkers[mapId]) miniMaps[mapId].removeLayer(miniMarkers[mapId]);
 
+      const card = document.getElementById((currentUser?.role === 'farmer' ? 'farmer-card-' : 'buyer-card-') + id);
+      const cropSel = card && card.querySelector('select[name="crop"]');
+      const group = window.GGH_ICONS ? window.GGH_ICONS.groupOf(cropSel ? cropSel.value : '', card && card.querySelector('select[name="materialType"]')?.value) : '';
       const marker = L.marker([lat, lng], {
         draggable: true,
-        icon: getRoleMarkerIcon(currentUser?.role)
+        icon: getRoleMarkerIcon(currentUser?.role, group)
       }).addTo(miniMaps[mapId]);
       miniMarkers[mapId] = marker;
-
+      showPinPlace(id, lat, lng);
 
       marker.on('dragend', e => {
         const p = e.target.getLatLng();
         document.getElementById('lat-' + id).value = p.lat.toFixed(6);
         document.getElementById('lng-' + id).value = p.lng.toFixed(6);
+        showPinPlace(id, p.lat, p.lng);
       });
     }
 
@@ -1268,7 +1362,7 @@
       if (!mainMap) {
         mainMap = L.map('map').setView([lat || 16.48, lng || 99.52], 9);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, className: 'ggh-basemap', attribution: '&copy; OpenStreetMap contributors' })
           .addTo(mainMap);
       }
 
@@ -1278,9 +1372,7 @@
           mainMap.removeLayer(mapMarkers['user']);
         }
 
-        const icon = getRoleMarkerIcon(currentUser.role);
-
-        mapMarkers['user'] = L.marker([lat, lng], {icon: icon}).addTo(mainMap).bindPopup('📍 ตำแหน่งของคุณ');
+        mapMarkers['user'] = L.circleMarker([lat, lng], { radius: 8, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 1 }).addTo(mainMap).bindPopup('ตำแหน่งที่เลือก');
         mainMap.setView([lat, lng], 9);
 
         loadMatchingData(lat, lng);
@@ -1355,8 +1447,9 @@
           mapPoints.forEach(({ item, role, own }, index) => {
             if (!validCoordinates(item.lat, item.lng)) return;
             const markerId = `m-${own ? 'own-' : ''}${role}-${safeId(item.id) || index}`;
+            const group = window.GGH_ICONS ? window.GGH_ICONS.groupOf(item.crop, item.material) : '';
             const marker = L.marker([Number(item.lat), Number(item.lng)], {
-              icon: getRoleMarkerIcon(role)
+              icon: getRoleMarkerIcon(role, group, own)
             }).addTo(mainMap);
             const popup = own
               ? mapPointDescription(item, role).replace('ประเภท: แปลงเกษตรกร', 'ประเภท: แปลงของฉัน')
@@ -1467,6 +1560,11 @@
     }
 
     function deleteData(mapId){
+      // 3.1.0: ask first — a deleted plot disappears from the market and from this page
+      Swal.fire({ title: 'ลบข้อมูลนี้?', text: 'ข้อมูลจะหายจากตลาดและจากหน้านี้ ถ้าขายแล้วให้กด "ขายแล้ว" แทน', icon: 'warning', showCancelButton: true,
+        confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#d33' }).then((r) => { if (r.isConfirmed) deleteDataNow(mapId); });
+    }
+    function deleteDataNow(mapId){
       const phone = document.getElementById('entryPhone').value;
 
       const payload = {
