@@ -10,6 +10,7 @@ class Sheet {
   getLastColumn() { return this.rows.length ? Math.max(...this.rows.map((r) => r.length)) : 0; }
   setFrozenRows() {}
   appendRow(r) { this.rows.push(r.slice()); }
+  deleteRow(i) { this.rows.splice(i - 1, 1); }
   getRange(row, col, nr = 1, nc = 1) {
     if (typeof row === 'string') return { setNumberFormat() { return this; } };
     const sh = this;
@@ -105,7 +106,7 @@ function load(options) {
     ? Object.assign({}, custom, { fetch: (url, o) => (/\/geo\//.test(String(url)) ? geoFetch(url) : custom.fetch(url, o)) })
     : { fetch: geoFetch, fetchAll: () => { throw new Error('no network in tests'); } };
   const dir = path.join(__dirname, '..', '..', 'apps-script');
-  const files = options.files || ['Districts.gs', 'Code.gs', 'Abm.gs', 'Counter.gs', 'Sso.gs', 'Market.gs', 'Geo.gs', 'Sales.gs'];   // 3.3.0: Pin.gs → Sales.gs   // 2.6.0: officer files moved to ABM
+  const files = options.files || ['Districts.gs', 'Code.gs', 'Abm.gs', 'Counter.gs', 'Market.gs', 'Geo.gs', 'Sales.gs', 'Admin.gs', 'Reports.gs'];   // 4.0.0: Sso.gs removed, officers back (Admin.gs, Reports.gs)   // 3.3.0: Pin.gs → Sales.gs   // 2.6.0: officer files moved to ABM
   const src = files.map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
   const names = options.expose || [];
   const api = new Function(src + '; return { doGet, doPost, setupSystem' + names.map((n) => ', ' + n).join('') + ' };')();

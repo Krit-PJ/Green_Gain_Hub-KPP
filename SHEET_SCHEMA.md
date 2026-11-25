@@ -54,3 +54,12 @@
 - `users!B` (`Password` เดิมที่ไม่ได้ใช้) — ว่างเสมอตั้งแต่ 3.3.0 (เลิกใช้ PIN; แฮช PIN ของ 3.1.0–3.2.0 ถูกล้างครั้งเดียว)
 - ชีตใหม่ `sales` (สร้างอัตโนมัติ): `ID, Sold_At, Plot_ID, Owner_Telephone, Crop, Material, Area_Rai, Quantity_Ton, Amount_Baht, Buyer_Name, Province_Code, Province, District_Code, District, Created_At` · แปลงที่ขายแล้ว `farmers!L = Sold`
 
+
+## ชีตใหม่ใน 4.0.0 (เจ้าหน้าที่ของ Green Gain Hub — สร้างอัตโนมัติ)
+
+| ชีต | คอลัมน์ | หมายเหตุ |
+| --- | --- | --- |
+| `ggh_admins` | Username, Name, Role, Status, Pass_Hash, Salt, Telephone, Agency, Province_Code, Province, Created_At, Created_By, Approved_At, Approved_By, Last_Login, Updated_At | Role = `super` (ทุกจังหวัด) / `admin` (จังหวัดเดียว) · Status = `pending` / `active` / `disabled` / `rejected` · ไม่มีรหัสผ่านแบบข้อความ |
+| `ggh_admin_log` | Time, Username, Name, Role, Province_Code, Action, Detail | บันทึกทุกการเข้าดูข้อมูลส่วนบุคคล การแก้ไข และการพิมพ์รายงาน |
+
+ชีต `admins` / `admin_log` เดิม (ก่อน 2.6.0 ย้ายไป ABM แล้ว) ไม่ถูกอ่านหรือแก้ไข

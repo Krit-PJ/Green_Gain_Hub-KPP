@@ -27,7 +27,9 @@
   const PROV = window.GGH_PROVINCE;
   const ABM_URL = cfg.ABM_URL || 'https://krit-pj.github.io/KPP-Agri-Byproduct-Management/';
   // old links to the results page / officer sign-in → the same place in ABM
-  const MOVED = { performance: '', overview: '', crops: '#crops', market: '#market', staff: '#staff', 'staff-register': '#staff-register' };
+  const MOVED = { performance: '', overview: '', crops: '#crops', market: '#market' };
+  // 4.0.0: officers of Green Gain Hub sign in here again (admin.html) — no longer at ABM
+  const STAFF = { staff: 'admin.html#login', 'staff-register': 'admin.html#register' };
   const NEAR_KM = 40;   // "ผู้รับซื้อใกล้สุด" is searched within this distance
 
   /* the same material drawings as the results page (dashboard.js) */
@@ -65,6 +67,7 @@
   function route() {
     if (loggedIn()) return;
     const h = decodeURIComponent((location.hash || '').replace('#', ''));
+    if (Object.prototype.hasOwnProperty.call(STAFF, h)) { location.replace(STAFF[h]); return; }
     if (Object.prototype.hasOwnProperty.call(MOVED, h)) { location.replace(ABM_URL + MOVED[h]); return; }
     $('marketPage').classList.remove('hidden');
     document.body.classList.add('ggh-landing-on');

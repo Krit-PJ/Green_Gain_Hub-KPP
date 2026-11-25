@@ -2,23 +2,169 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
-  <title>ย้ายไปที่ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร</title>
-  <!-- Green Gain Hub 2.6.0: the officer pages moved to ABM on 19 Nov 2026. Old bookmarks (admin.html, admin.html#admin) land here. -->
-  <script>
-    (function () {
-      var base = 'https://krit-pj.github.io/KPP-Agri-Byproduct-Management/admin.html';
-      location.replace(base + (location.hash || ''));
-    })();
-  </script>
-  <style>body{font-family:Sarabun,system-ui,sans-serif;max-width:36rem;margin:15vh auto;padding:0 1rem;line-height:1.6;color:#1f2937}a{color:#166534}</style>
+  <meta name="theme-color" content="#1a7f37">
+  <title>เจ้าหน้าที่ · Green Gain Hub</title>
+  <!-- 4.0.0: officers of Green Gain Hub (Admin of one province, Super Admin of all). Sign-in with username + password,
+       no central identity. Reports print on A4 landscape like Agri-Risk Map Burning. -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/admin.css?v=4.0.0">
 </head>
 <body>
-  <h1>หน้าเจ้าหน้าที่ย้ายแล้ว</h1>
-  <p>การบันทึกการจัดการวัสดุเหลือใช้ทางการเกษตร รายงาน และผลการดำเนินงาน อยู่ที่
-    <a href="https://krit-pj.github.io/KPP-Agri-Byproduct-Management/admin.html">ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร (ABM)</a>
-    เข้าสู่ระบบด้วยหมายเลขโทรศัพท์หรือชื่อผู้ใช้เดิมได้ทันที</p>
-  <p>เกษตรกรและผู้รับซื้อ ใช้ <a href="./">Green Gain Hub</a> ตามเดิม</p>
+  <header class="ad-top">
+    <a class="ad-brand" href="./" title="กลับหน้าแรก Green Gain Hub">
+      <img src="https://doaenews.doae.go.th/wp-content/uploads/2021/03/DOAE-2.png" alt="" width="36" height="36">
+      <span><b>Green Gain Hub</b><small>สำหรับเจ้าหน้าที่</small></span>
+    </a>
+    <div class="ad-me hidden" id="adMe">
+      <span class="ad-me-who"><i class="fa-solid fa-user-shield" aria-hidden="true"></i><b id="adMeName">-</b><small id="adMeRole">-</small></span>
+      <button type="button" class="ad-btn ad-btn-ghost" id="adLogout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <!-- sign in / register -->
+  <main class="ad-auth" id="adAuth">
+    <section class="ad-card ad-auth-card">
+      <div class="ad-tabs" role="tablist">
+        <button type="button" role="tab" data-auth="login" aria-selected="true">เข้าสู่ระบบ</button>
+        <button type="button" role="tab" data-auth="register" aria-selected="false">สมัคร Admin จังหวัด</button>
+      </div>
+      <form id="adLoginForm" data-authpanel="login" autocomplete="on" novalidate>
+        <p class="ad-help">สำหรับ Admin และ Super Admin ของ Green Gain Hub เท่านั้น (เกษตรกรและผู้รับซื้อเข้าสู่ระบบที่<a href="./">หน้าแรก</a>)</p>
+        <label>ชื่อผู้ใช้<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+        <label>รหัสผ่าน<input name="password" type="password" autocomplete="current-password" required></label>
+        <p class="ad-msg" id="adLoginMsg" role="alert"></p>
+        <button type="submit" class="ad-btn ad-btn-primary ad-btn-block">เข้าสู่ระบบ</button>
+      </form>
+      <form id="adRegForm" data-authpanel="register" class="hidden" autocomplete="off" novalidate>
+        <p class="ad-help">Admin จัดการข้อมูลและพิมพ์รายงานได้เฉพาะจังหวัดที่ลงทะเบียน · ใช้งานได้เมื่อ Super Admin อนุมัติ</p>
+        <label>ชื่อ-นามสกุล<input name="name" maxlength="120" required></label>
+        <label>หน่วยงาน<input name="agency" maxlength="150" placeholder="เช่น สำนักงานเกษตรจังหวัด…" required></label>
+        <label>จังหวัดที่รับผิดชอบ<select name="provinceCode" required><option value="">เลือกจังหวัด</option></select></label>
+        <label>หมายเลขโทรศัพท์<input name="phone" type="tel" inputmode="numeric" maxlength="12" placeholder="08xxxxxxxx" required></label>
+        <label>ชื่อผู้ใช้ (a–z, 0–9, จุด ขีด 3–32 ตัว)<input name="username" autocapitalize="none" spellcheck="false" maxlength="32" required></label>
+        <label>รหัสผ่าน (อย่างน้อย 8 ตัว)<input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label>ยืนยันรหัสผ่าน<input name="password2" type="password" autocomplete="new-password" minlength="8" required></label>
+        <p class="ad-msg" id="adRegMsg" role="alert"></p>
+        <button type="submit" class="ad-btn ad-btn-primary ad-btn-block">ส่งคำขอเป็น Admin</button>
+      </form>
+    </section>
+  </main>
+
+  <!-- officers' app -->
+  <div class="ad-app hidden" id="adApp">
+    <nav class="ad-nav" aria-label="เมนูเจ้าหน้าที่">
+      <button type="button" data-view="overview" aria-current="page"><i class="fa-solid fa-gauge" aria-hidden="true"></i>ภาพรวม</button>
+      <button type="button" data-view="users"><i class="fa-solid fa-users" aria-hidden="true"></i>ผู้ใช้</button>
+      <button type="button" data-view="farmers"><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i>แปลงประกาศขาย</button>
+      <button type="button" data-view="buyers"><i class="fa-solid fa-truck" aria-hidden="true"></i>จุดรับซื้อ</button>
+      <button type="button" data-view="reports"><i class="fa-solid fa-file-lines" aria-hidden="true"></i>รายงาน</button>
+      <button type="button" data-view="admins" data-super><i class="fa-solid fa-user-gear" aria-hidden="true"></i>เจ้าหน้าที่<span class="ad-badge hidden" id="adPendingBadge">0</span></button>
+      <button type="button" data-view="settings" data-super><i class="fa-solid fa-sliders" aria-hidden="true"></i>ตั้งค่าตลาด</button>
+      <button type="button" data-view="log" data-super><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>ประวัติการใช้งาน</button>
+      <button type="button" data-view="account"><i class="fa-solid fa-key" aria-hidden="true"></i>บัญชีของฉัน</button>
+    </nav>
+
+    <main class="ad-main">
+      <div class="ad-scopebar">
+        <label class="ad-scope">จังหวัด <select id="adProvince" aria-label="จังหวัดที่จัดการ"></select></label>
+        <span class="ad-scope-note" id="adScopeNote"></span>
+      </div>
+
+      <section data-panel="overview">
+        <h1>ภาพรวม จังหวัด<span data-scope-name>-</span></h1>
+        <div class="ad-alert hidden" id="adPendingAlert"></div>
+        <div class="ad-kpis" id="adKpis"></div>
+        <h2>รายอำเภอ</h2>
+        <div class="ad-tablewrap" id="adOverviewTable"></div>
+      </section>
+
+      <section data-panel="users" class="hidden">
+        <h1>ผู้ใช้ (เกษตรกรและผู้รับซื้อ) จังหวัด<span data-scope-name>-</span></h1>
+        <form class="ad-toolbar" id="adUsersSearch"><input name="q" type="search" placeholder="ค้นหาชื่อหรือเบอร์โทร"><button class="ad-btn" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>ค้นหา</button></form>
+        <p class="ad-privacy"><i class="fa-solid fa-lock" aria-hidden="true"></i>ข้อมูลส่วนบุคคล — ใช้เพื่องานส่งเสริมการซื้อขายเท่านั้น ระบบบันทึกทุกครั้งที่เปิดดู</p>
+        <div class="ad-tablewrap" id="adUsersTable"></div>
+      </section>
+
+      <section data-panel="farmers" class="hidden">
+        <h1>แปลงประกาศขาย จังหวัด<span data-scope-name>-</span></h1>
+        <form class="ad-toolbar" data-records="farmers"><input name="q" type="search" placeholder="ค้นหาชื่อ เบอร์ พืช วัสดุ อำเภอ"><label class="ad-check"><input type="checkbox" name="showDeleted">แสดงรายการที่ลบแล้ว</label><button class="ad-btn" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>ค้นหา</button></form>
+        <p class="ad-privacy"><i class="fa-solid fa-lock" aria-hidden="true"></i>มีเบอร์โทรและพิกัดจริง — ระบบบันทึกทุกครั้งที่เปิดดู</p>
+        <div class="ad-tablewrap" id="adFarmersTable"></div>
+      </section>
+
+      <section data-panel="buyers" class="hidden">
+        <h1>จุดรับซื้อ จังหวัด<span data-scope-name>-</span></h1>
+        <form class="ad-toolbar" data-records="buyers"><input name="q" type="search" placeholder="ค้นหาชื่อ เบอร์ วัสดุ อำเภอ"><label class="ad-check"><input type="checkbox" name="showDeleted">แสดงรายการที่ลบแล้ว</label><button class="ad-btn" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>ค้นหา</button></form>
+        <p class="ad-privacy"><i class="fa-solid fa-lock" aria-hidden="true"></i>มีเบอร์โทรและพิกัดจริง — ระบบบันทึกทุกครั้งที่เปิดดู</p>
+        <div class="ad-tablewrap" id="adBuyersTable"></div>
+      </section>
+
+      <section data-panel="reports" class="hidden">
+        <h1>รายงาน</h1>
+        <form class="ad-card ad-report-form" id="adReportForm">
+          <fieldset><legend>แบบรายงาน</legend><div class="ad-chips" id="adReportTypes"></div></fieldset>
+          <fieldset><legend>หัวข้อ</legend><div class="ad-checks" id="adReportSections"></div></fieldset>
+          <div class="ad-row">
+            <label>ขอบเขต<select name="province" id="adReportProvince"></select></label>
+            <label>การขาย/ลงทะเบียน ตั้งแต่<input type="date" name="from"></label>
+            <label>ถึง<input type="date" name="to"></label>
+          </div>
+          <label>ชื่อรายงาน<input name="title" maxlength="150" id="adReportTitle"></label>
+          <p class="ad-msg" id="adReportMsg" role="alert"></p>
+          <div class="ad-actions">
+            <button type="submit" class="ad-btn ad-btn-primary"><i class="fa-solid fa-table" aria-hidden="true"></i>แสดงรายงาน</button>
+            <button type="button" class="ad-btn" id="adReportPrint" disabled><i class="fa-solid fa-print" aria-hidden="true"></i>พิมพ์ / บันทึก PDF (A4 แนวนอน)</button>
+          </div>
+        </form>
+        <div id="adReportView"></div>
+      </section>
+
+      <section data-panel="admins" class="hidden">
+        <h1>เจ้าหน้าที่ (Admin / Super Admin)</h1>
+        <div class="ad-tablewrap" id="adAdminsTable"></div>
+      </section>
+
+      <section data-panel="settings" class="hidden">
+        <h1>ตั้งค่าตลาด</h1>
+        <form class="ad-card ad-narrow" id="adRuleForm">
+          <label>แสดงแปลงบนตลาดถึงกี่วันหลังวันเก็บเกี่ยว (0 = ไม่จำกัด)<input type="number" name="days" min="0" max="365" step="1" required></label>
+          <p class="ad-help" id="adRuleInfo"></p>
+          <p class="ad-msg" id="adRuleMsg" role="status"></p>
+          <button type="submit" class="ad-btn ad-btn-primary">บันทึก</button>
+        </form>
+      </section>
+
+      <section data-panel="log" class="hidden">
+        <h1>ประวัติการใช้งานของเจ้าหน้าที่</h1>
+        <div class="ad-tablewrap" id="adLogTable"></div>
+      </section>
+
+      <section data-panel="account" class="hidden">
+        <h1>บัญชีของฉัน</h1>
+        <dl class="ad-card ad-narrow ad-dl" id="adAccount"></dl>
+        <form class="ad-card ad-narrow" id="adPwForm" autocomplete="off">
+          <h2>เปลี่ยนรหัสผ่าน</h2>
+          <label>รหัสผ่านปัจจุบัน<input type="password" name="current" autocomplete="current-password" required></label>
+          <label>รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)<input type="password" name="next" autocomplete="new-password" minlength="8" required></label>
+          <label>ยืนยันรหัสผ่านใหม่<input type="password" name="next2" autocomplete="new-password" minlength="8" required></label>
+          <p class="ad-msg" id="adPwMsg" role="status"></p>
+          <button type="submit" class="ad-btn ad-btn-primary">เปลี่ยนรหัสผ่าน</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="ad-dialog" id="adDialog"><form method="dialog" id="adDialogForm"></form></dialog>
+
+  <!-- A4 landscape print, the same layout as Agri-Risk Map Burning: header · map + legend + KPIs | full table · footer -->
+  <section id="print-report" aria-hidden="true"></section>
+
+  <script src="assets/config.js?v=4.0.0"></script>
+  <script src="assets/admin.js?v=4.0.0"></script>
 </body>
 </html>

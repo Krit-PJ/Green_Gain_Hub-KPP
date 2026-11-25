@@ -9,10 +9,10 @@ window.GGH_CONFIG = {
   // ใช้เพื่อแสดงอ้างอิงเท่านั้น สิทธิ์อ่าน/เขียนอยู่ที่ API ไม่ได้ฝังใน GitHub
   SPREADSHEET_ID: '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw',
   REQUEST_TIMEOUT_MS: 30000,
-  // 2.6.0: เจ้าหน้าที่/ผู้บริหาร และผลการดำเนินงาน ย้ายไปที่ ABM — ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร
+  // 2.6.0: ผลการดำเนินงาน (จังหวัดกำแพงเพชร) อยู่ที่ ABM · 4.0.0: เจ้าหน้าที่ของ Green Gain Hub ใช้ admin.html ของระบบนี้
   ABM_URL: 'https://krit-pj.github.io/KPP-Agri-Byproduct-Management/',
   ABM_API_URL: 'https://script.google.com/macros/s/AKfycby7nbXMQ3_WvA7y_Mp0DTE_wMX9eyiJQbfYBlpaQBOshpUyurOFgoM7MxWMN0wLvjkdqw/exec',
-  BUILD_VERSION: '3.3.0',
+  BUILD_VERSION: '4.0.0',
   GEO_BASE: 'geo/',   // 3.0.0 boundary files of the 77 provinces (tools/geo/build.py)
   MINIMUM_API_VERSION: '1.3.1'
 };
