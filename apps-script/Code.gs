@@ -2,6 +2,8 @@
  * Green Gain Hub 4.0.0 — ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ ทุกจังหวัด
  * (API-only bridge from GitHub Pages to Google Sheets).
  *
+ * 4.1.0: record cards map-left / details-right, signed-in map page map-left / partners-right, switch to add partners of
+ *        other provinces within 50 km of the user's own pins (getMatchingDataServer nearKm), calmer high-contrast colours.
  * 4.0.0: officers of this system only — Admin (one province) and Super Admin (all), username + password, no central
  *        identity (Sso.gs removed) — Admin.gs; officers' reports printed like Agri-Risk Map — Reports.gs. The market
  *        listing rule is set here by Super Admin (ABM no longer sets it). ABM keeps reading the keyed feed/report API.
@@ -39,7 +41,7 @@
  * 2.8.0: a plot is shown until N days after its harvest date (Market.gs farmerListing_, Config hide_after_harvest_days,
  * default 20, set in ABM). A harvest date is required when saving. "ยังมีวัสดุอยู่" (renewFarmerServer) shows it N more days.
  */
-const APP_VERSION = '4.0.0';
+const APP_VERSION = '4.1.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -433,10 +435,27 @@ function getMatchingDataServer(session, input) {
   // 3.0.0: partners of one province (asked for, else the user's own) — contacts are never sent for the whole country.
   const isFarmer = session.role === 'farmer';
   const province = text_(input && input.province) || session.province || DEFAULT_PROVINCE_CODE;
-  const inProvince = function (kind) { return function (r) { return (rowProvince_(r, kind) || DEFAULT_PROVINCE_CODE) === province; }; };
-  const farmers = isFarmer ? [] : openFarmersWithCoordinates_().filter(inProvince('farmers')).map(farmerPublic_);
-  const buyers = isFarmer ? activeBuyersWithCoordinates_().filter(inProvince('buyers')).map(buyerPublic_) : [];
-  const ownPlots = isFarmer ? ownFarmerPlotsWithCoordinates_(session.phone).map(farmerPublic_) : [];
+  // 4.1.0: switch "รวมคู่ค้าต่างจังหวัดในรัศมี 50 กม." — partners of other provinces within 50 km of the user's OWN pins
+  // (plots for a farmer, buy points for a buyer; never the phone's GPS) are added, marked crossProvince.
+  const nearKm = Number(input && input.nearKm) === NEAR_KM ? NEAR_KM : 0;
+  const ownRows = isFarmer ? ownFarmerPlotsWithCoordinates_(session.phone) : ownBuyerPointsWithCoordinates_(session.phone);
+  const anchors = nearKm ? ownRows.map(function (r) { return isFarmer ? [Number(r[9]), Number(r[10])] : [Number(r[5]), Number(r[6])]; }) : [];
+  const near = function (lat, lng) { return anchors.some(function (a) { return distanceKm_(a[0], a[1], Number(lat), Number(lng)) <= nearKm; }); };
+  const pick = function (kind, pub) {
+    return function (list) {
+      const out = [];
+      list.forEach(function (r) {
+        const pc = rowProvince_(r, kind) || DEFAULT_PROVINCE_CODE;
+        const lat = kind === 'farmers' ? r[9] : r[5], lng = kind === 'farmers' ? r[10] : r[6];
+        if (pc === province) out.push(pub(r));
+        else if (anchors.length && near(lat, lng)) out.push(Object.assign(pub(r), { crossProvince: true, provinceName: text_(r[(kind === 'farmers' ? FARMER_GEO_COL : BUYER_GEO_COL)]) }));
+      });
+      return out;
+    };
+  };
+  const farmers = isFarmer ? [] : pick('farmers', farmerPublic_)(openFarmersWithCoordinates_());
+  const buyers = isFarmer ? pick('buyers', buyerPublic_)(activeBuyersWithCoordinates_()) : [];
+  const ownPlots = isFarmer ? ownRows.map(farmerPublic_) : [];
   return {
     status: 'success',
     success: true,
@@ -447,6 +466,7 @@ function getMatchingDataServer(session, input) {
     farmers: farmers,
     buyers: buyers,
     ownPlots: ownPlots,
+    nearKm: nearKm, nearAnchors: anchors.length,
     generatedAt: new Date().toISOString()
   };
 }
@@ -473,6 +493,19 @@ function activeBuyersWithCoordinates_() {
 }
 
 /** Every non-deleted plot owned by the logged-in farmer that has coordinates. */
+const NEAR_KM = 50;
+/** great-circle distance in km */
+function distanceKm_(lat1, lng1, lat2, lng2) {
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+function ownBuyerPointsWithCoordinates_(phone) {
+  return dataRows_(sheet_('buyers')).filter(function (r) {
+    return isOwned_(r, phone, 12) && String(r[11] || '').trim().toLowerCase() !== 'deleted' && hasCoordinates_(r[5], r[6]);
+  });
+}
 function ownFarmerPlotsWithCoordinates_(phone) {
   return dataRows_(sheet_('farmers')).filter(function (r) {
     return isOwned_(r, phone, 12) &&

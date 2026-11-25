@@ -16,9 +16,9 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=4.0.0">
-  <link rel="stylesheet" href="assets/market.css?v=4.0.0">
-  <link rel="stylesheet" href="assets/record.css?v=4.0.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=4.1.0">
+  <link rel="stylesheet" href="assets/market.css?v=4.1.0">
+  <link rel="stylesheet" href="assets/record.css?v=4.1.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -292,6 +292,13 @@
       </div>
 
       <div id="mapSection" class="hidden">
+         <!-- 4.1.0: partners across the province border — within 50 km of my own pins (switch, remembered) -->
+         <div class="ggh-near" id="nearBox">
+           <label class="ggh-switch"><input type="checkbox" id="nearSwitch" role="switch" onchange="toggleNear(this.checked)"><span class="ggh-switch-ui" aria-hidden="true"></span>
+             <span class="ggh-switch-text"><b>รวมคู่ค้าต่างจังหวัดในรัศมี 50 กม.</b><small id="nearHint">นับจากหมุดแปลงหรือจุดรับซื้อของคุณ เหมาะกับพื้นที่ติดเขตจังหวัด</small></span></label>
+         </div>
+         <div class="ggh-mapgrid">
+         <div class="ggh-mapgrid-map">
          <div id="map" class="md:h-[60vh]"></div>
          
          <div class="bg-white p-3 md:p-4 rounded-lg shadow mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs md:text-sm font-bold text-gray-600">
@@ -356,11 +363,13 @@
          </div>
          
          <p id="mapPinSummary" class="text-sm font-bold text-blue-800 bg-blue-50 border border-blue-200 rounded-xl p-3 mt-4"></p>
-
-         <h3 class="font-bold text-gray-700 text-base sm:text-lg mt-6 mb-3 sm:mb-4 border-l-4 border-green-500 pl-2">รายชื่อคู่ค้าที่แนะนำ</h3>
-         <p class="label-text leading-relaxed"><span class="required-mark">*</span> ระยะทางที่แสดงผลเป็นระยะทางกระจัด ไม่ใช่ระยะทางตามการเดินทางจริง</p>
-         
-         <div id="matchList" class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-12"></div>
+         </div>
+         <aside class="ggh-mapgrid-list" aria-labelledby="matchTitle">
+         <h3 id="matchTitle" class="ggh-match-title">รายชื่อคู่ค้าที่แนะนำ</h3>
+         <p class="ggh-match-note"><span class="required-mark">*</span> ระยะทางเป็นระยะทางตรง ไม่ใช่ระยะทางตามถนน</p>
+         <div id="matchList" class="ggh-match-list"></div>
+         </aside>
+         </div>
       </div>
 
     </div>
@@ -436,10 +445,10 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=4.0.0"></script>
-  <script src="assets/api-client.js?v=4.0.0"></script>
-  <script src="assets/province.js?v=4.0.0"></script>
-  <script src="assets/market.js?v=4.0.0" defer></script>
+  <script src="assets/config.js?v=4.1.0"></script>
+  <script src="assets/api-client.js?v=4.1.0"></script>
+  <script src="assets/province.js?v=4.1.0"></script>
+  <script src="assets/market.js?v=4.1.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','ซังข้าวโพด','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -1067,6 +1076,23 @@
           <button type="button" class="rec-btn is-map" onclick="switchToMap(${coordinateOr(f?.lat,16.48)},${coordinateOr(f?.lng,99.52)})"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>แผนที่ &amp; ผู้รับซื้อ</span></button>
         </header>
         ${sold ? soldHtml(f) : listingStatusHtml(f)}
+        <!-- 4.1.0: map of the plot on the left, its details on the right (stacked on phones: map first) -->
+        <div class="rec-split">
+          <div class="rec-split-map">
+        <fieldset class="rec-sec" ${sold ? 'disabled' : ''}>
+          <legend><i class="fa-solid fa-map-pin" aria-hidden="true"></i> ตำแหน่งแปลง <span class="required-mark">*</span></legend>
+          <p class="rec-help">กด "ใช้ตำแหน่งปัจจุบัน" ขณะอยู่ที่แปลง หรือแตะบนแผนที่ แล้วลากหมุดให้ตรงแปลง</p>
+          <button type="button" onclick="getGPS('miniMap-${index}')" class="rec-btn is-gps"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> ใช้ตำแหน่งปัจจุบัน</button>
+          <p class="rec-place" id="place-${index}" aria-live="polite">${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : ''}</p>
+          <div id="miniMap-${index}" class="rec-minimap"></div>
+          <details class="rec-coords"><summary>พิกัด (ละติจูด, ลองจิจูด)</summary>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly value="${f?.lat??''}">
+              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly value="${f?.lng??''}">
+            </div></details>
+        </fieldset>
+          </div>
+          <div class="rec-split-data">
         <fieldset class="rec-sec" ${sold ? 'disabled' : ''}>
           <legend><i class="fa-solid fa-seedling" aria-hidden="true"></i> พืชและวัสดุเหลือใช้</legend>
           <div class="rec-grid">
@@ -1098,18 +1124,8 @@
             <label><input type="number" value="${wah}" name="wah" class="input-field" inputmode="decimal" min="0" max="99" placeholder="0"><span>ตร.ว.</span></label>
           </div>
         </fieldset>
-        <fieldset class="rec-sec" ${sold ? 'disabled' : ''}>
-          <legend><i class="fa-solid fa-map-pin" aria-hidden="true"></i> ตำแหน่งแปลง <span class="required-mark">*</span></legend>
-          <p class="rec-help">กด "ใช้ตำแหน่งปัจจุบัน" ขณะอยู่ที่แปลง หรือแตะบนแผนที่ แล้วลากหมุดให้ตรงแปลง</p>
-          <button type="button" onclick="getGPS('miniMap-${index}')" class="rec-btn is-gps"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> ใช้ตำแหน่งปัจจุบัน</button>
-          <p class="rec-place" id="place-${index}" aria-live="polite">${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : ''}</p>
-          <div id="miniMap-${index}" class="mt-2 rounded border"></div>
-          <details class="rec-coords"><summary>พิกัด (ละติจูด, ลองจิจูด)</summary>
-            <div class="grid grid-cols-2 gap-2 mt-2">
-              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly value="${f?.lat??''}">
-              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly value="${f?.lng??''}">
-            </div></details>
-        </fieldset>
+          </div>
+        </div>
         ${sold ? '' : `<div class="rec-actions">
           <button type="button" onclick="submitData('${safeId(f?.id)}', ${index})" class="rec-btn is-save"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> บันทึกข้อมูลแปลง</button>
           ${saved && f?.recordStatus === 'Open' ? `<button type="button" onclick="markSold('${safeId(f?.id)}', ${index})" class="rec-btn is-sold"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> ขายแล้ว</button>` : ''}
@@ -1163,6 +1179,23 @@
             <p>${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : (b?.timestamp ? '' : 'จุดรับซื้อใหม่ — กรอกข้อมูลแล้วกดบันทึก')}</p></div>
           <button type="button" class="rec-btn is-map" onclick="switchToMap(${coordinateOr(b?.lat,16.48)},${coordinateOr(b?.lng,99.52)})"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>แผนที่ &amp; แปลงพร้อมขาย</span></button>
         </header>
+        <!-- 4.1.0: map of the plot on the left, its details on the right (stacked on phones: map first) -->
+        <div class="rec-split">
+          <div class="rec-split-map">
+        <fieldset class="rec-sec">
+          <legend><i class="fa-solid fa-map-pin" aria-hidden="true"></i> ตำแหน่งจุดรับซื้อ <span class="required-mark">*</span></legend>
+          <p class="rec-help">กด "ใช้ตำแหน่งปัจจุบัน" ขณะอยู่ที่จุดรับซื้อ หรือแตะบนแผนที่ แล้วลากหมุดให้ตรงตำแหน่ง</p>
+          <button type="button" onclick="getGPS('miniMap-${index}')" class="rec-btn is-gps"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> ใช้ตำแหน่งปัจจุบัน</button>
+          <p class="rec-place" id="place-${index}" aria-live="polite">${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : ''}</p>
+          <div id="miniMap-${index}" class="rec-minimap"></div>
+          <details class="rec-coords"><summary>พิกัด (ละติจูด, ลองจิจูด)</summary>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly value="${b?.lat??''}">
+              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly value="${b?.lng??''}">
+            </div></details>
+        </fieldset>
+          </div>
+          <div class="rec-split-data">
         <fieldset class="rec-sec">
           <legend><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> วัสดุที่รับซื้อ</legend>
           <div class="rec-grid">
@@ -1179,18 +1212,8 @@
               <input type="number" value="${b?.price??''}" name="price" class="input-field" inputmode="decimal" min="0" step="0.01" placeholder="เช่น 600"></label>
           </div>
         </fieldset>
-        <fieldset class="rec-sec">
-          <legend><i class="fa-solid fa-map-pin" aria-hidden="true"></i> ตำแหน่งจุดรับซื้อ <span class="required-mark">*</span></legend>
-          <p class="rec-help">กด "ใช้ตำแหน่งปัจจุบัน" ขณะอยู่ที่จุดรับซื้อ หรือแตะบนแผนที่ แล้วลากหมุดให้ตรงตำแหน่ง</p>
-          <button type="button" onclick="getGPS('miniMap-${index}')" class="rec-btn is-gps"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> ใช้ตำแหน่งปัจจุบัน</button>
-          <p class="rec-place" id="place-${index}" aria-live="polite">${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : ''}</p>
-          <div id="miniMap-${index}" class="mt-2 rounded border"></div>
-          <details class="rec-coords"><summary>พิกัด (ละติจูด, ลองจิจูด)</summary>
-            <div class="grid grid-cols-2 gap-2 mt-2">
-              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly value="${b?.lat??''}">
-              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly value="${b?.lng??''}">
-            </div></details>
-        </fieldset>
+          </div>
+        </div>
         <div class="rec-actions">
           <button type="button" onclick="submitData('${safeId(b?.id)}',${index})" class="rec-btn is-save"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> บันทึกจุดรับซื้อ</button>
           <button id="btn-delete-${index}" type="button" onclick="deleteData('${safeId(b?.id)}')" class="rec-btn is-delete"><i class="fa-solid fa-trash" aria-hidden="true"></i> ลบ</button>
@@ -1229,6 +1252,7 @@
     }
 
     function switchToMap(lat, lng) {
+      syncNearSwitch();   // 4.1.0
       lat = coordinateOr(lat, 16.48);
       lng = coordinateOr(lng, 99.52);
       const entryBtn = document.getElementById('btn-entry');
@@ -1439,12 +1463,14 @@
             pinSummary.textContent = isFarmer
               ? `แผนที่แสดงแปลงของฉัน ${ownPlots.length} แปลง และคู่ค้าฝั่งผู้รับซื้อ ${partnerTargets.length} จุด ปุ่มโทรและนำทางใช้ได้เฉพาะคู่ค้า`
               : `แผนที่แสดงคู่ค้าเฉพาะฝั่งตรงข้าม ${partnerTargets.length} ${roleLabel} กดหมุดเพื่อโทรติดต่อหรือเริ่มนำทาง`;
+            const cross = partnerTargets.filter((t) => t.crossProvince).length;
+            if (data.nearKm) pinSummary.textContent += data.nearAnchors ? ` · รวมคู่ค้าต่างจังหวัดในรัศมี ${data.nearKm} กม. ${cross} รายการ` : ' · ยังไม่มีหมุดของคุณ จึงยังค้นต่างจังหวัดไม่ได้ (บันทึกตำแหน่งแปลงหรือจุดรับซื้อก่อน)';
           }
           if (bounds.length > 1) {
             mainMap.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 });
           }
 
-          if(partnerTargets.length === 0) list.innerHTML = '<div class="col-span-1 md:col-span-2 text-center text-gray-600 py-8">ยังไม่พบข้อมูลคู่ค้าในระบบขณะนี้</div>';
+          if(partnerTargets.length === 0) list.innerHTML = `<div class="ggh-match-empty"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> ยังไม่พบคู่ค้า${data.nearKm ? 'ในจังหวัดและในรัศมี ' + data.nearKm + ' กม.' : 'ในจังหวัดนี้'}${data.nearKm ? '' : ' — ลองเปิด "รวมคู่ค้าต่างจังหวัดในรัศมี 50 กม." ด้านบน'}</div>`;
 
           const cards = partnerTargets.map((t, index) => {
             const desc = mapPointDescription(t, partnerRole);
@@ -1452,32 +1478,23 @@
             const dist = calcDist(userLat, userLng, t.lat, t.lng).toFixed(1);
             const phone = contactPhone(t.phone);
             const routeUrl = navigationUrl(t.lat, t.lng);
-            const roleColor = partnerRole === 'buyer' ? 'blue' : 'green';
-            const callClass = partnerRole === 'buyer'
-              ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-              : 'bg-green-50 text-green-700 hover:bg-green-100';
 
+            // 4.1.0: one look for every partner card — green = plot for sale, straw = buyer; big text, big buttons
+            const other = t.crossProvince ? `<span class="ggh-match-prov"><i class="fa-solid fa-signs-post" aria-hidden="true"></i> ต่างจังหวัด: จ.${escapeHtml(t.provinceName || '')}</span>` : '';
             const html = `
-              <div class="match-card bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 relative flex flex-col h-full" onclick="focusMarker('${markerId}', ${Number(t.lat)}, ${Number(t.lng)})">
-                <div class="flex justify-between items-start gap-3 mb-auto">
-                  <div class="min-w-0">
-                    <h4 class="font-bold text-gray-800 text-base sm:text-lg break-words">${escapeHtml(t.name)}</h4>
-                    <div class="text-sm text-gray-600 mt-2 leading-relaxed">${desc.replace(/<b>.*?<\/b><br>/, '')}</div>
-                  </div>
-                  <div class="text-right ${roleColor === 'blue' ? 'bg-blue-50' : 'bg-green-50'} px-2 py-1 rounded-lg">
-                    <span class="block text-xl font-bold ${roleColor === 'blue' ? 'text-blue-700' : 'text-green-700'}">${dist}</span>
-                    <span class="text-[10px] ${roleColor === 'blue' ? 'text-blue-600' : 'text-green-600'} uppercase font-bold">กม.</span>
-                  </div>
-                </div>
-                <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-2">
+              <article class="ggh-match ${partnerRole === 'buyer' ? 'is-buy' : 'is-sell'}" onclick="focusMarker('${markerId}', ${Number(t.lat)}, ${Number(t.lng)})">
+                <header class="ggh-match-head">
+                  <div class="ggh-match-who"><h4>${escapeHtml(t.name)}</h4>${other}</div>
+                  <div class="ggh-match-dist" aria-label="ระยะทาง ${dist} กิโลเมตร"><b>${dist}</b><span>กม.</span></div>
+                </header>
+                <div class="ggh-match-body">${desc.replace(/<b>.*?<\/b><br>/, '')}</div>
+                <div class="ggh-match-acts">
                   ${phone
-                    ? `<a href="tel:${phone}" target="_top" onclick="event.stopPropagation()" class="${callClass} py-2.5 rounded-xl font-bold text-center transition text-sm flex items-center justify-center gap-2"><i class="fa-solid fa-phone"></i> โทรติดต่อ</a>`
-                    : `<span class="bg-gray-100 text-gray-600 py-2.5 rounded-xl font-bold text-center text-sm flex items-center justify-center gap-2"><i class="fa-solid fa-phone-slash"></i> ไม่มีเบอร์โทร</span>`}
-                  <a href="${routeUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="bg-blue-600 text-white py-2.5 rounded-xl font-bold text-center hover:bg-blue-700 transition text-sm flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-route"></i> เริ่มนำทาง
-                  </a>
+                    ? `<a href="tel:${phone}" target="_top" onclick="event.stopPropagation()" class="ggh-match-btn is-call"><i class="fa-solid fa-phone" aria-hidden="true"></i> โทรติดต่อ</a>`
+                    : `<span class="ggh-match-btn is-off"><i class="fa-solid fa-phone-slash" aria-hidden="true"></i> ไม่มีเบอร์โทร</span>`}
+                  <a href="${routeUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="ggh-match-btn is-route"><i class="fa-solid fa-route" aria-hidden="true"></i> นำทาง</a>
                 </div>
-              </div>
+              </article>
             `;
             return { dist, html };
           });
@@ -1488,8 +1505,16 @@
         .withFailureHandler(function(err) {
           Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
         })
-.getMatchingDataServer({ province: window.GGH_PROVINCE ? window.GGH_PROVINCE.code : '' }); 
+.getMatchingDataServer({ province: window.GGH_PROVINCE ? window.GGH_PROVINCE.code : '', nearKm: nearOn() ? 50 : 0 }); 
     }
+
+    /** 4.1.0: partners across the province border within 50 km of my own pins — remembered on this device */
+    function nearOn() { try { return localStorage.getItem('ggh_near50') === '1'; } catch (e) { return false; } }
+    function toggleNear(on) {
+      try { localStorage.setItem('ggh_near50', on ? '1' : '0'); } catch (e) { /* private mode */ }
+      if (lastMatchingLat !== undefined && lastMatchingLat !== null) loadMatchingData(lastMatchingLat, lastMatchingLng);
+    }
+    function syncNearSwitch() { const sw = document.getElementById('nearSwitch'); if (sw) sw.checked = nearOn(); }
 
     function focusMarker(id, lat, lng) {
        mainMap.flyTo([lat, lng], 13);

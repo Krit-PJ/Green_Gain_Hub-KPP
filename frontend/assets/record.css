@@ -63,3 +63,92 @@
   .rec-area .input-field { padding-right: 2.9rem; font-size: 1rem; }
   .rec-area span { right: .5rem; font-size: .8rem; }
 }
+
+/* ======================================================================
+   4.1.0 — layout and colours for farmers and buyers (older users first)
+   · record card: map of the plot on the left, details on the right (phones: map first, then details)
+   · signed-in map page: map on the left, partners on the right — the same arrangement as the front page
+   · one colour per meaning everywhere: green = plot for sale / farmer, straw = buyer, red = delete only
+   · body text 18px, labels 16px, every tap target ≥ 48px, text ≥ 4.5:1 on its background (no pale grey on tints)
+   ====================================================================== */
+#mainApp { font-size: 1.125rem; color: #1d2b22; }
+#mainApp .label-text { font-size: 1rem; color: #26332b; }
+#mainApp .input-field { min-height: 52px; font-size: 1.0625rem; border-color: #9fb3a5; color: #1d2b22; }
+#mainApp .input-field:focus { border-color: var(--ggh-green); box-shadow: 0 0 0 3px rgba(26,127,55,.25); }
+#mainApp .text-gray-600, #mainApp .text-gray-500 { color: #3f4d44 !important; }
+#mainApp .rec-help { font-size: .95rem; color: #3a473f; }
+#mainApp .rec-title h4 { font-size: 1.25rem; }
+#mainApp .rec-title p { font-size: 1rem; color: #33413a; }
+#mainApp .rec-sec legend { font-size: 1.08rem; }
+#mainApp .rec-btn { min-height: 52px; font-size: 1.06rem; }
+#mainApp .rec-btn.is-gps { background: #fff; color: var(--ggh-green-dark); border-color: var(--ggh-green); }
+#mainApp .rec-btn.is-gps:hover { background: #eaf5ec; }
+#mainApp .rec-card.is-buyer .rec-btn.is-gps { color: var(--ggh-straw-ink); border-color: var(--ggh-straw); }
+#mainApp .rec-card.is-buyer .rec-btn.is-gps:hover { background: #fff7e6; }
+#mainApp .rec-card { border-width: 1.5px; border-color: #c9d6cc; box-shadow: 0 2px 6px rgba(15, 77, 36, .07); }
+#mainApp .rec-card.is-buyer { border-top-color: var(--ggh-straw); }
+#mainApp .rec-sec { background: #f3f7f3; border: 1px solid #dfe8e1; }
+#mainApp .rec-card.is-buyer .rec-sec { background: #fdf9ef; border-color: #efe3c4; }
+#mainApp .listing-status { font-size: 1rem; }
+#mainApp .listing-status .text-xs { font-size: .92rem; }
+#farmerFields { background: transparent !important; border: 0 !important; padding: 0 !important; }
+#buyerFields { background: transparent !important; border: 0 !important; padding: 0 !important; }
+
+/* record card: split */
+.rec-split { display: grid; gap: .85rem; }
+.rec-split-map .rec-sec { height: 100%; display: flex; flex-direction: column; }
+.rec-split-map .rec-minimap { height: 300px; flex: 1 1 auto; margin-top: .6rem; border: 2px solid #c9d6cc; border-radius: 12px; }
+.rec-split-data { display: grid; gap: .85rem; align-content: start; min-width: 0; }
+@media (min-width: 900px) {
+  .rec-split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+  .rec-split-map .rec-minimap { min-height: 380px; }
+  .rec-split-data .rec-grid { grid-template-columns: minmax(0, 1fr); }
+  .rec-split-data .rec-grid:has(> label:nth-child(3)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* map page: 50 km switch */
+.ggh-near { margin: 0 0 .9rem; padding: .8rem 1rem; background: #fff; border: 1.5px solid #c9d6cc; border-radius: 14px; }
+.ggh-switch { display: flex; align-items: center; gap: .85rem; cursor: pointer; min-height: 48px; }
+.ggh-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.ggh-switch-ui { position: relative; flex: 0 0 auto; width: 3.6rem; height: 2rem; border-radius: 999px; background: #b9c6bd; transition: background .15s; }
+.ggh-switch-ui::after { content: ''; position: absolute; top: .25rem; left: .25rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s; }
+.ggh-switch input:checked + .ggh-switch-ui { background: var(--ggh-green); }
+.ggh-switch input:checked + .ggh-switch-ui::after { transform: translateX(1.6rem); }
+.ggh-switch input:focus-visible + .ggh-switch-ui { outline: 3px solid rgba(26,127,55,.45); outline-offset: 2px; }
+.ggh-switch-text b { display: block; font-size: 1.06rem; color: #1d2b22; }
+.ggh-switch-text small { display: block; font-size: .95rem; color: #3a473f; }
+
+/* map page: map left, partners right */
+.ggh-mapgrid { display: grid; gap: 1rem; }
+.ggh-mapgrid-map { min-width: 0; }
+.ggh-match-title { font-size: 1.2rem; font-weight: 700; color: var(--ggh-green-dark); margin: 0 0 .3rem; }
+.ggh-match-note { font-size: .92rem; color: #3a473f; margin: 0 0 .7rem; }
+.ggh-match-list { display: grid; gap: .75rem; padding-bottom: 2rem; }
+@media (min-width: 900px) {
+  .ggh-mapgrid { grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); align-items: start; }
+  .ggh-mapgrid-list { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; padding-right: .25rem; }
+  .ggh-match-list { padding-bottom: .5rem; }
+}
+.ggh-match { background: #fff; border: 1.5px solid #c9d6cc; border-left-width: 6px; border-radius: 14px; padding: .9rem 1rem; cursor: pointer; display: grid; gap: .55rem; }
+.ggh-match.is-sell { border-left-color: var(--ggh-green); }
+.ggh-match.is-buy { border-left-color: var(--ggh-straw); }
+.ggh-match:hover { box-shadow: 0 4px 12px rgba(15, 77, 36, .12); }
+.ggh-match:focus-within { outline: 3px solid rgba(26,127,55,.35); outline-offset: 2px; }
+.ggh-match-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .6rem; align-items: start; }
+.ggh-match-who h4 { margin: 0; font-size: 1.15rem; font-weight: 700; color: #1d2b22; overflow-wrap: anywhere; }
+.ggh-match-prov { display: inline-flex; align-items: center; gap: .3rem; margin-top: .25rem; padding: .1rem .55rem; border-radius: 999px; background: #eef2ff; color: #3730a3; font-size: .9rem; font-weight: 700; }
+.ggh-match-dist { text-align: center; min-width: 4rem; padding: .3rem .5rem; border-radius: 10px; background: #eaf5ec; color: var(--ggh-green-dark); }
+.ggh-match.is-buy .ggh-match-dist { background: #fff4dc; color: var(--ggh-straw-ink); }
+.ggh-match-dist b { display: block; font-size: 1.35rem; line-height: 1.1; }
+.ggh-match-dist span { font-size: .85rem; font-weight: 700; }
+.ggh-match-body { font-size: 1rem; color: #26332b; line-height: 1.55; }
+.ggh-match-acts { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; padding-top: .6rem; border-top: 1px solid #e2e9e4; }
+.ggh-match-btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 50px; border-radius: 12px; font-weight: 700; font-size: 1.05rem; text-decoration: none; border: 2px solid transparent; }
+.ggh-match-btn.is-call { background: var(--ggh-green); color: #fff; }
+.ggh-match-btn.is-call:hover { background: var(--ggh-green-dark); }
+.ggh-match.is-buy .ggh-match-btn.is-call { background: var(--ggh-straw-ink); }
+.ggh-match-btn.is-route { background: #fff; color: #1d2b22; border-color: #9fb3a5; }
+.ggh-match-btn.is-route:hover { background: #f3f7f3; }
+.ggh-match-btn.is-off { background: #eef1ef; color: #3f4d44; }
+.ggh-match-empty { padding: 1.2rem; border-radius: 14px; background: #fff; border: 1.5px dashed #b9c6bd; color: #33413a; font-size: 1rem; }
+@media (max-width: 639px) { #mainApp { font-size: 1.0625rem; } .ggh-match-acts { grid-template-columns: 1fr; } }
