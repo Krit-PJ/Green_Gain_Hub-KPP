@@ -69,7 +69,7 @@ global.UrlFetchApp = { fetch: (url) => {
   return { getResponseCode: () => (fs.existsSync(f) ? 200 : 404), getContentText: () => fs.readFileSync(f, 'utf8') };
 } };
 // 2.8.0: Code.gs uses the market listing rule in Market.gs
-const code = ['Code.gs', 'Market.gs', 'Geo.gs', 'Districts.gs', 'Pin.gs', 'Abm.gs'].map((f) => fs.readFileSync(require('path').join(__dirname, '..', 'apps-script', f), 'utf8')).join('\n');
+const code = ['Code.gs', 'Market.gs', 'Geo.gs', 'Districts.gs', 'Sales.gs', 'Abm.gs'].map((f) => fs.readFileSync(require('path').join(__dirname, '..', 'apps-script', f), 'utf8')).join('\n');
 const api = new Function(code + '; return { loginServer, getApiInfoServer, getUserProfileServer, saveDataServer, getMatchingDataServer, verifyDatabaseSchema, verifyLiveMatchingData, ensureBuyerHarvestDaysColumn_, ensureSheetDataFormats_, normalizeLegacySheetData_, restoreLegacyExpiredFarmers_, setupDailyTrigger, autoExpireFarmers, normalizePhone_, toDate_, farmerMaterialForCrop_ };')();
 
 function assert(value, message) { if (!value) throw new Error(message); }
@@ -85,8 +85,8 @@ assert(sheets.users.rows[1][0] === '0812345678', 'legacy user phone was not repa
 assert(sheets.farmers.rows[1][4] === '0812345678' && sheets.farmers.rows[1][12] === '0812345678', 'legacy farmer phone values were not repaired');
 assert(sheets.farmers.rows[1][6] instanceof Date && sheets.farmers.rows[1][7] instanceof Date, 'legacy farmer dates were not converted to Date values');
 
-// 3.1.0: an account from before the PIN must set one first
-assert(api.loginServer({ username: '0812345678' }).status === 'need_pin', '3.1.0: old account asked to set a PIN');
+// 3.3.0: phone number alone signs in (PIN removed)
+assert(api.loginServer({ username: '0812345678' }).status === 'success', '3.3.0: phone-only sign-in');
 
 const session = { phone: '0812345678', role: 'farmer', name: 'ผู้ทดสอบ' };
 const profile = api.getUserProfileServer(session);
@@ -115,8 +115,8 @@ assert(api.farmerMaterialForCrop_('อ้อยโรงงาน', 'ฟาง�
 assert(api.farmerMaterialForCrop_('มันสำปะหลัง', 'ฟางข้าว', '').type === 'เหง้ามันสำปะหลัง', 'cassava mapping failed');
 
 const matches = api.getMatchingDataServer(session);
-assert(matches.apiVersion === '3.2.0', 'matching API version is missing or stale');
-assert(api.getApiInfoServer().apiVersion === '3.2.0', 'public API version check failed');
+assert(matches.apiVersion === '3.3.0', 'matching API version is missing or stale');
+assert(api.getApiInfoServer().apiVersion === '3.3.0', 'public API version check failed');
 assert(api.getApiInfoServer().feature === 'MARKET_ONLY', 'feature flag is missing or stale');
 assert(matches.viewerRole === 'farmer' && matches.visibleRole === 'buyer', 'farmer visibility metadata is incorrect');
 assert(matches.farmers.length === 0, 'farmer must not receive other farmer records');

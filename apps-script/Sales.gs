@@ -1,63 +1,17 @@
 /**
- * Green Gain Hub 3.1.0 — 6-digit PIN and "ขายแล้ว" (sold) records.
+ * Green Gain Hub 3.3.0 — sign-in session and "ขายแล้ว" (sold) records (was Pin.gs in 3.1.0–3.2.0).
  *
- * PIN: phone number alone was enough to sign in. With all provinces open, anyone who knows a number could open that
- * account and see the partners' phone numbers. Each user now has a 6-digit PIN:
- *   - stored only as a salted SHA-256 in users!B (the old, unused "Password" column): pin1$<salt>$<hash>
- *   - new users choose it at registration; users from before 3.1.0 choose it at their next sign-in (setPinServer works
- *     only while the account has no PIN)
- *   - 5 wrong PINs lock the number for 15 minutes; officers (ABM Super Admin) can clear a forgotten PIN (abm_pin_reset)
+ * 3.3.0: the 6-digit PIN is removed — farmers and buyers register and sign in with their phone number only.
+ * The PIN hashes 3.1.0 kept in users!B are blanked once (pinCleanup_, Script Property PIN_REMOVED) so no PIN derivative
+ * stays in the sheet.
  *
  * Sold: a farmer marks a plot "ขายแล้ว" with what was really sold (tonnes, baht, to whom — all optional). The plot leaves
  * the market (status Sold) and one row goes to the `sales` sheet, the only real income figure the system has.
  */
-const PIN_PREFIX = 'pin1$';
-const PIN_MAX_FAILS = 5;
-const PIN_LOCK_SECONDS = 900;
+
 const SALES_SHEET = 'sales';
 const SALES_HEADERS = ['ID', 'Sold_At', 'Plot_ID', 'Owner_Telephone', 'Crop', 'Material', 'Area_Rai', 'Quantity_Ton', 'Amount_Baht',
   'Buyer_Name', 'Province_Code', 'Province', 'District_Code', 'District', 'Created_At'];
-
-function pinValid_(pin) {
-  pin = String(pin === null || pin === undefined ? '' : pin).trim();
-  if (!/^\d{6}$/.test(pin)) throw new Error('PIN ต้องเป็นตัวเลข 6 หลัก');
-  if (/^(\d)\1{5}$/.test(pin) || '0123456789'.indexOf(pin) >= 0 || '9876543210'.indexOf(pin) >= 0) {
-    throw new Error('PIN ง่ายเกินไป (เช่น 111111 หรือ 123456) กรุณาตั้งใหม่');
-  }
-  return pin;
-}
-
-function pinHash_(salt, pin) {
-  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + ':' + pin, Utilities.Charset.UTF_8);
-  return bytes.map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
-}
-
-function pinRecord_(pin) {
-  const salt = Utilities.getUuid().replace(/-/g, '').slice(0, 16);
-  return PIN_PREFIX + salt + '$' + pinHash_(salt, pin);
-}
-
-function hasPin_(row) { return String(row[1] || '').indexOf(PIN_PREFIX) === 0; }
-
-/** true when the PIN matches; counts failures per phone and locks after PIN_MAX_FAILS. */
-function pinCheck_(phone, row, pin) {
-  const cache = CacheService.getScriptCache();
-  const key = 'pinfail:' + phone;
-  const fails = Number(cache.get(key) || 0);
-  if (fails >= PIN_MAX_FAILS) throw new Error('ใส่ PIN ผิดหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่');
-  const parts = String(row[1]).split('$');
-  const ok = /^\d{6}$/.test(String(pin || '')) && parts.length === 3 && pinHash_(parts[1], String(pin)) === parts[2];
-  if (ok) { cache.remove(key); return true; }
-  cache.put(key, String(fails + 1), PIN_LOCK_SECONDS);
-  const left = PIN_MAX_FAILS - fails - 1;
-  throw new Error(left > 0 ? 'PIN ไม่ถูกต้อง (ลองได้อีก ' + left + ' ครั้ง)' : 'ใส่ PIN ผิดหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่');
-}
-
-function userRowIndex_(phone) {
-  const rows = dataRows_(sheet_('users'));
-  for (let i = 0; i < rows.length; i++) if (normalizePhone_(rows[i][0]) === phone) return { row: rows[i], index: i + 2 };
-  return null;
-}
 
 function newSession_(phone, row) {
   const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
@@ -68,37 +22,27 @@ function newSession_(phone, row) {
   return { status: 'success', success: true, token: token, phone: phone, role: role, name: session.name, province: province };
 }
 
-/** Account from before 3.1.0 without a PIN: choose one now (only once — afterwards the PIN is needed to sign in). */
-function setPinServer(input) {
-  input = input || {};
-  const phone = normalizePhone_(input.phone || input.username);
-  if (!/^0\d{9}$/.test(phone)) throw new Error('กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก');
-  const pin = pinValid_(input.pin);
+/** 3.3.0: one time — blank the 3.1.0 PIN hashes (pin1$…) in users!B. Safe to call on every sign-in. */
+const PIN_REMOVED_PROP = 'PIN_REMOVED';
+function pinCleanup_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty(PIN_REMOVED_PROP) === '3.3.0') return 0;
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    const u = userRowIndex_(phone);
-    if (!u) throw new Error('ไม่พบหมายเลขโทรศัพท์นี้ในระบบ กรุณาลงทะเบียน');
-    if (hasPin_(u.row)) throw new Error('หมายเลขนี้ตั้ง PIN แล้ว กรุณาเข้าสู่ระบบด้วย PIN');
-    sheet_('users').getRange(u.index, 2).setValue(pinRecord_(pin));
-    sheet_('users').getRange(u.index, 9).setValue(new Date());
-    u.row[1] = 'set';
-    return newSession_(phone, u.row);
+    if (props.getProperty(PIN_REMOVED_PROP) === '3.3.0') return 0;
+    const sh = sheet_('users'), last = sh.getLastRow();
+    let n = 0;
+    if (last >= 2) {
+      const col = sh.getRange(2, 2, last - 1, 1).getValues();
+      col.forEach(function (r) { if (String(r[0]).indexOf('pin1$') === 0) { r[0] = ''; n++; } });
+      if (n) sh.getRange(2, 2, last - 1, 1).setValues(col);
+    }
+    props.setProperty(PIN_REMOVED_PROP, '3.3.0');
+    return n;
   } finally { lock.releaseLock(); }
 }
-
-/** ABM Super Admin clears a forgotten PIN (feed key); the user chooses a new one at the next sign-in. */
-function abmPinReset_(body) {
-  abmCheckKey_(body);
-  const phone = normalizePhone_(body.phone);
-  if (!/^0\d{9}$/.test(phone)) throw new Error('หมายเลขโทรศัพท์ไม่ถูกต้อง');
-  const u = userRowIndex_(phone);
-  if (!u) throw new Error('ไม่พบหมายเลขโทรศัพท์นี้ใน Green Gain Hub');
-  sheet_('users').getRange(u.index, 2).setValue('');
-  sheet_('users').getRange(u.index, 9).setValue(new Date());
-  CacheService.getScriptCache().remove('pinfail:' + phone);
-  return { phone: phone.slice(0, 3) + 'xxxx' + phone.slice(7), reset: true, by: cleanText_(body.by || '', 80) };
-}
+function pinCleanupSafe_() { try { pinCleanup_(); } catch (err) { /* retried at the next sign-in */ } }
 
 /* ------------------------------ ขายแล้ว ------------------------------ */
 function salesSheet_() { return ensureSheet_(SALES_SHEET, SALES_HEADERS); }

@@ -16,7 +16,7 @@ r = feed({ action: 'abm_feed', key: key.slice(0, -1) + (key.endsWith('0') ? '1' 
 assert(!r.ok && /Invalid feed key/.test(r.error) && !JSON.stringify(r).includes('สมศรี'), 'wrong key refused, nothing leaked');
 assert(!feed({ action: 'abm_feed' }).ok, 'missing key refused');
 r = feed({ action: 'abm_feed', key });
-assert(r.ok && r.data.apiVersion === '3.2.0' && r.data.farmers.headers[0] === 'ID' && r.data.farmers.rows.length === 1 && r.data.buyers.rows.length === 1, 'feed: ' + JSON.stringify(r).slice(0, 200));
+assert(r.ok && r.data.apiVersion === '3.3.0' && r.data.farmers.headers[0] === 'ID' && r.data.farmers.rows.length === 1 && r.data.buyers.rows.length === 1, 'feed: ' + JSON.stringify(r).slice(0, 200));
 assert(r.data.farmers.rows[0][2] === 'สมศรี' && r.data.farmers.rows[0][1] === '2026-11-01T03:00:00.000Z' && r.data.farmers.rows[0].length === HEADERS.farmers.length, 'rows keep the sheet column order; dates as ISO');
 // 2.9.0: farmer/buyer phone numbers as SHA-256 only (ABM refuses them as officers)
 sheets.users.rows.push(['0811111111', '', 'farmer', 'สมศรี', false, true, '', '', ''], ['086-222-2222', '', 'buyer', 'โรงอัดฟาง', false, true, '', '', '']);

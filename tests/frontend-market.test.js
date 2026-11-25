@@ -7,7 +7,7 @@ const js = fs.readFileSync(path.join(front, 'assets', 'market.js'), 'utf8');
 const css = fs.readFileSync(path.join(front, 'assets', 'market.css'), 'utf8');
 new vm.Script(js, { filename: 'frontend/assets/market.js' });
 
-assert(html.includes('assets/market.js?v=3.1.0') && html.includes('assets/market.css?v=3.1.0') && !html.includes('dashboard.js'), 'market assets 3.1.0, no dashboard.js');
+assert(html.includes('assets/market.js?v=3.3.0') && html.includes('assets/market.css?v=3.3.0') && !html.includes('dashboard.js'), 'market assets 3.3.0, no dashboard.js');
 assert(html.includes("document.getElementById('marketPage')?.classList.add('hidden');"), 'signing in hides the market page');
 assert(['mkMats', 'mkSide', 'mkDistrict', 'mkNear', 'mkMap', 'mkList', 'mkStats', 'mkView', 'mkDistWrap', 'mkDistTable'].every((id) => html.includes(`id="${id}"`)), 'board controls');
 
@@ -20,7 +20,7 @@ assert(js.includes("endpoint: 'market', province: code") && js.includes('PROV.on
 assert(['พื้นที่รวม<small>ไร่</small>', 'จำนวน<small>ราย</small>', 'ชีวมวล<small>ตัน (ประมาณ)</small>', '<tfoot>'].every((t) => js.includes(t)), '3.0.0: district table uses the same numbers as the tiles, with a total row');
 assert(['มีผู้รับซื้อรอ — ประกาศขายได้เลย', 'มีวัสดุแต่ยังไม่มีผู้รับซื้อ', 'ยังไม่มีประกาศ'].every((t) => js.includes(t)) && js.includes('ตามที่ผู้รับซื้อระบุ'), 'material status and price note');
 assert(js.includes("['now', 'ตอนนี้'], ['d30', 'ใน 30 วัน'], ['d90', '31–90 วัน']") && js.includes('sell.timing'), 'harvest timing buckets');
-assert(js.includes('data-mat="${g.key}"') && js.includes('data-district=') && js.includes("$('mkDistWrap').open = false"), 'cards and district rows filter the map; table folds on phones');
+assert(js.includes('data-mat="${g.key}"') && js.includes('data-district=') && !js.includes("$('mkDistWrap').open = false"), 'cards and district rows filter the map; 3.3.0: district summary (with the tiles) stays open on phones');
 assert(css.includes('.ggh-mk-mat { flex: 0 0 78%') && css.includes('scroll-snap-type: x'), 'cards scroll sideways on phones');
 assert(js.includes("const MOVED = { performance: '', overview: '', crops: '#crops', market: '#market', staff: '#staff', 'staff-register': '#staff-register' }") && js.includes('location.replace(ABM_URL + MOVED[h])'), 'old results/staff links open the same view in ABM');
 assert(!/\.phone\b|fname|lname|\.owner|\b(c|v|it|item|cell)\.name\b/.test(js), 'public page never reads names or phone numbers (only place names)');

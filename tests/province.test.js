@@ -54,8 +54,7 @@ check(c.cells.every((x) => x.lat > 18), 'no Kamphaeng Phet cell in Chiang Mai');
 check(!JSON.stringify(c).includes('18.7883'), 'still no real coordinates');
 
 /* a new plot saved in Chiang Mai clears that province's cache */
-check(get({ action: 'rpc', method: 'loginServer', args: JSON.stringify([{ username: '0810000002' }]), callback: '' }).result.status === 'need_pin', '3.1.0: old account sets a PIN first');
-const login = get({ action: 'rpc', method: 'setPinServer', args: JSON.stringify([{ phone: '0810000002', pin: '583920' }]), callback: '' });
+const login = get({ action: 'rpc', method: 'loginServer', args: JSON.stringify([{ username: '0810000002' }]), callback: '' });   // 3.3.0: phone only
 check(login.ok && login.result.province.code === '50', 'sign-in gives the user province');
 const tok = login.result.token;
 const save = get({ action: 'rpc', method: 'saveDataServer', token: tok, callback: '', args: JSON.stringify([{ role: 'farmer', fname: 'ใหม่', phone: '0810000002', crop: 'ข้าวนาปี', harvestDate: '2026-12-20', area: '8 ไร่', lat: 19.9, lng: 99.85 }]) });
@@ -63,7 +62,7 @@ check(save.ok && save.result.location.province === 'เชียงราย', '
 check(get({ api: 'v1', endpoint: 'market', province: '57' }).data.totals.plots === 1, 'Chiang Rai market shows it at once');
 
 /* signed-in map: partners of one province only */
-const buyerTok = get({ action: 'rpc', method: 'registerServer', callback: '', args: JSON.stringify([{ role: 'buyer', name: 'โรงงาน กพ', phone: '0899000001', provinceCode: '62', pin: '470215' }]) }).result.token;
+const buyerTok = get({ action: 'rpc', method: 'registerServer', callback: '', args: JSON.stringify([{ role: 'buyer', name: 'โรงงาน กพ', phone: '0899000001', provinceCode: '62' }]) }).result.token;
 const m62 = get({ action: 'rpc', method: 'getMatchingDataServer', token: buyerTok, callback: '', args: JSON.stringify([{}]) }).result;
 check(m62.province === '62' && m62.farmers.length === 3 && m62.farmers.every((f) => f.lat < 17), 'buyer sees plots of their province by default');
 const m50 = get({ action: 'rpc', method: 'getMatchingDataServer', token: buyerTok, callback: '', args: JSON.stringify([{ province: '50' }]) }).result;

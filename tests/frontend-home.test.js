@@ -13,9 +13,11 @@ new vm.Script(inline, { filename: 'index.html inline' });
 ['id="loginPhone"', 'id="loginBtn"', 'login();', 'id="hubAuth"', 'id="pdpaCheck"', 'id="mainApp"', 'id="marketPage"'].forEach((s) => assert(html.includes(s), 'market markup missing: ' + s));
 assert(/sell: \['register', 'farmer'\]/.test(inline) && /buy: \['register', 'buyer'\]/.test(inline), 'shareable #sell / #buy links');
 // 2.9.3: farmers and buyers sign in at Green Gain Hub only — phone number straight to loginServer, no central identity hop
-assert(/\.loginServer\(\{ action: 'login', username: u, pin: pin \}\)/.test(inline) && !/GGH_SSO|KPP_ID|ssoAutoMarket|need_register/.test(inline), 'direct phone + PIN sign-in, no SSO');
-// 3.1.0: PIN at sign-in and registration; old accounts set one once
-assert(html.includes('id="loginPin"') && html.includes('id="regPin"') && html.includes('id="regPin2"') && html.includes('id="setPinBox"') && /status === 'need_pin'/.test(inline) && /\.setPinServer\(\{ phone: u, pin: a \}\)/.test(inline) && /pin: f\.pin\.value/.test(inline), '3.1.0 PIN screens');
+assert(/\.loginServer\(\{ action: 'login', username: u \}\)/.test(inline) && !/GGH_SSO|KPP_ID|ssoAutoMarket|need_register/.test(inline), 'direct phone sign-in, no SSO');
+// 3.3.0: PIN removed — phone number only at sign-in and registration
+assert(!/loginPin|regPin|setPinBox|need_pin|setPinServer|PIN/.test(html) && /provinceCode: f\.province\.value \}\)/.test(inline), '3.3.0 no PIN screens');
+// 3.3.0: the three summary tiles sit on top of the district table
+assert(html.indexOf('id="mkDistWrap"') < html.indexOf('id="mkStats"') && html.indexOf('id="mkStats"') < html.indexOf('id="mkDistTable"'), '3.3.0 tiles above the district table');
 assert(!html.includes('kpp-id.js') && !html.includes('sso-client.js') && !fs.existsSync(path.join(front, 'assets', 'sso-client.js')), 'central identity scripts not loaded');
 assert(/Green Gain Hub เท่านั้น/.test(html) && !/ตัวตนกลาง/.test(html), 'PDPA: data used for this system only');
 
@@ -35,8 +37,8 @@ assert(!/ggh-mk-perf|data-abm-link|ผลการดำเนินงาน|�
 assert(inline.includes("function openStaff(tab) { location.href = ABM_URL") && inline.includes("window.GGH_CONFIG?.ABM_URL"), 'any remaining staff door goes to ABM');
 assert(admin.includes("location.replace(base + (location.hash || ''))") && admin.includes(ABM + 'admin.html') && /noindex/.test(admin), 'admin.html bookmarks redirect to ABM');
 const cfg = {}; new vm.Script(config).runInNewContext({ window: cfg });
-assert(cfg.GGH_CONFIG.BUILD_VERSION === '3.1.0' && cfg.GGH_CONFIG.GEO_BASE === 'geo/' && cfg.GGH_CONFIG.ABM_URL === ABM && /\/macros\/s\/AKfycby7nbXM[^/]+\/exec$/.test(cfg.GGH_CONFIG.ABM_API_URL), 'config 3.1.0 with ABM links (redirects only)');
-assert(['market.js', 'config.js', 'api-client.js', 'province.js', 'market.css', 'dashboard.css'].every((f) => html.includes('assets/' + f + '?v=3.1.0')), 'asset versions 3.1.0');
+assert(cfg.GGH_CONFIG.BUILD_VERSION === '3.3.0' && cfg.GGH_CONFIG.GEO_BASE === 'geo/' && cfg.GGH_CONFIG.ABM_URL === ABM && /\/macros\/s\/AKfycby7nbXM[^/]+\/exec$/.test(cfg.GGH_CONFIG.ABM_API_URL), 'config 3.3.0 with ABM links (redirects only)');
+assert(['market.js', 'config.js', 'api-client.js', 'province.js', 'market.css', 'dashboard.css'].every((f) => html.includes('assets/' + f + '?v=3.3.0')), 'asset versions 3.3.0');
 // 3.0.0: every province — the name follows the province on show / the signed-in user
 assert(html.includes('Green Gain Hub: จังหวัด<span data-province>') && html.includes('<p class="ggh-topbar-sub">ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร</p>'), '3.0.0 name and second line');
 assert(html.includes('สร้างรายได้จากฟางข้าว ใบอ้อย ซังข้าวโพด แทนการเผา') && html.includes('ศูนย์รวมผู้รับซื้อฟาง ใบอ้อย ซังข้าวโพด เหง้ามัน เก็บเกี่ยวเมื่อใด ต้องการขายหรือต้องการซื้อ ลงทะเบียนแล้วดูตำแหน่งและติดต่อกันได้โดยตรง'), '3.0.0 hero text');

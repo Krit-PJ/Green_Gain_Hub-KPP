@@ -20,7 +20,7 @@
 .ggh-mk-door.is-buy { background: #fffaf0; border-color: var(--ggh-straw); color: var(--ggh-straw-ink); }
 .ggh-mk-door.is-buy:hover { background: #fbf0d4; }
 .ggh-mk-door:focus-visible, .ggh-mk button:focus-visible, .ggh-mk select:focus-visible, .ggh-mk a:focus-visible, .ggh-mk-item:focus-visible { outline: 3px solid rgba(26,127,55,.35); outline-offset: 2px; }
-.ggh-mk-stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; margin: 0; padding-top: .9rem; border-top: 1px solid var(--ggh-line); font-size: .92rem; color: var(--ggh-muted); }
+.ggh-mk-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; margin: .6rem 0 .2rem; font-size: .92rem; color: var(--ggh-muted); }   /* 3.3.0: on top of the district table */
 .ggh-mk-stats.is-error { display: block; color: #9a3412; }
 /* 2.7.0 key numbers: what is offered, who buys, how much of the province is trading */
 .ggh-mk-key-tile { position: relative; padding: .7rem .8rem .75rem 2.75rem; border-radius: 12px; background: #f6f8f6; min-width: 0; }
