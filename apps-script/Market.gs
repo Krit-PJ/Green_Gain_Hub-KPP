@@ -308,8 +308,14 @@ function buildMarketPublic_(now, provinceCode) {
  */
 function abmReport_(body) {
   abmCheckKey_(body);
+  return marketReport_(body.province);
+}
+
+/** 4.0.0: the same numbers for GGH officers' reports. Sales can be limited to a period (from / to, yyyy-mm-dd). */
+function marketReport_(province, from, to) {
   geoMigrateSafe_();
-  const want = String(body.province || DEFAULT_PROVINCE_CODE).toUpperCase() === 'ALL' ? 'ALL' : String(body.province).replace(/\D/g, '').slice(0, 2);
+  const want = String(province || DEFAULT_PROVINCE_CODE).toUpperCase() === 'ALL' ? 'ALL' : String(province).replace(/\D/g, '').slice(0, 2);
+  const fromD = from ? toDate_(from) : null, toD = to ? toDate_(to) : null;
   let provNames = {};
   try { geoProvinces_().forEach(function (p) { provNames[p.code] = p.name; }); } catch (err) { provNames[DEFAULT_PROVINCE_CODE] = 'กำแพงเพชร'; }
   if (want !== 'ALL' && !provNames[want]) throw new Error('ไม่รู้จักจังหวัด ' + want);
@@ -370,6 +376,8 @@ function abmReport_(body) {
   if (sh && sh.getLastRow() >= 2) dataRows_(sh).forEach(function (r) {
     const pc = text_(r[10]) || DEFAULT_PROVINCE_CODE;
     if (!inScope(pc)) return;
+    const sd = toDate_(r[1]);
+    if ((fromD && sd && sd.getTime() < startOfDay_(fromD).getTime()) || (toD && sd && sd.getTime() >= startOfDay_(toD).getTime() + 864e5)) return;
     const g = materialGroupOf_(r[5]) === 'other' ? cropGroupOf_(r[4]) : materialGroupOf_(r[5]);
     const ton = maybeNumber_(r[7]), baht = maybeNumber_(r[8]), area = Number(r[6]) || 0;
     [areaOf(pc, text_(r[11]), text_(r[12]), text_(r[13])), matOf(g)].forEach(function (x) {
@@ -392,6 +400,7 @@ function abmReport_(body) {
   return {
     apiVersion: APP_VERSION, generatedAt: new Date().toISOString(),
     scope: { code: want, name: byProvince ? 'ทุกจังหวัด' : provNames[want], by: byProvince ? 'province' : 'district' },
+    period: { from: fromD ? dateInput_(fromD) : '', to: toD ? dateInput_(toD) : '' },
     listing: { hideAfterHarvestDays: rule.days },
     summary: { usersFarmers: users.farmer, usersBuyers: users.buyer, farmers: Object.keys(allSellers).length, plots: sum('plots'), areaRai: round_(sum('areaRai'), 2),
       ton: round_(sum('ton'), 1), buyers: sum('buyers'), capacityTonPerDay: round_(sum('capacityTonPerDay'), 1), potentialBaht: round_(sum('potentialBaht'), 0),

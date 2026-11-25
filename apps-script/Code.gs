@@ -1,7 +1,10 @@
 /**
- * Green Gain Hub 3.0.0 — ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ ทุกจังหวัด
+ * Green Gain Hub 4.0.0 — ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ ทุกจังหวัด
  * (API-only bridge from GitHub Pages to Google Sheets).
  *
+ * 4.0.0: officers of this system only — Admin (one province) and Super Admin (all), username + password, no central
+ *        identity (Sso.gs removed) — Admin.gs; officers' reports printed like Agri-Risk Map — Reports.gs. The market
+ *        listing rule is set here by Super Admin (ABM no longer sets it). ABM keeps reading the keyed feed/report API.
  * 3.3.0: sign-in and registration by phone number only (the 3.1.0 PIN is removed) — Sales.gs; summary cards moved
  *        above the district table.
  * 3.2.0: executive report for ABM (abm_report — all provinces or one, facts apart from estimates) — Market.gs.
@@ -16,7 +19,7 @@
  * This system keeps what farmers and buyers use and own: their accounts, plots for sale, buyers, the matching map.
  * ABM reads plots and buyers through the server-to-server feed below (abmFeed_); it never copies them.
  *
- * Files: Code.gs (this), Market.gs (public matching map), Sso.gs (farmer/buyer sign-in through the central identity),
+ * Files: Code.gs (this), Market.gs (public matching map), Admin.gs + Reports.gs (4.0.0 officers),
  *        Abm.gs (link to ABM: residue rates, managed area, helpers), Counter.gs (visit counter), Geo.gs (77 provinces:
  *        which province / district / subdistrict a pin is in), Districts.gs (Kamphaeng Phet only — fallback before 3.0.0).
  * Database: Google Sheets (users, farmers, buyers, Config, visit_stats). The officer sheets that used to live in the same
@@ -28,14 +31,15 @@
  *   ?api=v1&endpoint=hit | visits     Visit counter (count once per session | read)
  *   ?api=v1&endpoint=health           Public version check
  *   POST {action:'abm_feed', key}     Server-to-server feed for ABM (2.5.1; 2.8.0 + market listing rule)
- *   POST {action:'abm_config', key}   ABM officers set how long a plot stays on the market after harvest (2.8.0)
+ *   POST {action:'abm_config', key}   ABM reads the market listing rule (2.8.0; read-only since 4.0.0 — Super Admin sets it here)
+ *   POST {method, args, token}        GGH officers (4.0.0, Admin.gs)
  *
  * 2.9.0: farmers and buyers use Green Gain Hub only (Agri-Risk identity scope "market"); the ABM feed carries SHA-256 of
  * their phone numbers so ABM can refuse them as officers.
  * 2.8.0: a plot is shown until N days after its harvest date (Market.gs farmerListing_, Config hide_after_harvest_days,
  * default 20, set in ABM). A harvest date is required when saving. "ยังมีวัสดุอยู่" (renewFarmerServer) shows it N more days.
  */
-const APP_VERSION = '3.3.0';
+const APP_VERSION = '4.0.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -83,8 +87,6 @@ function apiMethods_() {
     registerServer: function (args) { return registerServer(args[0]); },
     markSoldServer: function (args, session) { return markSoldServer(args[0], session); },
     getApiInfoServer: function () { return getApiInfoServer(); },
-    ssoLoginServer: function (args) { return ssoLoginServer(args[0]); },
-    ssoProvisionServer: function (args) { return ssoProvisionServer(args[0]); },
     getUserProfileServer: function (args, session) { return getUserProfileServer(session); },
     saveDataServer: function (args, session) { return saveDataServer(args[0], session); },
     deleteDataServer: function (args, session) { return deleteDataServer(args[0], session); },
@@ -251,21 +253,10 @@ function marketListingInfo_() {
   return { hideAfterHarvestDays: rule.days, startDate: rule.start ? dateInput_(rule.start) : '', listedPlots: listed, hiddenPlots: hidden.length, hidden: hidden };
 }
 
-/** 2.8.0: ABM (Super/Mini Super Admin) sets N. Turning the rule on again counts listed plots from today. */
+/** 2.8.0 → 4.0.0: ABM reads the listing rule only — Super Admin of Green Gain Hub sets it (Admin.gs adminMarketRuleSave_). */
 function abmConfig_(body) {
   abmCheckKey_(body);
-  if (body.hideAfterHarvestDays !== undefined) {
-    const days = hideDaysValid_(body.hideAfterHarvestDays);
-    const lock = LockService.getScriptLock();
-    lock.waitLock(20000);
-    try {
-      const before = marketHideRule_();
-      const start = days > 0 && (!before.days || !before.start) ? dateInput_(new Date()) : (before.start ? dateInput_(before.start) : '');
-      hideRuleWrite_(days, start);
-      settingWrite_('hide_after_harvest_updated', new Date(), 'วันที่', 'แก้ไขล่าสุดโดย ABM: ' + cleanText_(body.by || '', 80));
-    } finally { lock.releaseLock(); }
-    invalidateSummary_();
-  }
+  if (body.hideAfterHarvestDays !== undefined) throw new Error('ตั้งค่านี้ที่ Green Gain Hub (Super Admin) ตั้งแต่รุ่น 4.0.0');
   return marketListingInfo_();
 }
 
@@ -290,15 +281,16 @@ function abmFeed_(body) {
     marketPhones: marketPhones, sales: salesForFeed_(province) };   // 3.1.0: real sales (no phones / buyer names)
 }
 
-/** 2.6.0: the only POSTs are from ABM (the officer/admin API moved there): the feed and, 2.8.0, the market listing rule. */
+/** POSTs: GGH officers' page ({method, args, token} — 4.0.0, Admin.gs) and ABM's keyed server-to-server API ({action, key}). */
 function doPost(e) {
   let payload;
   try {
     const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-    if (body.action === 'abm_feed') payload = { ok: true, data: abmFeed_(body) };
+    if (body.method) payload = { ok: true, result: adminDispatch_(body) };
+    else if (body.action === 'abm_feed') payload = { ok: true, data: abmFeed_(body) };
     else if (body.action === 'abm_config') payload = { ok: true, data: abmConfig_(body) };
     else if (body.action === 'abm_report') payload = { ok: true, data: abmReport_(body) };   // 3.2.0 executive report
-    else throw new Error('หน้าเจ้าหน้าที่ย้ายไปที่ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร (ABM): ' + ABM_SITE_URL);
+    else throw new Error('Invalid action');
   } catch (err) {
     payload = { ok: false, error: publicError_(err) };
   }
@@ -673,7 +665,9 @@ function setupSystem() {
   const abm = verifyAbmLink();
   let geo;   // 3.0.0: province columns, then fill provinces from pins (needs the boundary files on GitHub Pages)
   try { geo = ensureGeoColumns_() + '\n' + geoMigrate_(false) + '\n' + verifyGeo(); } catch (err) { geo = 'INFO: provinces not filled yet — ' + err; }
-  const out = [migration, formats, normalized, schema, restored, trigger, visits, abm, geo].join('\n');
+  let admins;   // 4.0.0: GGH officers (ggh_admins / ggh_admin_log) and the first Super Admin from Script Properties
+  try { admins = ensureAdminSchema_() + '\n' + ensureSuperAdmin_(); } catch (err) { admins = 'FAIL: officer sheets — ' + err; }
+  const out = [migration, formats, normalized, schema, restored, trigger, visits, abm, geo, admins].join('\n');
   console.log(out);
   return out;
 }

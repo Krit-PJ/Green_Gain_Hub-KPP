@@ -38,7 +38,7 @@ const post = (body) => { api.doPost({ postData: { contents: JSON.stringify(body)
 check(!post({ action: 'abm_pin_reset', key, phone: '0872222222' }).ok, 'abm_pin_reset removed');
 
 /* retired central identity: a ticket cannot open a session */
-bad(rpc('ssoLoginServer', { ticket: 'abc.def' }), /Method not allowed/, 'ssoLoginServer retired');
+bad(rpc('ssoLoginServer', { ticket: 'abc.def' }), /Method not allowed/, 'ssoLoginServer retired (Sso.gs removed in 4.0.0)');
 bad(rpc('ssoProvisionServer', { phone: '0861111111' }), /Method not allowed/, 'ssoProvisionServer retired');
 
 /* maize: a crop and a material */

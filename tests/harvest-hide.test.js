@@ -12,6 +12,7 @@ const env = load({ sheets: { Config: new Sheet('Config', [HEADERS.Config,
   ['hide_after_harvest_days', 20, 'วัน', ''], ['hide_after_harvest_start', '2026-01-01', 'วันที่', '']]) } });
 const { sheets, get } = env;
 const post = (body) => { env.api.doPost({ postData: { contents: JSON.stringify(body) } }); return JSON.parse(env.out().body); };
+const quiet = (f) => { const l = console.log; console.log = () => {}; try { return f(); } finally { console.log = l; } };
 const rpc = (method, args, token) => get({ action: 'rpc', method, args: JSON.stringify(args || []), token: token || '' });
 
 const OWNER = '0811111111';
@@ -55,17 +56,24 @@ check(!r.ok && /กรุณาระบุวันเก็บเกี่ย�
 r = rpc('saveDataServer', [Object.assign({ id: 'd21', harvestDate: iso(day(-21)) }, base)], farmer.token);
 check(r.ok && sheets.farmers.rows.find((x) => x[0] === 'd21')[15] === iso(day(20)), 'edit keeps the "ยังมีวัสดุอยู่" date');
 
-/* 5. ABM sets N (key required); 0 = off; turning on again counts from today */
-check(!post({ action: 'abm_config', key: 'x'.repeat(64), hideAfterHarvestDays: 0 }).ok, 'wrong key refused');
-[-1, 400, 1.5, ''].forEach((v) => check(!post({ action: 'abm_config', key, hideAfterHarvestDays: v }).ok, 'invalid days refused: ' + v));
-r = post({ action: 'abm_config', key, hideAfterHarvestDays: 0, by: 'krit' });
-check(r.ok && r.data.hideAfterHarvestDays === 0 && r.data.hiddenPlots === 0, 'off → nothing hidden');
+/* 5. 4.0.0: Super Admin of Green Gain Hub sets N; 0 = off; turning on again counts from today. ABM only reads it. */
+check(!post({ action: 'abm_config', key: 'x'.repeat(64) }).ok, 'wrong key refused');
+r = post({ action: 'abm_config', key });
+check(r.ok && r.data.hideAfterHarvestDays === 20, 'ABM reads the rule');
+check(!post({ action: 'abm_config', key, hideAfterHarvestDays: 0, by: 'krit' }).ok, 'ABM can no longer set it');
+env.props.SUPER_ADMIN_USERNAME = 'krit'; env.props.SUPER_ADMIN_PASSWORD = 'Super12345';
+quiet(() => env.api.setupSystem());
+const T = post({ method: 'adminLoginServer', args: [{ username: 'krit', password: 'Super12345' }] }).result.token;
+const rule = (d) => post({ method: 'marketRuleSaveServer', args: [{ hideAfterHarvestDays: d }], token: T });
+[-1, 400, 1.5, ''].forEach((v) => check(!rule(v).ok, 'invalid days refused: ' + v));
+r = rule(0);
+check(r.ok && r.result.rule.hideAfterHarvestDays === 0 && r.result.rule.hiddenPlots === 0, 'off → nothing hidden');
 check(get({ api: 'v1', endpoint: 'market' }).data.totals.plots === 6, 'off → every Open plot on the market');
-r = post({ action: 'abm_config', key, hideAfterHarvestDays: 30, by: 'krit' });
-check(r.ok && r.data.hideAfterHarvestDays === 30 && r.data.startDate === iso(day(0)) && r.data.hiddenPlots === 1, 'on again (30) counts from today; only nodate hidden');
-r = post({ action: 'abm_config', key, hideAfterHarvestDays: 25, by: 'somchai' });
-check(r.ok && r.data.startDate === iso(day(0)), 'changing N keeps the start date');
-check(sheets.Config.rows.some((x) => x[0] === 'hide_after_harvest_updated' && /somchai/.test(x[3])), 'who changed it last is noted');
+r = rule(30);
+check(r.ok && r.result.rule.hideAfterHarvestDays === 30 && r.result.rule.startDate === iso(day(0)) && r.result.rule.hiddenPlots === 1, 'on again (30) counts from today; only nodate hidden');
+r = rule(25);
+check(r.ok && r.result.rule.startDate === iso(day(0)), 'changing N keeps the start date');
+check(sheets.Config.rows.some((x) => x[0] === 'hide_after_harvest_updated' && /krit/.test(x[3])), 'who changed it last is noted');
 
 /* 6. feed tells ABM which plots are hidden (ids only) */
 r = post({ action: 'abm_feed', key });

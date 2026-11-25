@@ -577,3 +577,19 @@ body.ggh-landing-on > nav > .container { max-width: 84rem; }
   .ggh-topcard .ggh-scope { padding: .8rem 1.35rem 0; }
   .ggh-topcard .ggh-scope .ggh-tabs { margin: 0 -1.35rem; padding: 0 .85rem; }
 }
+
+/* 4.0.0: officers' menu, top right of the top bar (Admin / Super Admin of Green Gain Hub) */
+.ggh-staff { position: relative; flex-shrink: 0; }
+.ggh-staff > summary { list-style: none; display: inline-flex; align-items: center; gap: .35rem; min-height: 40px; padding: .35rem .6rem; border: 1px solid #c9d8cc;
+  border-radius: 999px; background: #fff; color: #1f4d2c; font-size: .9rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.ggh-staff > summary::-webkit-details-marker { display: none; }
+.ggh-staff > summary:hover, .ggh-staff[open] > summary { background: #eef6f0; }
+.ggh-staff > summary:focus-visible { outline: 3px solid rgba(26,127,55,.4); outline-offset: 2px; }
+.ggh-staff-caret { font-size: .7rem; transition: transform .15s; }
+.ggh-staff[open] .ggh-staff-caret { transform: rotate(180deg); }
+.ggh-staff-menu { position: absolute; right: 0; top: calc(100% + .4rem); min-width: 15rem; padding: .35rem; background: #fff; border: 1px solid #d6e2d9;
+  border-radius: 12px; box-shadow: 0 10px 28px rgba(16,44,24,.16); z-index: 60; }
+.ggh-staff-menu a { display: flex; align-items: center; gap: .6rem; min-height: 44px; padding: .5rem .7rem; border-radius: 8px; color: #1d2b22; font-size: .95rem; text-decoration: none; }
+.ggh-staff-menu a:hover, .ggh-staff-menu a:focus-visible { background: #eef6f0; outline: none; }
+.ggh-staff-menu i { width: 1.1rem; text-align: center; color: #1a7f37; }
+@media (max-width: 479px) { .ggh-staff-label, .ggh-staff-caret { display: none; } .ggh-staff > summary { padding: .45rem .6rem; } }

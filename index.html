@@ -16,9 +16,9 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=3.3.0">
-  <link rel="stylesheet" href="assets/market.css?v=3.3.0">
-  <link rel="stylesheet" href="assets/record.css?v=3.3.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=4.0.0">
+  <link rel="stylesheet" href="assets/market.css?v=4.0.0">
+  <link rel="stylesheet" href="assets/record.css?v=4.0.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -69,6 +69,14 @@
       </div>
       <img src="https://upload.wikimedia.org/wikipedia/commons/f/fd/Seal_of_Kamphaeng_Phet_Province_%28color_version%2C_Thai_Fine_Art_Department%29.png" class="h-8 sm:h-10 w-auto shrink-0" alt="ตราจังหวัดกำแพงเพชร" data-province-seal="62">
       <span class="ggh-topbar-spacer" aria-hidden="true"></span>
+      <!-- 4.0.0: officers of this system (Admin / Super Admin) — kept out of the way in a small menu, top right -->
+      <details class="ggh-staff" id="staffMenu">
+        <summary aria-label="สำหรับเจ้าหน้าที่"><i class="fa-solid fa-user-shield" aria-hidden="true"></i><span class="ggh-staff-label">เจ้าหน้าที่</span><i class="fa-solid fa-chevron-down ggh-staff-caret" aria-hidden="true"></i></summary>
+        <div class="ggh-staff-menu" role="menu">
+          <a role="menuitem" href="admin.html#login"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>เข้าสู่ระบบเจ้าหน้าที่</a>
+          <a role="menuitem" href="admin.html#register"><i class="fa-solid fa-user-plus" aria-hidden="true"></i>สมัครเป็นเจ้าหน้าที่ (Admin จังหวัด)</a>
+        </div>
+      </details>
     </div>
   </nav>
 
@@ -205,7 +213,7 @@
       </section>
     </div>
 
-    <!-- 2.6.0: the results page (ผลการดำเนินงาน) and officer sign-in moved to ABM — ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร -->
+    <!-- 2.6.0: the results page (ผลการดำเนินงาน) moved to ABM. 4.0.0: officers sign in here again (menu top right → admin.html) -->
 
 
     <div id="mainApp" class="hidden">
@@ -428,10 +436,10 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=3.3.0"></script>
-  <script src="assets/api-client.js?v=3.3.0"></script>
-  <script src="assets/province.js?v=3.3.0"></script>
-  <script src="assets/market.js?v=3.3.0" defer></script>
+  <script src="assets/config.js?v=4.0.0"></script>
+  <script src="assets/api-client.js?v=4.0.0"></script>
+  <script src="assets/province.js?v=4.0.0"></script>
+  <script src="assets/market.js?v=4.0.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','ซังข้าวโพด','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -695,8 +703,7 @@
       toggleOtherMaterial(materialSelect);
     }
 
-    // --- 2.2.1 sign-in popup for farmers/buyers (#hubAuth); 2.6.0: officers sign in at ABM ---
-    const ABM_URL = window.GGH_CONFIG?.ABM_URL || 'https://krit-pj.github.io/KPP-Agri-Byproduct-Management/';
+    // --- 2.2.1 sign-in popup for farmers/buyers (#hubAuth); 4.0.0: officers sign in at admin.html (menu top right) ---
     const AUTH = { opener: null };
     function setMsg(id, html, kind) {
       const el = document.getElementById(id);
@@ -752,8 +759,14 @@
       setMsg('hubLoginMsg', ''); setMsg('hubRegMsg', '');
       selectTab(dlg, 'hub', tab || 'login');
     }
-    /** 2.6.0: officer sign-in is in ABM (same popup and phone sign-in as before). */
-    function openStaff(tab) { location.href = ABM_URL + (tab === 'register' ? '#staff-register' : '#staff'); }
+    /** 4.0.0: officers of Green Gain Hub sign in at admin.html */
+    function openStaff(tab) { location.href = tab === 'register' ? 'admin.html#register' : 'admin.html#login'; }
+    // the officers' menu closes when tapping elsewhere or pressing Esc
+    (function staffMenu() {
+      const m = document.getElementById('staffMenu'); if (!m) return;
+      document.addEventListener('click', (e) => { if (m.open && !m.contains(e.target)) m.open = false; });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.open) { m.open = false; m.querySelector('summary').focus(); } });
+    })();
     function openDoor(action, role, opener) {
       if (action === 'staff') return openStaff('login', '', opener);
       openHub(action === 'register' ? 'register' : 'login', role, '', opener);
@@ -774,7 +787,7 @@
     // Kept for older links/buttons.
     function toggleAuth(page) { openHub(page === 'register' ? 'register' : 'login'); }
 
-    // Shareable links (e.g. in LINE): #sell, #buy, #login, #register. (#staff, #staff-register and the old results links open ABM — market.js.)
+    // Shareable links (e.g. in LINE): #sell, #buy, #login, #register. (#staff, #staff-register → admin.html; old results links open ABM — market.js.)
     (function openFromHash() {
       const h = decodeURIComponent((location.hash || '').slice(1));
       const map = { sell: ['register', 'farmer'], buy: ['register', 'buyer'], login: ['login', ''], register: ['register', ''] };
