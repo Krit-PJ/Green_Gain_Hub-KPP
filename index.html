@@ -16,9 +16,9 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=3.1.0">
-  <link rel="stylesheet" href="assets/market.css?v=3.1.0">
-  <link rel="stylesheet" href="assets/record.css?v=3.1.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=3.3.0">
+  <link rel="stylesheet" href="assets/market.css?v=3.3.0">
+  <link rel="stylesheet" href="assets/record.css?v=3.3.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -85,8 +85,6 @@
           <button type="button" data-door="login" data-role="farmer" class="ggh-mk-door is-sell"><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i><span class="ggh-mk-door-name">ฉันมีวัสดุจะขาย</span><span class="ggh-mk-door-hint">ประกาศขาย และดูผู้รับซื้อใกล้แปลง</span></button>
           <button type="button" data-door="login" data-role="buyer" class="ggh-mk-door is-buy"><i class="fa-solid fa-truck" aria-hidden="true"></i><span class="ggh-mk-door-name">ฉันรับซื้อวัสดุ</span><span class="ggh-mk-door-hint">ปักจุดรับซื้อ และดูแปลงพร้อมขาย</span></button>
         </nav>
-        <!-- 3.0.0: three numbers of the chosen province — area, how many sellers, estimated biomass -->
-        <div class="ggh-mk-stats" id="mkStats" aria-live="polite">กำลังโหลดข้อมูลตลาด…</div>
       </header>
 
       <section class="ggh-mk-board" aria-labelledby="mkBoardTitle">
@@ -128,6 +126,9 @@
         <!-- 3.0.0: every district of the chosen province — area, sellers, biomass, buyers; a row filters the map -->
         <details class="ggh-mk-dist" id="mkDistWrap" open>
           <summary><span class="ggh-mk-h3">สรุปรายอำเภอ จังหวัด<span data-province>กำแพงเพชร</span></span><span class="ggh-mk-dist-hint" id="mkDistHint">แตะชื่ออำเภอเพื่อดูบนแผนที่</span></summary>
+          <!-- 3.0.0: three numbers of the chosen province — area, how many sellers, estimated biomass;
+               3.3.0: moved here from the page header, on top of the district table (same material as the table) -->
+          <div class="ggh-mk-stats" id="mkStats" aria-live="polite">กำลังโหลดข้อมูลตลาด…</div>
           <div class="ggh-mk-dist-body" id="mkDistTable"></div>
         </details>
       </section>
@@ -373,17 +374,6 @@
           <p class="ggh-dhelp">กรอกหมายเลขโทรศัพท์ที่ลงทะเบียนไว้ เพื่อประกาศแปลงหรือจุดรับซื้อ และดูคู่ค้าใกล้คุณ</p>
           <label class="label-text" for="loginPhone">หมายเลขโทรศัพท์ 10 หลัก</label>
           <input type="tel" id="loginPhone" class="input-field text-lg tracking-widest text-center font-bold" placeholder="08XXXXXXXX" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-          <!-- 3.1.0: 6-digit PIN (accounts from before 3.1.0 set one at their next sign-in) -->
-          <label class="label-text" for="loginPin">PIN 6 หลัก</label>
-          <input type="password" id="loginPin" class="input-field text-lg tracking-widest text-center font-bold ggh-pin" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="current-password" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-          <p class="ggh-dhint">ผู้ใช้เดิมที่ยังไม่เคยตั้ง PIN: เว้นช่อง PIN ว่างแล้วกดเข้าสู่ระบบ ระบบจะให้ตั้ง PIN ครั้งเดียว · ลืม PIN ติดต่อสำนักงานเกษตรจังหวัดเพื่อขอล้าง PIN</p>
-          <div class="ggh-setpin hidden" id="setPinBox">
-            <p class="ggh-dhelp"><b>ตั้ง PIN 6 หลัก</b> สำหรับเข้าสู่ระบบครั้งต่อไป (ห้ามใช้เลขเรียงหรือเลขซ้ำ เช่น 123456, 111111)</p>
-            <label class="label-text" for="newPin">PIN ใหม่</label>
-            <input type="password" id="newPin" class="input-field text-lg tracking-widest text-center font-bold ggh-pin" maxlength="6" inputmode="numeric" autocomplete="new-password" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-            <label class="label-text" for="newPin2">ยืนยัน PIN อีกครั้ง</label>
-            <input type="password" id="newPin2" class="input-field text-lg tracking-widest text-center font-bold ggh-pin" maxlength="6" inputmode="numeric" autocomplete="new-password" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-          </div>
           <div class="ggh-dmsg" id="hubLoginMsg" role="alert"></div>
           <button type="submit" id="loginBtn" class="ggh-dbtn">เข้าสู่ระบบ</button>
           <p class="ggh-dswitch">ยังไม่มีบัญชี? <button type="button" data-hubtab="register">ลงทะเบียนใหม่</button></p>
@@ -398,10 +388,6 @@
           <input type="text" id="regName" name="name" class="input-field" maxlength="150" autocomplete="name">
           <label class="label-text" for="regPhone">หมายเลขโทรศัพท์ 10 หลัก (ใช้เข้าสู่ระบบ)</label>
           <input type="tel" id="regPhone" name="phone" class="input-field font-bold tracking-wider" placeholder="08XXXXXXXX" maxlength="10" inputmode="numeric" autocomplete="tel" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-          <label class="label-text" for="regPin">ตั้ง PIN 6 หลัก (ใช้คู่กับเบอร์โทรทุกครั้งที่เข้าสู่ระบบ)</label>
-          <input type="password" id="regPin" name="pin" class="input-field font-bold tracking-widest ggh-pin" maxlength="6" inputmode="numeric" autocomplete="new-password" placeholder="ห้ามใช้ 123456 หรือ 111111" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-          <label class="label-text" for="regPin2">ยืนยัน PIN อีกครั้ง</label>
-          <input type="password" id="regPin2" name="pin2" class="input-field font-bold tracking-widest ggh-pin" maxlength="6" inputmode="numeric" autocomplete="new-password" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
           <!-- 3.0.0: the province the user trades in (the page opens on it after sign-in) -->
           <label class="label-text" for="regProvince">จังหวัดของคุณ (ที่ตั้งแปลงหรือจุดรับซื้อ)</label>
           <select id="regProvince" name="province" class="input-field" required><option value="">เลือกจังหวัด</option></select>
@@ -442,10 +428,10 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=3.1.0"></script>
-  <script src="assets/api-client.js?v=3.1.0"></script>
-  <script src="assets/province.js?v=3.1.0"></script>
-  <script src="assets/market.js?v=3.1.0" defer></script>
+  <script src="assets/config.js?v=3.3.0"></script>
+  <script src="assets/api-client.js?v=3.3.0"></script>
+  <script src="assets/province.js?v=3.3.0"></script>
+  <script src="assets/market.js?v=3.3.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','ซังข้าวโพด','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -762,7 +748,7 @@
       if (phone) { document.getElementById('loginPhone').value = phone; f.phone.value = phone; }
       // 3.0.0: the 77 provinces, the one the page shows chosen already
       if (window.GGH_PROVINCE && f.province.options.length < 2) window.GGH_PROVINCE.fillSelect(f.province, { placeholder: 'เลือกจังหวัด', value: window.GGH_PROVINCE.code }).catch(() => {});
-      document.getElementById('setPinBox').classList.add('hidden'); document.getElementById('loginBtn').textContent = 'เข้าสู่ระบบ';
+      document.getElementById('loginBtn').textContent = 'เข้าสู่ระบบ';
       setMsg('hubLoginMsg', ''); setMsg('hubRegMsg', '');
       selectTab(dlg, 'hub', tab || 'login');
     }
@@ -809,21 +795,13 @@
     // --- AUTH: farmers and buyers sign in by phone only. Messages stay inside the popup. ---
     function login() {
       const u = document.getElementById('loginPhone').value.replace(/\D/g, '');
-      const pin = document.getElementById('loginPin').value.replace(/\D/g, '');
       const btn = document.getElementById('loginBtn');
       if (u.length !== 10) return setMsg('hubLoginMsg', 'กรุณากรอกหมายเลขโทรศัพท์ให้ครบ 10 หลัก');
-      const setBox = document.getElementById('setPinBox');
-      if (!setBox.classList.contains('hidden')) return setPin(u);   // 3.1.0: choosing a PIN for an old account
       setMsg('hubLoginMsg', '');
       btn.textContent = 'กำลังตรวจสอบข้อมูล…'; btn.disabled = true;
       const done = () => { btn.textContent = 'เข้าสู่ระบบ'; btn.disabled = false; };
       const success = (data) => {
         done();
-        if (data.status === 'need_pin') {   // 3.1.0: account from before the PIN — choose one now
-          setBox.classList.remove('hidden'); document.getElementById('loginBtn').textContent = 'ตั้ง PIN และเข้าสู่ระบบ';
-          setMsg('hubLoginMsg', escapeHtml(data.message), 'ok'); document.getElementById('newPin').focus(); return;
-        }
-        if (data.status === 'pin_required') { setMsg('hubLoginMsg', escapeHtml(data.message)); document.getElementById('loginPin').focus(); return; }
         if (data.status === 'success') { closeDialog(document.getElementById('hubAuth')); currentUser = data; setupUI(data); }
         else setMsg('hubLoginMsg', escapeHtml(data.message || 'เข้าสู่ระบบไม่สำเร็จ'));
       };
@@ -836,23 +814,7 @@
           } else setMsg('hubLoginMsg', escapeHtml(msg || 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่'));
       };
       // 2.9.3: farmers and buyers sign in here with their phone number only (no central identity hop).
-      google.script.run.withSuccessHandler(success).withFailureHandler(failure).loginServer({ action: 'login', username: u, pin: pin });
-    }
-    function setPin(u) {
-      const a = document.getElementById('newPin').value, b = document.getElementById('newPin2').value;
-      if (!/^\d{6}$/.test(a)) return setMsg('hubLoginMsg', 'PIN ต้องเป็นตัวเลข 6 หลัก');
-      if (a !== b) return setMsg('hubLoginMsg', 'PIN ทั้งสองช่องไม่ตรงกัน');
-      const btn = document.getElementById('loginBtn');
-      btn.disabled = true; btn.textContent = 'กำลังตั้ง PIN…';
-      google.script.run
-        .withSuccessHandler((data) => {
-          btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
-          document.getElementById('setPinBox').classList.add('hidden');
-          closeDialog(document.getElementById('hubAuth')); currentUser = data; setupUI(data);
-          Swal.fire({ icon: 'success', title: 'ตั้ง PIN แล้ว', text: 'ครั้งต่อไปเข้าสู่ระบบด้วยเบอร์โทรและ PIN นี้', timer: 3500 });
-        })
-        .withFailureHandler((err) => { btn.disabled = false; btn.textContent = 'ตั้ง PIN และเข้าสู่ระบบ'; setMsg('hubLoginMsg', escapeHtml(err.message)); })
-        .setPinServer({ phone: u, pin: a });
+      google.script.run.withSuccessHandler(success).withFailureHandler(failure).loginServer({ action: 'login', username: u });   // 3.3.0: phone number only
     }
 
     document.getElementById('hubPanelRegister').addEventListener('submit', (e) => { e.preventDefault(); register(); });
@@ -864,9 +826,7 @@
       if (!f.name.value.trim()) miss.push('ชื่อ');
       if (u.length !== 10) miss.push('หมายเลขโทรศัพท์ 10 หลัก');
       if (!f.province.value) miss.push('จังหวัด');
-      if (!/^\d{6}$/.test(f.pin.value)) miss.push('PIN 6 หลัก');
       if (miss.length) return setMsg('hubRegMsg', 'กรุณากรอก: ' + miss.join(', '));
-      if (f.pin.value !== f.pin2.value) return setMsg('hubRegMsg', 'PIN ทั้งสองช่องไม่ตรงกัน');
       if (!document.getElementById('pdpaCheck').checked) return setMsg('hubRegMsg', 'กรุณาอ่านและติ๊กยินยอมการใช้ข้อมูลส่วนบุคคล (PDPA) ก่อนลงทะเบียน');
       const btn = document.getElementById('regBtn');
       setMsg('hubRegMsg', ''); btn.textContent = 'กำลังลงทะเบียน…'; btn.disabled = true;
@@ -876,7 +836,7 @@
           done();
           if (d.status !== 'success') return setMsg('hubRegMsg', escapeHtml(d.message || 'ลงทะเบียนไม่สำเร็จ'));
           closeDialog(document.getElementById('hubAuth'));
-          if (d.token) { currentUser = d; setupUI(d); Swal.fire({ icon: 'success', title: 'ลงทะเบียนสำเร็จ', text: 'เข้าใช้งานได้ทันที ครั้งต่อไปเข้าสู่ระบบด้วยเบอร์โทรและ PIN ที่ตั้งไว้', timer: 3500 }); }
+          if (d.token) { currentUser = d; setupUI(d); Swal.fire({ icon: 'success', title: 'ลงทะเบียนสำเร็จ', text: 'เข้าใช้งานได้ทันที ครั้งต่อไปเข้าสู่ระบบด้วยหมายเลขโทรศัพท์นี้', timer: 3500 }); }
           else { openHub('login', '', u); setMsg('hubLoginMsg', 'ลงทะเบียนสำเร็จ กรุณาเข้าสู่ระบบ', 'ok'); }
         })
         .withFailureHandler(function (err) {
@@ -887,7 +847,7 @@
             document.querySelector('#hubRegMsg [data-to-login]').addEventListener('click', () => openHub('login', '', u));
           } else setMsg('hubRegMsg', escapeHtml(msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่'));
         })
-        .registerServer({ role: role, name: f.name.value.trim(), phone: u, password: '', provinceCode: f.province.value, pin: f.pin.value });
+        .registerServer({ role: role, name: f.name.value.trim(), phone: u, password: '', provinceCode: f.province.value });
     }
 
     // --- UI SETUP ---

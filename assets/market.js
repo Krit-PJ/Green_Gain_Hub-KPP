@@ -258,10 +258,12 @@
   };
   const statusOf = (sell, buy) => STATUS[sell && buy ? 'both' : sell ? 'sellOnly' : buy ? 'buyOnly' : 'none'];
 
-  /** 3.0.0: พื้นที่รวม · จำนวนราย · ประมาณการชีวมวล — of the province on show */
+  /** 3.0.0: พื้นที่รวม · จำนวนราย · ประมาณการชีวมวล — of the province on show.
+      3.3.0: shown on top of the district table and, like it, for the chosen material (all materials by default) */
   function renderStats() {
     const d = state.data; if (!d) return;
-    const t = d.totals;
+    const g = state.mat === 'all' ? null : groups().find((x) => x.key === state.mat);
+    const t = g ? { areaRai: g.sell.areaRai || 0, plots: g.sell.plots || 0, farmers: g.sell.farmers ?? g.sell.plots ?? 0, ton: g.sell.ton || 0, buyers: g.buy.buyers || 0 } : d.totals;
     const tile = (cls, ico, value, unit, name, sub) => `<div class="ggh-mk-key-tile ${cls}"><i class="fa-solid ${ico}" aria-hidden="true"></i>
       <p class="ggh-mk-key-num"><b>${value}</b> ${unit}</p><p class="ggh-mk-key-name">${name}</p><p class="ggh-mk-key-sub">${sub}</p></div>`;
     const el = $('mkStats'); el.classList.remove('is-error');
@@ -424,8 +426,7 @@
       setDistrict(state.district === b.dataset.district ? '' : b.dataset.district);
       const top = $('mkBoardTitle'); if (top && top.scrollIntoView) top.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-    // phones: the table starts folded so the map stays near the top
-    if (window.matchMedia && window.matchMedia('(max-width: 899px)').matches) $('mkDistWrap').open = false;
+    // 3.3.0: the district summary stays open on phones too — the three summary tiles live on top of it
     $('mkView').addEventListener('click', (e) => {
       const b = e.target.closest('[data-view]'); if (!b) return; state.view = b.dataset.view; $('mkBody').dataset.view = state.view;
       $('mkView').querySelectorAll('[data-view]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));

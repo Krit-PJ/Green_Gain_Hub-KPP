@@ -105,7 +105,7 @@ function load(options) {
     ? Object.assign({}, custom, { fetch: (url, o) => (/\/geo\//.test(String(url)) ? geoFetch(url) : custom.fetch(url, o)) })
     : { fetch: geoFetch, fetchAll: () => { throw new Error('no network in tests'); } };
   const dir = path.join(__dirname, '..', '..', 'apps-script');
-  const files = options.files || ['Districts.gs', 'Code.gs', 'Abm.gs', 'Counter.gs', 'Sso.gs', 'Market.gs', 'Geo.gs', 'Pin.gs'];   // 2.6.0: officer files moved to ABM
+  const files = options.files || ['Districts.gs', 'Code.gs', 'Abm.gs', 'Counter.gs', 'Sso.gs', 'Market.gs', 'Geo.gs', 'Sales.gs'];   // 3.3.0: Pin.gs → Sales.gs   // 2.6.0: officer files moved to ABM
   const src = files.map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
   const names = options.expose || [];
   const api = new Function(src + '; return { doGet, doPost, setupSystem' + names.map((n) => ', ' + n).join('') + ' };')();

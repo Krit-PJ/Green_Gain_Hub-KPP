@@ -2,8 +2,10 @@
  * Green Gain Hub 3.0.0 — ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ ทุกจังหวัด
  * (API-only bridge from GitHub Pages to Google Sheets).
  *
+ * 3.3.0: sign-in and registration by phone number only (the 3.1.0 PIN is removed) — Sales.gs; summary cards moved
+ *        above the district table.
  * 3.2.0: executive report for ABM (abm_report — all provinces or one, facts apart from estimates) — Market.gs.
- * 3.1.0: 6-digit PIN for every account, "ขายแล้ว" records (sales sheet) and maize (ซังข้าวโพด) as a material — Pin.gs.
+ * 3.1.0: 6-digit PIN for every account, "ขายแล้ว" records (sales sheet) and maize (ซังข้าวโพด) as a material — Pin.gs (Sales.gs since 3.3.0).
  * 3.0.0: all 77 provinces. Every plot / buyer point carries Province…Subdistrict decided by the server from its pin
  * (Geo.gs, farmers S:X, buyers R:W), every user a province (users J:K, chosen at registration). The public market,
  * the signed-in map and the district table are per province; ABM (Kamphaeng Phet officers) reads only its province.
@@ -33,7 +35,7 @@
  * 2.8.0: a plot is shown until N days after its harvest date (Market.gs farmerListing_, Config hide_after_harvest_days,
  * default 20, set in ABM). A harvest date is required when saving. "ยังมีวัสดุอยู่" (renewFarmerServer) shows it N more days.
  */
-const APP_VERSION = '3.2.0';
+const APP_VERSION = '3.3.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -46,8 +48,8 @@ const CROP_MATERIAL_MAP = {
   'ข้าวโพดเลี้ยงสัตว์': 'ซังข้าวโพด',
   'มันสำปะหลัง': 'เหง้ามันสำปะหลัง'
 };
-// 3.1.0: ssoLoginServer / ssoProvisionServer retired (unused since 2.9.3) — a central-identity ticket must not skip the PIN.
-const PUBLIC_METHODS = ['loginServer', 'registerServer', 'setPinServer', 'getApiInfoServer'];
+// 3.1.0: ssoLoginServer / ssoProvisionServer retired (unused since 2.9.3) (farmers and buyers sign in with their phone number).
+const PUBLIC_METHODS = ['loginServer', 'registerServer', 'getApiInfoServer'];   // 3.3.0: setPinServer removed
 const PRIVATE_METHODS = ['getUserProfileServer', 'saveDataServer', 'deleteDataServer', 'getMatchingDataServer', 'renewFarmerServer', 'markSoldServer'];
 
 /** JSONP endpoint used by the static GitHub Pages frontend. */
@@ -79,7 +81,6 @@ function apiMethods_() {
   return {
     loginServer: function (args) { return loginServer(args[0]); },
     registerServer: function (args) { return registerServer(args[0]); },
-    setPinServer: function (args) { return setPinServer(args[0]); },
     markSoldServer: function (args, session) { return markSoldServer(args[0], session); },
     getApiInfoServer: function () { return getApiInfoServer(); },
     ssoLoginServer: function (args) { return ssoLoginServer(args[0]); },
@@ -296,7 +297,6 @@ function doPost(e) {
     const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (body.action === 'abm_feed') payload = { ok: true, data: abmFeed_(body) };
     else if (body.action === 'abm_config') payload = { ok: true, data: abmConfig_(body) };
-    else if (body.action === 'abm_pin_reset') payload = { ok: true, data: abmPinReset_(body) };   // 3.1.0
     else if (body.action === 'abm_report') payload = { ok: true, data: abmReport_(body) };   // 3.2.0 executive report
     else throw new Error('หน้าเจ้าหน้าที่ย้ายไปที่ระบบบริหารจัดการวัสดุเหลือใช้ทางการเกษตร (ABM): ' + ABM_SITE_URL);
   } catch (err) {
@@ -321,10 +321,7 @@ function loginServer(input) {
   const rows = dataRows_(sheet_('users'));
   const found = rows.find(function (r) { return normalizePhone_(r[0]) === phone; });
   if (!found) throw new Error('ไม่พบหมายเลขโทรศัพท์นี้ในระบบ กรุณาลงทะเบียน');
-  // 3.1.0: the PIN is needed; an account from before 3.1.0 chooses one first (setPinServer)
-  if (!hasPin_(found)) return { status: 'need_pin', success: true, phone: phone, message: 'บัญชีนี้ยังไม่มี PIN กรุณาตั้ง PIN 6 หลัก (ครั้งเดียว)' };
-  if (!String(input.pin || '').trim()) return { status: 'pin_required', success: true, phone: phone, message: 'กรุณาใส่ PIN 6 หลัก' };
-  pinCheck_(phone, found, String(input.pin).trim());
+  pinCleanupSafe_();   // 3.3.0: phone number only — the PIN is removed (old PIN hashes blanked once)
   return newSession_(phone, found);
 }
 
@@ -336,7 +333,6 @@ function registerServer(input) {
   if (!/^0\d{9}$/.test(phone)) throw new Error('กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก');
   if (!name) throw new Error('กรุณากรอกชื่อ');
   const province = registerProvince_(input.provinceCode || input.province);   // 3.0.0: required
-  const pin = pinValid_(input.pin);   // 3.1.0: required
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -349,7 +345,7 @@ function registerServer(input) {
     ensureGeoColumns_();
     // A:I = Telephone, Password(legacy/unused), Role, Name, System, Consent, Consent_Timestamp, Created_At, Updated_At
     // J:K (3.0.0) = Province_Code, Province
-    sh.appendRow([phone, pinRecord_(pin), role, name, false, true, now, now, now, province.code, province.name]);
+    sh.appendRow([phone, '', role, name, false, true, now, now, now, province.code, province.name]);
   } finally {
     lock.releaseLock();
   }

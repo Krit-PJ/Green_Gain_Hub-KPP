@@ -51,6 +51,6 @@
 
 ## 3.1.0: PIN และการขาย
 
-- `users!B` (`Password` เดิมที่ไม่ได้ใช้) = `pin1$<salt>$<sha256>` — ไม่เก็บ PIN จริง · ว่าง = ยังไม่ตั้ง PIN (ตั้งตอนเข้าสู่ระบบครั้งถัดไป)
+- `users!B` (`Password` เดิมที่ไม่ได้ใช้) — ว่างเสมอตั้งแต่ 3.3.0 (เลิกใช้ PIN; แฮช PIN ของ 3.1.0–3.2.0 ถูกล้างครั้งเดียว)
 - ชีตใหม่ `sales` (สร้างอัตโนมัติ): `ID, Sold_At, Plot_ID, Owner_Telephone, Crop, Material, Area_Rai, Quantity_Ton, Amount_Baht, Buyer_Name, Province_Code, Province, District_Code, District, Created_At` · แปลงที่ขายแล้ว `farmers!L = Sold`
 

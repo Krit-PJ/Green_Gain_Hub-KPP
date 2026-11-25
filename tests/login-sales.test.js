@@ -1,5 +1,5 @@
-/* 3.1.0: 6-digit PIN (register, first-time set for old accounts, lockout, ABM reset), "ขายแล้ว" records, maize material,
-   and the retired central-identity RPCs (a ticket must not skip the PIN). Replaces sso.test.js. */
+/* 3.3.0: phone-number-only sign-in and registration (the 3.1.0 PIN removed, old hashes blanked), "ขายแล้ว" records,
+   maize material and the retired central-identity RPCs. Was pin.test.js (3.1.0). */
 const crypto = require('crypto');
 const { load, Sheet, HEADERS } = require('./helpers/gas-mock');
 function assert(v, m) { if (!v) throw new Error(m); }
@@ -12,42 +12,30 @@ quiet(() => api.setupSystem());
 const rpc = (method, arg, token) => get({ action: 'rpc', method, args: JSON.stringify([arg]), callback: '', token: token || '' });
 const bad = (r, re, m) => { n++; assert(!r.ok && re.test(r.error), m + ': ' + JSON.stringify(r)); };
 
-/* register: PIN required, too-simple PINs refused, stored only as a salted hash */
-bad(rpc('registerServer', { role: 'farmer', name: 'ใหม่', phone: '0861111111', provinceCode: '62' }), /PIN/, 'PIN required at registration');
-bad(rpc('registerServer', { role: 'farmer', name: 'ใหม่', phone: '0861111111', provinceCode: '62', pin: '123456' }), /ง่ายเกินไป/, 'sequence refused');
-bad(rpc('registerServer', { role: 'farmer', name: 'ใหม่', phone: '0861111111', provinceCode: '62', pin: '777777' }), /ง่ายเกินไป/, 'same digits refused');
-bad(rpc('registerServer', { role: 'farmer', name: 'ใหม่', phone: '0861111111', provinceCode: '62', pin: '12a456' }), /6 หลัก/, '6 digits only');
-const reg = rpc('registerServer', { role: 'farmer', name: 'สมใจ ปลูกข้าว', phone: '0861111111', provinceCode: '62', pin: '408215' });
-check(reg.ok && reg.result.token, 'registered and signed in');
+/* 3.3.0: register and sign in with the phone number only — no PIN anywhere */
+const reg = rpc('registerServer', { role: 'farmer', name: 'สมใจ ปลูกข้าว', phone: '0861111111', provinceCode: '62' });
+check(reg.ok && reg.result.token && reg.result.province.code === '62', 'registered with phone, name, province → signed in');
 const urow = sheets.users.rows.find((r) => r[0] === '0861111111');
-check(/^pin1\$[0-9a-f]{16}\$[0-9a-f]{64}$/.test(urow[1]) && !JSON.stringify(sheets.users.rows).includes('408215'), 'PIN stored as salted SHA-256 only');
+check(urow[1] === '', 'nothing stored in the old password column');
+bad(rpc('registerServer', { role: 'farmer', name: 'ซ้ำ', phone: '0861111111', provinceCode: '62' }), /ลงทะเบียนแล้ว/, 'a number registers once');
+const ok = rpc('loginServer', { username: '0861111111' });
+check(ok.ok && ok.result.status === 'success' && /^[0-9a-f]{64}$/.test(ok.result.token), 'phone alone signs in');
+check(rpc('loginServer', { username: '0861111111', pin: '000001' }).result.status === 'success', 'a PIN sent by an old page is ignored');
+bad(rpc('loginServer', { username: '0899999990' }), /ไม่พบหมายเลข/, 'unknown number → register');
+bad(rpc('setPinServer', { phone: '0861111111', pin: '408215' }), /Method not allowed/, 'setPinServer removed');
 
-/* sign in needs the PIN */
-check(rpc('loginServer', { username: '0861111111' }).result.status === 'pin_required', 'phone alone asks for the PIN');
-bad(rpc('loginServer', { username: '0861111111', pin: '000001' }), /PIN ไม่ถูกต้อง \(ลองได้อีก 4 ครั้ง\)/, 'wrong PIN counted');
-const ok = rpc('loginServer', { username: '0861111111', pin: '408215' });
-check(ok.ok && ok.result.status === 'success' && /^[0-9a-f]{64}$/.test(ok.result.token), 'right PIN signs in');
-for (let i = 0; i < 5; i++) rpc('loginServer', { username: '0861111111', pin: '000002' });
-bad(rpc('loginServer', { username: '0861111111', pin: '408215' }), /รอ 15 นาที/, 'locked after 5 wrong PINs, even with the right one');
-cache.delete('pinfail:0861111111');
+/* accounts that set a PIN under 3.1.0: the hash is blanked once at the next sign-in, and they sign in by phone */
+delete env.props.PIN_REMOVED;
+sheets.users.rows.push(['0872222222', 'pin1$0123456789abcdef$' + 'a'.repeat(64), 'buyer', 'โรงอัดฟาง เดิม', false, true, '', '', '', '62', 'กำแพงเพชร']);
+const set = rpc('loginServer', { username: '0872222222' });
+check(set.ok && set.result.token && set.result.role === 'buyer', 'old PIN account signs in by phone');
+check(!JSON.stringify(sheets.users.rows).includes('pin1$') && env.props.PIN_REMOVED === '3.3.0', 'PIN hashes blanked once');
 
-/* accounts from before 3.1.0: choose a PIN once, then it is needed */
-sheets.users.rows.push(['0872222222', '', 'buyer', 'โรงอัดฟาง เดิม', false, true, '', '', '', '62', 'กำแพงเพชร']);
-check(rpc('loginServer', { username: '0872222222' }).result.status === 'need_pin', 'old account without PIN: asked to set one');
-check(!rpc('loginServer', { username: '0872222222' }).result.token, 'no session before the PIN is set');
-const set = rpc('setPinServer', { phone: '0872222222', pin: '590314' });
-check(set.ok && set.result.token && set.result.role === 'buyer', 'PIN set → signed in');
-bad(rpc('setPinServer', { phone: '0872222222', pin: '111222' }), /ตั้ง PIN แล้ว/, 'cannot overwrite an existing PIN');
-check(rpc('loginServer', { username: '0872222222', pin: '590314' }).result.status === 'success', 'then signs in with it');
-
-/* ABM Super Admin clears a forgotten PIN (feed key only) */
+/* ABM PIN reset retired */
 const key = crypto.randomBytes(32).toString('hex');
 sheets.Config.rows.push(['abm_feed_key_sha256', crypto.createHash('sha256').update(key).digest('hex'), 'sha256', 'ABM']);
 const post = (body) => { api.doPost({ postData: { contents: JSON.stringify(body) } }); return JSON.parse(env.out().body); };
-check(!post({ action: 'abm_pin_reset', key: 'x'.repeat(64), phone: '0872222222' }).ok, 'reset needs the ABM key');
-const rs = post({ action: 'abm_pin_reset', key, phone: '0872222222', by: 'super' });
-check(rs.ok && rs.data.reset && rs.data.phone === '087xxxx222', 'reset (masked number in the answer)');
-check(rpc('loginServer', { username: '0872222222' }).result.status === 'need_pin', 'after reset the user sets a new PIN');
+check(!post({ action: 'abm_pin_reset', key, phone: '0872222222' }).ok, 'abm_pin_reset removed');
 
 /* retired central identity: a ticket cannot open a session */
 bad(rpc('ssoLoginServer', { ticket: 'abc.def' }), /Method not allowed/, 'ssoLoginServer retired');
@@ -79,4 +67,4 @@ bad(rpc('markSoldServer', { id }, bt), /ไม่มีสิทธิ์/, 'a b
 const feed = post({ action: 'abm_feed', key });
 check(feed.ok && feed.data.sales.rows.length === 1 && feed.data.sales.rows[0][7] === 5700 && !JSON.stringify(feed.data.sales).includes('0861111111') && !JSON.stringify(feed.data.sales).includes('โรงงานอาหารสัตว์'), 'ABM feed carries sales without phones or buyer names');
 
-console.log('PASS: ' + n + ' checks — 3.1.0 PIN (register, lockout, first-time set, ABM reset), SSO retired, maize, ขายแล้ว');
+console.log('PASS: ' + n + ' checks — 3.3.0 phone-only sign-in (PIN removed), SSO retired, maize, ขายแล้ว');
