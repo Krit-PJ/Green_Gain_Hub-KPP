@@ -202,7 +202,7 @@
       door = `<button type="button" class="ggh-mk-cta is-sell" data-door="login" data-role="farmer">ดูเบอร์และตำแหน่ง (ผู้ขาย)</button>`;
     } else {
       head = `${esc(label(g))} ${fmt(v.plots)} แปลง · ${fmt(v.areaRai, 1)} ไร่`;
-      facts = [v.ton !== null && v.ton !== undefined ? 'ประมาณ ' + fmt(v.ton, 1) + ' ตัน' : '', v.readyPlots ? 'พร้อมขาย ' + fmt(v.readyPlots) + ' แปลง' : '',
+      facts = [v.readyPlots ? 'พร้อมขาย ' + fmt(v.readyPlots) + ' แปลง' : '',
         v.nextHarvest ? 'แปลงถัดไปเก็บเกี่ยว ' + thDate(v.nextHarvest) : ''].filter(Boolean).join(' · ');
       const n = nearest(c, g, 'buy');
       match = n ? `ผู้รับซื้อ${esc(label(g))}${n.d ? 'ใกล้สุด ' + kmText(n.d) : 'ในพื้นที่นี้'} · ${priceText(n.c.buy[g])}` : `ยังไม่มีผู้รับซื้อ${esc(label(g))}ในรัศมี ${NEAR_KM} กม.`;
@@ -297,8 +297,9 @@
     const card = (g) => {
       const s = g.sell, b = g.buy, st = statusOf(s.plots, b.buyers);
       const badge = b.buyers ? { cls: 'is-ok', text: 'มีผู้รับซื้อรอ — ประกาศขายได้เลย' } : s.plots ? { cls: 'is-warn', text: 'มีวัสดุแต่ยังไม่มีผู้รับซื้อ' } : { cls: 'is-none', text: 'ยังไม่มีประกาศ' };
-      const sellBig = s.plots ? (s.ton ? `~${fmt(s.ton, 0)} <small>ตัน</small>` : `${fmt(s.areaRai, 0)} <small>ไร่</small>`) : '–';
-      const sellSub = s.plots ? `${fmt(s.plots)} แปลง${s.ton ? ' · ' + fmt(s.areaRai, 0) + ' ไร่' : ''}` : 'ยังไม่มีแปลง';
+      // 4.2.1: the card shows what farmers declared (ไร่); the tonnage estimate lives in the estimate tile, the district table and printed reports
+      const sellBig = s.plots ? `${fmt(s.areaRai, 0)} <small>ไร่</small>` : '–';
+      const sellSub = s.plots ? `${fmt(s.plots)} แปลง` : 'ยังไม่มีแปลง';
       const buyBig = b.buyers ? `${fmt(b.buyers)} <small>ราย</small>` : '–';
       const buySub = b.buyers ? (b.capacityTonPerDay ? `รับได้ ${fmt(b.capacityTonPerDay, 0)} ตัน/วัน` : 'ไม่ระบุปริมาณ') : 'ยังไม่มีผู้รับซื้อ';
       return `<button type="button" class="ggh-mk-mat ${st.cls}${!s.plots && !b.buyers ? ' is-empty' : ''}" data-mat="${g.key}" aria-pressed="${state.mat === g.key}">

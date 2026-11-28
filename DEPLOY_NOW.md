@@ -1,4 +1,7 @@
-# Deploy Green Gain Hub 4.2.0
+# Deploy Green Gain Hub 4.2.1
+
+> 4.2.1 เปลี่ยนเฉพาะหน้าเว็บ (market.js, market.css, config.js) — GitHub Pages deploy อัตโนมัติ ไม่ต้อง Deploy Apps Script (ยังเป็นเวอร์ชัน 24)
+
 
 สถานะ 25 พ.ย. 2569: **Deploy แล้ว** (ดูเลขเวอร์ชันล่าสุดในประวัติด้านล่าง)
 
