@@ -115,8 +115,8 @@ assert(api.farmerMaterialForCrop_('อ้อยโรงงาน', 'ฟาง�
 assert(api.farmerMaterialForCrop_('มันสำปะหลัง', 'ฟางข้าว', '').type === 'เหง้ามันสำปะหลัง', 'cassava mapping failed');
 
 const matches = api.getMatchingDataServer(session);
-assert(matches.apiVersion === '4.2.0', 'matching API version is missing or stale');
-assert(api.getApiInfoServer().apiVersion === '4.2.0', 'public API version check failed');
+assert(matches.apiVersion === '4.3.0', 'matching API version is missing or stale');
+assert(api.getApiInfoServer().apiVersion === '4.3.0', 'public API version check failed');
 assert(api.getApiInfoServer().feature === 'MARKET_ONLY', 'feature flag is missing or stale');
 assert(matches.viewerRole === 'farmer' && matches.visibleRole === 'buyer', 'farmer visibility metadata is incorrect');
 assert(matches.farmers.length === 0, 'farmer must not receive other farmer records');
@@ -160,7 +160,7 @@ const buyerSaved = api.saveDataServer({
 }, buyerSession);
 assert(buyerSaved.status === 'success', 'buyer upload failed');
 const newBuyer = sheets.buyers.rows.at(-1);
-assert(newBuyer.length === 23 && newBuyer[16] === 'ALL', 'retired buyer harvest-days field must always save as neutral ALL');
+assert(newBuyer.length === 25 && newBuyer[16] === 'ALL' && newBuyer[23] === 'rai' && JSON.parse(newBuyer[24])[0].material === 'ใบอ้อย', 'retired buyer harvest-days field must always save as neutral ALL');
 assert(newBuyer[17] === '62' && newBuyer[18] === 'กำแพงเพชร' && newBuyer[20], '3.0.0 buyer location R:W');
 const buyerProfile = api.getUserProfileServer(buyerSession);
 assert(!('purchaseAfterHarvestDays' in buyerProfile.buyers.at(-1)), 'retired buyer field must not appear in the profile');

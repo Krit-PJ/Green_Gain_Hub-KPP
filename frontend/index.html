@@ -17,8 +17,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="assets/dashboard.css?v=4.2.0">
-  <link rel="stylesheet" href="assets/market.css?v=4.2.1">
-  <link rel="stylesheet" href="assets/record.css?v=4.2.0">
+  <link rel="stylesheet" href="assets/market.css?v=4.3.0">
+  <link rel="stylesheet" href="assets/record.css?v=4.3.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -423,10 +423,10 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=4.2.1"></script>
+  <script src="assets/config.js?v=4.3.0"></script>
   <script src="assets/api-client.js?v=4.2.0"></script>
   <script src="assets/province.js?v=4.2.0"></script>
-  <script src="assets/market.js?v=4.2.1" defer></script>
+  <script src="assets/market.js?v=4.3.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','ซังข้าวโพด','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -1164,33 +1164,88 @@
     /** a sold plot, next season: a new card with the same crop, size and pin */
     function newSeason(crop, area, lat, lng) { addData({ crop, area, lat: lat ?? '', lng: lng ?? '' }); }
 
+    /** 4.3.0: one buy point buys several materials — each row: material · price · unit (บาท/ไร่ · บาท/ตัน · บาท/ก้อน) */
+    const PRICE_UNITS = [['rai', 'บาท/ไร่'], ['ton', 'บาท/ตัน'], ['bale', 'บาท/ก้อน']];
+    const OFFERS_MAX = 6;
+    function buyerOffersOf(b) {
+      if (b && Array.isArray(b.offers) && b.offers.length) return b.offers;
+      return [{ materialType: b?.materialType || 'ฟางข้าว', materialOther: b?.materialOther || '', price: b?.price ?? '', unit: b?.priceUnit || 'rai' }];
+    }
+    function offerRowHtml(o, n) {
+      const type = o.materialType || 'ฟางข้าว';
+      const unit = o.unit || 'rai';
+      return `<div class="rec-offer" data-offer>
+        <div class="rec-offer-head"><b>วัสดุที่ <span data-offer-no>${n}</span></b>
+          <button type="button" class="rec-offer-del" onclick="removeOffer(this)" aria-label="ลบวัสดุนี้"><i class="fa-solid fa-xmark" aria-hidden="true"></i> ลบ</button></div>
+        <label><span class="label-text">ชนิดวัสดุ <span class="required-mark">*</span></span>
+          <select name="materialType" class="input-field" onchange="offerMatChange(this)">
+            ${MATERIAL_TYPES.map(opt => `<option value="${opt}" ${opt === type ? 'selected' : ''}>${opt}</option>`).join('')}
+          </select>
+          <input type="text" name="materialOther" value="${escapeHtml(o.materialOther || '')}" class="input-field mt-2 ${type === 'อื่นๆ' ? '' : 'hidden'}" placeholder="ระบุชนิดวัสดุเหลือใช้ทางการเกษตร"></label>
+        <div class="rec-offer-price">
+          <label><span class="label-text">ราคารับซื้อ <span class="required-mark">*</span></span>
+            <input type="number" value="${o.price ?? ''}" name="price" class="input-field" inputmode="decimal" min="0" step="0.01" placeholder="เช่น 600"></label>
+          <label><span class="label-text">หน่วยราคา</span>
+            <select name="priceUnit" class="input-field">${PRICE_UNITS.map(([k, t]) => `<option value="${k}" ${k === unit ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+        </div>
+      </div>`;
+    }
+    function renumberOffers(list) {
+      const rows = list.querySelectorAll('[data-offer]');
+      rows.forEach((r, i) => { r.querySelector('[data-offer-no]').textContent = i + 1; r.querySelector('.rec-offer-del').hidden = rows.length === 1; });
+      const add = list.parentElement.querySelector('[data-offer-add]'); if (add) add.hidden = rows.length >= OFFERS_MAX;
+      const card = list.closest('[id^="buyer-card-"]'); if (card) syncOfferTitle(card);
+    }
+    function addOffer(btn) {
+      const list = btn.parentElement.querySelector('[data-offers]');
+      const used = [...list.querySelectorAll('select[name="materialType"]')].map((x) => x.value);
+      const next = MATERIAL_TYPES.find((m) => m !== 'อื่นๆ' && used.indexOf(m) < 0) || 'อื่นๆ';
+      list.insertAdjacentHTML('beforeend', offerRowHtml({ materialType: next, unit: 'rai' }, list.children.length + 1));
+      renumberOffers(list);
+      list.lastElementChild.querySelector('input[name="price"]').focus();
+    }
+    function removeOffer(btn) { const list = btn.closest('[data-offers]'); btn.closest('[data-offer]').remove(); renumberOffers(list); }
+    function offerMatChange(sel) {
+      const row = sel.closest('[data-offer]'); const other = row.querySelector('input[name="materialOther"]');
+      const show = sel.value === 'อื่นๆ'; other.classList.toggle('hidden', !show); if (!show) other.value = '';
+      syncOfferTitle(sel.closest('[id^="buyer-card-"]'));
+    }
+    function offerNames(card) {
+      return [...card.querySelectorAll('[data-offer]')].map((r) => { const t = r.querySelector('select[name="materialType"]').value; return t === 'อื่นๆ' ? (r.querySelector('input[name="materialOther"]').value.trim() || 'วัสดุอื่น') : t; });
+    }
+    function syncOfferTitle(card) {
+      if (!card) return;
+      const t = card.querySelector('[data-crop-title]'); if (t) t.textContent = offerNames(card).join(', ');
+      if (typeof recPickerHtml === 'function' && document.getElementById('recPicker')) recPickerHtml();
+    }
+
     function renderBuyerFieldCard(b, index){
       const type = b?.materialType || 'ฟางข้าว';
+      const offers = buyerOffersOf(b);
+      const names = offers.map((o) => (o.materialType === 'อื่นๆ' ? (o.materialOther || 'วัสดุอื่น') : (o.material || o.materialType))).join(', ');
       const place = b?.location && b.location.province ? escapeHtml([b.location.subdistrict && 'ต.' + b.location.subdistrict, b.location.district && 'อ.' + b.location.district, 'จ.' + b.location.province].filter(Boolean).join(' ')) : '';
       const truck = '<span class="rec-ico is-buy" aria-hidden="true"><i class="fa-solid fa-truck"></i></span>';
       return `
       <div class="record-card rec-card is-buyer scroll-mt-28" id="buyer-card-${index}">
         <header class="rec-head">
           ${truck}
-          <div class="rec-title"><h4>${(b?.timestamp || b?.id) ? 'จุดรับซื้อที่ ' + index : 'จุดรับซื้อใหม่'} · <span data-crop-title>${escapeHtml(type === 'อื่นๆ' ? (b?.materialOther || 'วัสดุอื่น') : type)}</span></h4>
+          <div class="rec-title"><h4>${(b?.timestamp || b?.id) ? 'จุดรับซื้อที่ ' + index : 'จุดรับซื้อใหม่'} · <span data-crop-title>${escapeHtml(names)}</span></h4>
             <p class="rec-place" id="place-${index}" aria-live="polite">${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : ((b?.timestamp || b?.id) ? '' : 'กรอกข้อมูล ปักหมุดบนแผนที่ แล้วกดบันทึก')}</p></div>
         </header>
         <input type="hidden" name="lat" id="lat-${index}" value="${b?.lat??''}"><input type="hidden" name="lng" id="lng-${index}" value="${b?.lng??''}">
         <div class="rec-split-data">
         <fieldset class="rec-sec">
-          <legend><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> วัสดุที่รับซื้อ</legend>
+          <legend><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> วัสดุและราคาที่รับซื้อ</legend>
+          <div class="rec-offers" data-offers>${offers.map((o, i) => offerRowHtml(o, i + 1)).join('')}</div>
+          <button type="button" class="rec-offer-add" data-offer-add onclick="addOffer(this)"${offers.length >= OFFERS_MAX ? ' hidden' : ''}><i class="fa-solid fa-plus" aria-hidden="true"></i> เพิ่มวัสดุที่รับซื้อ</button>
+        </fieldset>
+        <fieldset class="rec-sec">
+          <legend><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> ปริมาณและคุณภาพ</legend>
           <div class="rec-grid">
-            <label><span class="label-text">รับซื้อวัสดุ <span class="required-mark">*</span></span>
-              <select name="materialType" class="input-field" onchange="toggleOtherMaterial(this)">
-                ${MATERIAL_TYPES.map(opt => `<option value="${opt}" ${opt === type ? 'selected' : ''}>${opt}</option>`).join('')}
-              </select>
-              <input type="text" name="materialOther" value="${escapeHtml(b?.materialOther || '')}" class="input-field mt-2 ${(type === 'อื่นๆ') ? '' : 'hidden'}" placeholder="ระบุชนิดวัสดุเหลือใช้ทางการเกษตร"></label>
             <label><span class="label-text">ปริมาณที่รับได้ (ตัน/วัน) <span class="required-mark">*</span></span>
               <input type="text" value="${escapeHtml(b?.capacity??'')}" name="capacity" class="input-field" placeholder="เช่น 50"></label>
             <label><span class="label-text">คุณภาพที่ต้องการ <span class="required-mark">*</span></span>
               <input type="text" value="${escapeHtml(b?.quality??'')}" name="quality" class="input-field" placeholder="เช่น ความชื้นไม่เกิน 15%"></label>
-            <label><span class="label-text">ราคารับซื้อ (บาท/ไร่) <span class="required-mark">*</span></span>
-              <input type="number" value="${b?.price??''}" name="price" class="input-field" inputmode="decimal" min="0" step="0.01" placeholder="เช่น 600"></label>
           </div>
         </fieldset>
         </div>
@@ -1288,7 +1343,8 @@
 
     function mapPointDescription(item, role) {
       if (role === 'buyer') {
-        return `<b>${escapeHtml(item.name)}</b><br>ประเภท: ผู้รับซื้อ<br>รับซื้อ: ${escapeHtml(item.material)}<br>ความชื้น: ${escapeHtml(item.quality)}<br>ราคารับซื้อ: ${escapeHtml(item.price)} บ./ไร่`;
+        const prices = item.priceText ? escapeHtml(item.priceText).split(' · ').join('<br>') : escapeHtml(item.price) + ' บาท/ไร่';   // 4.3.0: every material + unit
+        return `<b>${escapeHtml(item.name)}</b><br>ประเภท: ผู้รับซื้อ<br>รับซื้อ: ${escapeHtml((item.materials || [item.material]).join(', '))}<br>ความชื้น: ${escapeHtml(item.quality)}<br>ราคารับซื้อ:<br>${prices}`;
       }
       return `<b>${escapeHtml(item.name)}</b><br>ประเภท: แปลงเกษตรกร<br>พืช: ${escapeHtml(item.crop)}<br>วัสดุเหลือใช้ทางการเกษตร: ${escapeHtml(item.material || '-')}<br>พื้นที่: ${escapeHtml(item.area)}<br>เก็บเกี่ยว: ${escapeHtml(item.harvest || '-')}`;
     }
@@ -1541,24 +1597,33 @@
           // payload.cropId = `${id}`;
 
         } else {
-          const materialType = card.querySelector('select[name="materialType"]').value;
-          const materialOther = card.querySelector('input[name="materialOther"]').value.trim();
           const quality = card.querySelector('input[name="quality"]').value;
-          const price = card.querySelector('input[name="price"]').value;
           const capacity = card.querySelector('input[name="capacity"]').value;
-
-          if (!quality || !price || !capacity) {
-            return Swal.fire('แจ้งเตือน','กรุณากรอกข้อมูลรับซื้อให้ครบถ้วน','warning');
+          // 4.3.0: every material row with its price and unit
+          const offers = [...card.querySelectorAll('[data-offer]')].map((r) => ({
+            materialType: r.querySelector('select[name="materialType"]').value,
+            materialOther: r.querySelector('input[name="materialOther"]').value.trim(),
+            price: r.querySelector('input[name="price"]').value,
+            unit: r.querySelector('select[name="priceUnit"]').value
+          }));
+          if (!quality || !capacity || !offers.length || offers.some((o) => o.price === '')) {
+            return Swal.fire('แจ้งเตือน','กรุณากรอกข้อมูลรับซื้อให้ครบถ้วน (ราคาของวัสดุทุกชนิด ปริมาณ และคุณภาพ)','warning');
           }
-          if (materialType === 'อื่นๆ' && !materialOther) {
+          if (offers.some((o) => o.materialType === 'อื่นๆ' && !o.materialOther)) {
             return Swal.fire('แจ้งเตือน','กรุณาระบุชนิดวัสดุเหลือใช้ทางการเกษตรอื่นๆ','warning');
           }
+          const names = offers.map((o) => (o.materialType === 'อื่นๆ' ? o.materialOther : o.materialType));
+          if (new Set(names).size !== names.length) {
+            return Swal.fire('แจ้งเตือน','เลือกวัสดุแต่ละชนิดครั้งเดียว (มีวัสดุซ้ำกัน)','warning');
+          }
 
-          payload.materialType = materialType;
-          payload.materialOther = materialOther;
-          payload.material = materialType === 'อื่นๆ' ? materialOther : materialType;
+          payload.offers = offers;
+          payload.materialType = offers[0].materialType;   // older servers read the first material
+          payload.materialOther = offers[0].materialOther;
+          payload.material = names[0];
+          payload.price = offers[0].price;
+          payload.priceUnit = offers[0].unit;
           payload.quality = quality;
-          payload.price = price;
           payload.capacity = capacity;
           // payload.materialId = `${id}`;
         }

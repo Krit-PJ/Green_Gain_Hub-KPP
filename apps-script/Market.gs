@@ -191,10 +191,16 @@ function buildMarketPublic_(now, provinceCode) {
     }
     return cells[k];
   };
-  const price = function (b, v) {
+  // 4.3.0: prices are kept per unit (priceByUnit.rai / .ton / .bale = {min, max}); priceMin/priceMax stay บาท/ไร่ only
+  const price = function (b, v, unit) {
     if (v === '' || !(v > 0)) return;
-    b.priceMin = b.priceMin === null ? v : Math.min(b.priceMin, v);
-    b.priceMax = b.priceMax === null ? v : Math.max(b.priceMax, v);
+    unit = unit || 'rai';
+    const pu = b.priceByUnit || (b.priceByUnit = {});
+    const x = pu[unit] || (pu[unit] = { min: v, max: v });
+    x.min = Math.min(x.min, v); x.max = Math.max(x.max, v);
+    if (unit !== 'rai') return;
+    b.priceMin = b.priceMin === null || b.priceMin === undefined ? v : Math.min(b.priceMin, v);
+    b.priceMax = b.priceMax === null || b.priceMax === undefined ? v : Math.max(b.priceMax, v);
   };
 
   dataRows_(sheet_('farmers')).forEach(function (r) {
@@ -230,20 +236,27 @@ function buildMarketPublic_(now, provinceCode) {
     const pc = rowProv(r, 'buyers');
     act(pc).buyers++;
     if (pc !== province) return;
-    const material = resolvedMaterial_(r[13], r[14], r[7]);
-    const g = materialGroupOf_(material);
     const cap = leadingNumber_(r[10]);
-    const v = maybeNumber_(r[9]);
     const after = r[16] === '' || r[16] === undefined ? null : Number(r[16]);
     const dc = rowDist(r, 'buyers', Number(r[5]), Number(r[6]));
     const c = cellOf(Number(r[5]), Number(r[6]), dc);
     const dr = distRow(dc);
-    if (dr) { const db = dr.buy[g] || (dr.buy[g] = { buyers: 0, capacityTonPerDay: 0 }); db.buyers++; db.capacityTonPerDay += cap; }
-    const b = c.buy[g] || (c.buy[g] = { buyers: 0, capacityTonPerDay: 0, priceMin: null, priceMax: null, afterHarvestDays: null });
-    b.buyers++; b.capacityTonPerDay += cap; price(b, v);
-    if (after !== null && isFinite(after)) b.afterHarvestDays = b.afterHarvestDays === null ? after : Math.min(b.afterHarvestDays, after);
-    const t = groups[g].buy; t.buyers++; t.capacityTonPerDay += cap; price(t, v);
-    if (g === 'other' && material) groups[g].others[material] = true;
+    // 4.3.0: the point counts once under every material group it buys (capacity is the point's, not split)
+    const seenG = {};
+    buyerOffers_(r).forEach(function (o) {
+      const material = o.material;
+      const g = materialGroupOf_(material);
+      const first = !seenG[g]; seenG[g] = true;
+      const b = c.buy[g] || (c.buy[g] = { buyers: 0, capacityTonPerDay: 0, priceMin: null, priceMax: null, afterHarvestDays: null });
+      const t = groups[g].buy;
+      if (first) {
+        if (dr) { const db = dr.buy[g] || (dr.buy[g] = { buyers: 0, capacityTonPerDay: 0 }); db.buyers++; db.capacityTonPerDay += cap; }
+        b.buyers++; b.capacityTonPerDay += cap; t.buyers++; t.capacityTonPerDay += cap;
+        if (after !== null && isFinite(after)) b.afterHarvestDays = b.afterHarvestDays === null ? after : Math.min(b.afterHarvestDays, after);
+      }
+      price(b, o.price, o.unit); price(t, o.price, o.unit);
+      if (g === 'other' && material) groups[g].others[material] = true;
+    });
   });
 
   const ton = function (g, rai) { return rates[g] === undefined ? null : round_(rai * rates[g], 1); };
@@ -333,7 +346,7 @@ function marketReport_(province, from, to) {
     return areas[k] || (areas[k] = blank(k, byProvince ? (provNames[pc] || pname || pc) : (dname || 'ไม่ระบุอำเภอ')));
   };
   const matOf = function (g) { const m = mats[g] || (mats[g] = blank(g, label[g] || g)); m.prices = m.prices || []; return m; };
-  const prices = {};   // province|group → [baht/rai]
+  const prices = {};   // province|group → [baht/rai] — 4.3.0: บาท/ตัน × อัตราชีวมวล (ตัน/ไร่) = บาท/ไร่ ประมาณ; บาท/ก้อน not averaged
   const harvest = {};
   const users = { farmer: 0, buyer: 0 };
 
@@ -344,14 +357,22 @@ function marketReport_(province, from, to) {
   const buyerRows = dataRows_(sheet_('buyers')).filter(function (r) { return String(r[11] || '').trim().toLowerCase() === 'active'; });
   buyerRows.forEach(function (r) {
     const pc = rowProvince_(r, 'buyers') || DEFAULT_PROVINCE_CODE;
-    const g = materialGroupOf_(resolvedMaterial_(r[13], r[14], r[7]));
-    const v = maybeNumber_(r[9]);
-    if (v !== '' && v > 0) (prices[pc + '|' + g] || (prices[pc + '|' + g] = [])).push(v);
+    const offers = buyerOffers_(r).map(function (o) {
+      const g = materialGroupOf_(o.material);
+      const perRai = !(o.price > 0) ? null : o.unit === 'rai' ? o.price : o.unit === 'ton' && rates[g] > 0 ? o.price * rates[g] : null;
+      return { g: g, perRai: perRai };
+    });
+    offers.forEach(function (o) { if (o.perRai !== null) (prices[pc + '|' + o.g] || (prices[pc + '|' + o.g] = [])).push(o.perRai); });
     if (!inScope(pc)) return;
     const cap = leadingNumber_(r[10]);
     const a = areaOf(pc, text_(r[BUYER_GEO_COL]), text_(r[BUYER_GEO_COL + 1]), text_(r[BUYER_GEO_COL + 2]));
     a.buyers++; a.capacityTonPerDay += cap;
-    const m = matOf(g); m.buyers++; m.capacityTonPerDay += cap; if (v !== '' && v > 0) m.prices.push(v);
+    const seenG = {};
+    offers.forEach(function (o) {
+      const m = matOf(o.g);
+      if (!seenG[o.g]) { seenG[o.g] = true; m.buyers++; m.capacityTonPerDay += cap; }
+      if (o.perRai !== null) m.prices.push(o.perRai);
+    });
   });
   const avg = function (xs) { return xs && xs.length ? xs.reduce(function (s, x) { return s + x; }, 0) / xs.length : null; };
   dataRows_(sheet_('farmers')).forEach(function (r) {

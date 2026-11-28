@@ -358,7 +358,9 @@ function adminRecords_(input, s) {
       material: resolvedMaterial_(r[13], r[14], r[5]), harvestDate: dateInput_(r[7]), areaRai: round_(parseAreaRai_(r[8]), 2), area: text_(r[8]),
       lat: r[9], lng: r[10], status: status, listed: status.toLowerCase() === 'open' && farmerListing_(r, rule, today).listed, updatedAt: dateTime_(r[17]), location: loc
     } : {
-      id: text_(r[0]), owner: displayPhone_(owner), ownerName: names[owner] || [text_(r[2]), text_(r[3])].join(' ').trim(), material: resolvedMaterial_(r[13], r[14], r[7]),
+      id: text_(r[0]), owner: displayPhone_(owner), ownerName: names[owner] || [text_(r[2]), text_(r[3])].join(' ').trim(),
+      material: buyerOffers_(r).map(function (o) { return o.material; }).join(', '), offers: buyerOffers_(r),   // 4.3.0
+      priceText: buyerOffers_(r).map(offerPriceText_).join(' · '),
       price: maybeNumber_(r[9]), capacity: text_(r[10]), lat: r[5], lng: r[6], status: status, updatedAt: dateTime_(r[15]), location: loc
     };
     if (q && (x.ownerName + ' ' + owner + ' ' + (x.crop || '') + ' ' + x.material + ' ' + (loc.district || '')).toLowerCase().indexOf(q) < 0) return;

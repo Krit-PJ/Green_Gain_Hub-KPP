@@ -184,9 +184,15 @@
   }
 
   /* ---------------- text for one item (list card and map popup) ---------------- */
+  // 4.3.0: buyers price per unit — priceByUnit {rai, ton, bale: {min, max}}; older answers have priceMin/priceMax (บาท/ไร่) only
+  const UNIT_TEXT = { rai: 'บาท/ไร่', ton: 'บาท/ตัน', bale: 'บาท/ก้อน' };
+  function unitPrices(v) {
+    const pu = v.priceByUnit || (v.priceMin === null || v.priceMin === undefined ? {} : { rai: { min: v.priceMin, max: v.priceMax } });
+    return ['rai', 'ton', 'bale'].filter((k) => pu[k]).map((k) => (pu[k].min === pu[k].max ? fmt(pu[k].min) : fmt(pu[k].min) + '–' + fmt(pu[k].max)) + ' ' + UNIT_TEXT[k]);
+  }
   function priceText(v) {
-    if (v.priceMin === null || v.priceMin === undefined) return 'ราคาตกลงกัน';
-    return (v.priceMin === v.priceMax ? fmt(v.priceMin) : fmt(v.priceMin) + '–' + fmt(v.priceMax)) + ' บาท/ไร่';
+    const xs = unitPrices(v);
+    return xs.length ? xs.join(' · ') : 'ราคาตกลงกัน';
   }
   function itemHtml(it, inPopup) {
     const { c, side, g, v } = it;
@@ -278,9 +284,9 @@
 
   function priceLine(b) {
     if (!b.buyers) return '';
-    if (b.priceMin === null || b.priceMin === undefined) return '<p class="ggh-mk-mat-price">ราคาตกลงกัน</p>';
-    const v = b.priceMin === b.priceMax ? fmt(b.priceMin) : fmt(b.priceMin) + '–' + fmt(b.priceMax);
-    return `<p class="ggh-mk-mat-price">ราคา ${v} บาท/ไร่ <span>ตามที่ผู้รับซื้อระบุ</span></p>`;
+    const xs = unitPrices(b);
+    if (!xs.length) return '<p class="ggh-mk-mat-price">ราคาตกลงกัน</p>';
+    return `<p class="ggh-mk-mat-price">ราคา ${xs.join(' · ')} <span>ตามที่ผู้รับซื้อระบุ</span></p>`;
   }
   /** when the offered residue is available: a bar by area, and the plots in each bucket */
   function timingHtml(sell) {

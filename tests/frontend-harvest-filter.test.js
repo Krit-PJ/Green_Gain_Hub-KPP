@@ -17,7 +17,7 @@ assert(
   config.includes('AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT/exec'),
   'deployment URL is missing or stale'
 );
-assert(config.includes("BUILD_VERSION: '4.2.1'"), 'frontend build version is missing or stale');
+assert(config.includes("BUILD_VERSION: '4.3.0'"), 'frontend build version is missing or stale');
 assert(config.includes("MINIMUM_API_VERSION: '1.3.1'"), 'minimum compatible API version is missing');
 
 [
@@ -69,7 +69,7 @@ assert(config.includes("MINIMUM_API_VERSION: '1.3.1'"), 'minimum compatible API 
   "if (harvest.dataset.touched === '1' || !plant.value) return;", "'ข้าวโพดเลี้ยงสัตว์': 'ซังข้าวโพด'",
   'function showPinPlace', 'window.GGH_PROVINCE.where(lat, lng)', 'function markSold', '.markSoldServer(res.value)', 'function newSeason',
   'window.GGH_ICONS.pin(side', 'getRoleMarkerIcon(role, group, own)', 'class="rec-sec"', 'fa-calendar-days', 'fa-ruler-combined', 'fa-seedling', 'id="recMap"', 'id="recPicker"', 'function recSelect(i, quiet)', 'แปลงเพาะปลูกที่ ', 'จุดรับซื้อที่ ', 'บันทึกข้อมูลเพาะปลูก', 'บันทึกข้อมูลการรับซื้อ', 'function saveProfile(e)', 'id="meProfile"', 'id="userProvinceDisplay"', 'class="ggh-me-tabs"',
-  'function deleteDataNow', 'assets/record.css?v=4.2.0'
+  'function deleteDataNow', 'assets/record.css?v=4.3.0'
 ].forEach(text => assert(html.includes(text), `missing component: ${text}`));
 
 assert(!html.includes('marker-icon-red.png'), 'red marker must not remain');

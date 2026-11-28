@@ -1,4 +1,7 @@
-# Deploy Green Gain Hub 4.2.1
+# Deploy Green Gain Hub 4.3.0
+
+> 4.3.0 = Apps Script เวอร์ชัน 25 (Code.gs + Market.gs + Admin.gs) · ชีต buyers ได้คอลัมน์ X Price_Unit, Y Materials_JSON อัตโนมัติเมื่อบันทึกจุดรับซื้อครั้งแรก (หรือรัน setupSystem)
+
 
 > 4.2.1 เปลี่ยนเฉพาะหน้าเว็บ (market.js, market.css, config.js) — GitHub Pages deploy อัตโนมัติ ไม่ต้อง Deploy Apps Script (ยังเป็นเวอร์ชัน 24)
 
@@ -9,7 +12,7 @@
 
 - Apps Script: **Green Gain Hub KPP API** (`1JfUtXCoOvrb_Nz2N6xgRBSiT72DSWV92pFepA20eNcGb8WUhDNuRLLSg`, บัญชี noonoy.cmu@gmail.com)
 - Deployment `AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT` (Execute as: Me, Access: Anyone)
-  - เวอร์ชัน 24 = 4.2.0 การ์ดผู้ใช้งานแก้ไขได้ + รัศมีคู่ค้าตั้งค่าได้ + แดชบอร์ดเจ้าหน้าที่ (Code.gs + Admin.gs) · 23 = 4.1.0 รัศมี 50 กม. ข้ามจังหวัด (Code.gs) · 22 = 4.0.0 เจ้าหน้าที่ของ GGH เอง (ไฟล์ใหม่ Admin.gs + Reports.gs, ลบ Sso.gs, Code.gs + Market.gs) · 21 = 3.3.0 เข้าสู่ระบบด้วยเบอร์อย่างเดียว (Code.gs + ไฟล์ใหม่ Sales.gs แทน Pin.gs ที่ลบแล้ว) · 20 = 3.2.0 รายงานผู้บริหารให้ ABM (Market.gs + Code.gs) · 19 = 3.1.0 PIN + ขายแล้ว (ไฟล์ใหม่ Pin.gs + Code.gs) · 18 = 3.0.0 ทุกจังหวัด (ไฟล์ใหม่ Geo.gs + Code.gs + Market.gs) · 17 = 2.9.3 เข้าสู่ระบบด้วยเบอร์ที่ GGH โดยตรง ไม่ถูกปิดด้วย SSO_MODE (Code.gs) · 16 = 2.9.0 feed marketPhones (Code.gs + Sso.gs) · 15 = 2.8.0 ซ่อนแปลงหลังเก็บเกี่ยว N วัน (Market.gs + Code.gs) · 14 = 2.7.0 หน้าตลาดแบบ Dashboard (Market.gs + Code.gs) · 13 = 2.6.0 ตลาดอย่างเดียว (แยกส่วนเจ้าหน้าที่ไป ABM) · 12 = 2.5.1 feed สำหรับ ABM · 11 = 2.5.0 หน้าแรกตลาด · 10 = 2.4.0 ตัวตนกลาง
+  - เวอร์ชัน 25 = 4.3.0 ผู้รับซื้อหลายวัสดุ + หน่วยราคา (Code.gs + Market.gs + Admin.gs) · 24 = 4.2.0 การ์ดผู้ใช้งานแก้ไขได้ + รัศมีคู่ค้าตั้งค่าได้ + แดชบอร์ดเจ้าหน้าที่ (Code.gs + Admin.gs) · 23 = 4.1.0 รัศมี 50 กม. ข้ามจังหวัด (Code.gs) · 22 = 4.0.0 เจ้าหน้าที่ของ GGH เอง (ไฟล์ใหม่ Admin.gs + Reports.gs, ลบ Sso.gs, Code.gs + Market.gs) · 21 = 3.3.0 เข้าสู่ระบบด้วยเบอร์อย่างเดียว (Code.gs + ไฟล์ใหม่ Sales.gs แทน Pin.gs ที่ลบแล้ว) · 20 = 3.2.0 รายงานผู้บริหารให้ ABM (Market.gs + Code.gs) · 19 = 3.1.0 PIN + ขายแล้ว (ไฟล์ใหม่ Pin.gs + Code.gs) · 18 = 3.0.0 ทุกจังหวัด (ไฟล์ใหม่ Geo.gs + Code.gs + Market.gs) · 17 = 2.9.3 เข้าสู่ระบบด้วยเบอร์ที่ GGH โดยตรง ไม่ถูกปิดด้วย SSO_MODE (Code.gs) · 16 = 2.9.0 feed marketPhones (Code.gs + Sso.gs) · 15 = 2.8.0 ซ่อนแปลงหลังเก็บเกี่ยว N วัน (Market.gs + Code.gs) · 14 = 2.7.0 หน้าตลาดแบบ Dashboard (Market.gs + Code.gs) · 13 = 2.6.0 ตลาดอย่างเดียว (แยกส่วนเจ้าหน้าที่ไป ABM) · 12 = 2.5.1 feed สำหรับ ABM · 11 = 2.5.0 หน้าแรกตลาด · 10 = 2.4.0 ตัวตนกลาง
 - ABM (ระบบเจ้าหน้าที่): repo `KPP-Agri-Byproduct-Management`, Apps Script `1ZRd2SmPDj6yKB3MuQe7tW1yOMfZwBFULjIDOCnN-hH-YcsqPT6CieYe8`
 
 > ⚠️ `AKfycbxoo4…` เป็นของระบบ **KPP Smart Agri-Materials v2** ห้ามวางโค้ด GGH หรือ Deploy ทับ
