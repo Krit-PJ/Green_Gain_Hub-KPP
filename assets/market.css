@@ -269,3 +269,16 @@
 }
 
 @media (prefers-reduced-motion: reduce) { .ggh-mk * { scroll-behavior: auto; transition: none !important; } }
+
+/* 4.2.1: phones — keep every block inside the board (the province picker's long option text used to widen the grid track) */
+.ggh-mk-board { grid-template-columns: minmax(0, 1fr); }
+.ggh-mk-board > * { min-width: 0; }
+.ggh-mk-province select { min-width: 0; text-overflow: ellipsis; }
+@media (max-width: 599px) {
+  .ggh-mk-province { white-space: normal; }
+  .ggh-mk-dist-table { font-size: .88rem; }
+  .ggh-mk-dist-table th, .ggh-mk-dist-table td { padding: .45rem .28rem; }
+  .ggh-mk-dist-table th:first-child, .ggh-mk-dist-table td:first-child { padding-left: .1rem; }
+  .ggh-mk-dist-table thead th { font-size: .78rem; white-space: normal; }
+  .ggh-mk-dist-table thead th small { white-space: normal; }
+}

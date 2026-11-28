@@ -7,7 +7,7 @@ const js = fs.readFileSync(path.join(front, 'assets', 'market.js'), 'utf8');
 const css = fs.readFileSync(path.join(front, 'assets', 'market.css'), 'utf8');
 new vm.Script(js, { filename: 'frontend/assets/market.js' });
 
-assert(html.includes('assets/market.js?v=4.2.0') && html.includes('assets/market.css?v=4.2.0') && !html.includes('dashboard.js'), 'market assets 4.2.0, no dashboard.js');
+assert(html.includes('assets/market.js?v=4.2.1') && html.includes('assets/market.css?v=4.2.1') && !html.includes('dashboard.js'), 'market assets 4.2.1, no dashboard.js');
 assert(html.includes("document.getElementById('marketPage')?.classList.add('hidden');"), 'signing in hides the market page');
 assert(['mkMats', 'mkSide', 'mkDistrict', 'mkNear', 'mkMap', 'mkList', 'mkStats', 'mkView', 'mkDistWrap', 'mkDistTable'].every((id) => html.includes(`id="${id}"`)), 'board controls');
 
@@ -30,3 +30,9 @@ assert(/is-sell/.test(css) && /is-buy/.test(css) && css.includes('var(--ggh-stra
 assert(css.includes('@media (max-width: 899px)') && css.includes('[data-view="list"]'), 'map / list toggle on phones');
 
 console.log('PASS: 3.0.0 market front page — per province; — key numbers, material cards, timing, districts');
+
+// 4.2.1: material cards and list items show the declared area (ไร่); the tonnage estimate stays in the estimate tile, district table and reports
+assert(js.includes("const sellBig = s.plots ? `${fmt(s.areaRai, 0)} <small>ไร่</small>` : '–';") && !/sellBig[^\n]*ตัน/.test(js), '4.2.1 card shows ไร่, not ตัน');
+assert(!/'ประมาณ ' \+ fmt\(v\.ton/.test(js), '4.2.1 list items carry no tonnage estimate');
+assert(css.includes('.ggh-mk-board { grid-template-columns: minmax(0, 1fr); }'), '4.2.1 board stays inside the phone width');
+console.log('PASS 4.2.1 market card checks');
