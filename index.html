@@ -16,9 +16,9 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/dashboard.css?v=4.1.0">
-  <link rel="stylesheet" href="assets/market.css?v=4.1.0">
-  <link rel="stylesheet" href="assets/record.css?v=4.1.0">
+  <link rel="stylesheet" href="assets/dashboard.css?v=4.2.0">
+  <link rel="stylesheet" href="assets/market.css?v=4.2.0">
+  <link rel="stylesheet" href="assets/record.css?v=4.2.0">
 
   <style>
     * { box-sizing: border-box; }
@@ -218,76 +218,54 @@
 
     <div id="mainApp" class="hidden">
       
-      <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-md border border-green-50 mb-4 sm:mb-6 flex justify-between items-center gap-3 relative overflow-hidden">
-        <div id="userBorderRoleDisplay" class="absolute top-0 left-0 w-2 h-full bg-green-500"></div>
-        <div class="pl-2">
-           <p class="text-xs md:text-sm text-gray-600 mb-1">ผู้ใช้งานปัจจุบัน</p>
-           <h3 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 leading-tight break-words" id="userNameDisplay">User</h3>
-           <span class="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full" id="userRoleDisplay">Role</span>
+      <!-- 4.2.0: one user card — who is signed in (role, province), their profile (edit + save), and the two tabs -->
+      <section class="ggh-me" id="meCard" aria-label="ผู้ใช้งานปัจจุบัน">
+        <div class="ggh-me-top">
+          <span class="ggh-me-ico" id="userBorderRoleDisplay" aria-hidden="true"><i class="fa-solid fa-wheat-awn"></i></span>
+          <div class="ggh-me-who">
+            <small>ผู้ใช้งานปัจจุบัน</small>
+            <h3 id="userNameDisplay">User</h3>
+            <div class="ggh-me-tags"><span class="ggh-me-role" id="userRoleDisplay">Role</span><span class="ggh-me-prov"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> จ.<span id="userProvinceDisplay">-</span></span></div>
+          </div>
+          <button type="button" onclick="logout()" class="ggh-me-out"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i><span>ออกจากระบบ</span></button>
         </div>
-        <button onclick="logout()" class="shrink-0 flex flex-col items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 sm:px-4 py-2 rounded-xl transition">
-          <i class="fa-solid fa-right-from-bracket text-lg md:text-xl mb-1"></i><span class="text-[10px] md:text-xs font-bold">ออกจากระบบ</span>
-        </button>
-      </div>
-
-      <div class="section-tabs grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
-        <button onclick="switchToEntry('entry')" id="btn-entry" class="bg-white px-2 py-3 md:py-4 rounded-xl shadow-sm text-gray-600 text-sm sm:text-base font-bold border-b-4 border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-1.5 sm:gap-2 transition md:text-lg">
-           <i class="fa-solid fa-pen-to-square"></i> บันทึกข้อมูล
-        </button>
-        <button onclick="openMatchingMapCard()" id="btn-map-main" class="bg-white px-2 py-3 md:py-4 rounded-xl shadow-sm text-gray-600 text-sm sm:text-base font-bold border-b-4 border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-1.5 sm:gap-2 transition md:text-lg">
-           <i class="fa-solid fa-map-location-dot"></i> แผนที่ &amp; คู่ค้า
-        </button>
-      </div>
+        <details class="ggh-me-profile" id="meProfile">
+          <summary><span><i class="fa-solid fa-id-card" aria-hidden="true"></i> ข้อมูลผู้ใช้งาน</span><span class="ggh-me-edit">ดู / แก้ไข <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></span></summary>
+          <form id="profileForm" class="ggh-me-form" onsubmit="saveProfile(event)" novalidate>
+            <label><span class="label-text">ชื่อ <span class="required-mark">*</span></span><input type="text" id="entryFname" name="fname" class="input-field" maxlength="80" required></label>
+            <label><span class="label-text">นามสกุล</span><input type="text" id="entryLname" name="lname" class="input-field" maxlength="80"></label>
+            <label><span class="label-text">เบอร์ติดต่อ (คู่ค้าเห็นเบอร์นี้) <span class="required-mark">*</span></span><input type="tel" id="entryPhone" name="contactPhone" class="input-field" maxlength="10" inputmode="numeric" autocomplete="tel" required></label>
+            <label><span class="label-text">จังหวัด</span><select id="profileProvince" name="provinceCode" class="input-field"></select></label>
+            <label class="ggh-me-login"><span class="label-text">เบอร์ที่ใช้เข้าสู่ระบบ (เปลี่ยนไม่ได้ ติดต่อเจ้าหน้าที่จังหวัด)</span><input type="text" id="entryUsername" class="input-field" readonly></label>
+            <div class="ggh-me-save"><button type="submit" class="rec-btn is-save"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> บันทึกข้อมูลผู้ใช้งาน</button>
+              <small class="rec-help">ชื่อและเบอร์ติดต่อจะปรับในทุกแปลง/จุดรับซื้อของคุณ</small></div>
+          </form>
+        </details>
+        <nav class="ggh-me-tabs" role="tablist" aria-label="เมนูผู้ใช้งาน">
+          <button type="button" role="tab" onclick="switchToEntry('entry')" id="btn-entry" aria-selected="true"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> <span id="entryTabLabel">บันทึกข้อมูลเพาะปลูก</span></button>
+          <button type="button" role="tab" onclick="openMatchingMapCard()" id="btn-map-main" aria-selected="false"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> แผนที่ &amp; คู่ค้า</button>
+        </nav>
+      </section>
 
       <div id="entrySection" class="hidden">
-        <div class="bg-white p-3 sm:p-6 md:p-8 rounded-2xl shadow-lg">
-          <h3 class="font-bold text-lg md:text-xl text-gray-800 mb-4 sm:mb-6 border-b pb-3">แบบฟอร์มบันทึกข้อมูล</h3>
-          <form id="dataForm">
-             
-             <div class="bg-gray-50 p-3 sm:p-4 md:p-6 rounded-xl border border-gray-200 mb-4 sm:mb-6">
-                 <p class="text-sm text-gray-600 mb-4 font-bold"><i class="fa-solid fa-robot"></i> ข้อมูลผู้ใช้งาน</p>
-                 
-                 <div class="grid grid-cols-1 md:grid-cols-1 gap-2">
-                     <div class="md:col-span-2">
-                        <label class="label-text">ชื่อผู้ใช้งาน (หมายเลขระบบ)</label>
-                        <input type="text" id="entryUsername" class="input-field bg-gray-200 text-gray-600 font-bold cursor-not-allowed" readonly>
-                     </div>
-                     
-                     <div class="info-details grid grid-cols-1 sm:grid-cols-3 gap-2 md:col-span-1">
-                       <div>
-                           <label class="label-text">ชื่อ <span class="required-mark">*</span></label>
-                           <input type="text" id="entryFname" name="fname" class="input-field font-bold text-gray-700" required>
-                       </div>
-                       <div>
-                           <label class="label-text">นามสกุล</label>
-                           <input type="text" id="entryLname" name="lname" class="input-field font-bold text-gray-700">
-                       </div>
-                       <div>
-                           <label class="label-text">เบอร์โทรติดต่อ <span class="required-mark">*</span></label>
-                           <input type="tel" id="entryPhone" name="phone" class="input-field" placeholder="แก้ไขได้" maxlength="10" inputmode="numeric" autocomplete="tel" required>
-                       </div>
-                     </div>
-                 </div>
-             </div>
-            
-            <!-- Farmer Form -->
-            <div id="farmerFields" class="hidden bg-green-50 p-2 sm:p-4 md:p-6 rounded-xl border border-green-100 mb-6">
-              <div id="farmerListSection" class="mt-6">
-                <div id="farmerList" class="grid grid-cols-1 gap-4"></div>
+        <!-- 4.2.0: บันทึกข้อมูลเพาะปลูก / บันทึกข้อมูลการรับซื้อ — one map with every plot (left), numbered buttons + the chosen form (right) -->
+        <div class="rec-board-wrap">
+          <h3 class="rec-board-title" id="entryTitle">บันทึกข้อมูลเพาะปลูก</h3>
+          <form id="dataForm" class="rec-board" onsubmit="return false">
+            <div class="rec-board-map">
+              <div class="rec-board-maphead">
+                <p><b id="recMapTitle">ตำแหน่งแปลง</b><span class="rec-help" id="recMapHelp">แตะบนแผนที่ หรือลากหมุดของแปลงที่เลือกให้ตรงตำแหน่ง</span></p>
+                <button type="button" onclick="recGps()" class="rec-btn is-gps"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> ใช้ตำแหน่งปัจจุบัน</button>
               </div>
+              <div id="recMap" class="rec-bigmap" role="application" aria-label="แผนที่ตำแหน่ง"></div>
+              <p class="rec-place" id="recPlace" aria-live="polite"></p>
             </div>
-
-            <!-- Buyer Form-->
-            <div id="buyerFields" class="hidden bg-blue-50 p-2 sm:p-4 md:p-6 rounded-xl border border-blue-100 mb-6">
-              <div id="buyerListSection" class="mt-6">
-                <div id="buyerList" class="grid grid-cols-1 gap-4"></div>
-              </div>
+            <div class="rec-board-side">
+              <div class="rec-picker" id="recPicker" role="tablist" aria-label="เลือกแปลง"></div>
+              <div id="farmerFields" class="hidden"><div id="farmerList"></div></div>
+              <div id="buyerFields" class="hidden"><div id="buyerList"></div></div>
             </div>
-
-            <!-- Add button -->
-            <button id="btn-add" type="button" onclick="addData()" class="w-full text-white py-4 rounded-xl font-bold mt-8 shadow-lg text-lg transition"><i class="fas fa-plus"></i> เพิ่มข้อมูลเข้าสู่ระบบ</button>
           </form>
-          
         </div>
       </div>
 
@@ -445,10 +423,10 @@
     </div>
   </footer>
 
-  <script src="assets/config.js?v=4.1.0"></script>
-  <script src="assets/api-client.js?v=4.1.0"></script>
-  <script src="assets/province.js?v=4.1.0"></script>
-  <script src="assets/market.js?v=4.1.0" defer></script>
+  <script src="assets/config.js?v=4.2.0"></script>
+  <script src="assets/api-client.js?v=4.2.0"></script>
+  <script src="assets/province.js?v=4.2.0"></script>
+  <script src="assets/market.js?v=4.2.0" defer></script>
   <script>
     const MATERIAL_TYPES = ['ฟางข้าว','ใบอ้อย','ซังข้าวโพด','เหง้ามันสำปะหลัง','อื่นๆ'];
     const CROP_MATERIAL_MAP = Object.freeze({
@@ -509,7 +487,7 @@
           Swal.close();
           if (d && d.status === 'success') {
             Swal.fire('สำเร็จ', d.listedUntil ? 'แปลงนี้จะแสดงบนตลาดถึงวันที่ ' + thaiDate(d.listedUntil) : d.message, 'success');
-            miniMaps = {}; miniMarkers = {};
+            REC.keepId = String(id);
             loadUserProfile();
           } else {
             Swal.fire('เกิดข้อผิดพลาด', (d && d.message) || 'ทำรายการไม่สำเร็จ', 'error');
@@ -695,6 +673,7 @@
       if (!other) return;
       const show = selectEl.value === 'อื่นๆ';
       other.classList.toggle('hidden', !show);
+      const wrap = card.querySelector('[data-other-wrap]'); if (wrap) { wrap.classList.toggle('hidden', !show); other.classList.remove('hidden'); if (!show) wrap.classList.add('hidden'); }
       other.required = show;
       if (!show) other.value = '';
     }
@@ -878,47 +857,35 @@
       if (user.province && user.province.code && window.GGH_PROVINCE) window.GGH_PROVINCE.set(user.province, { save: false });
       document.getElementById('marketPage')?.classList.add('hidden');
       document.getElementById('mainApp').classList.remove('hidden');
+      const buyer = user.role === 'buyer';
+      document.getElementById('mainApp').dataset.role = buyer ? 'buyer' : 'farmer';
       document.getElementById('userNameDisplay').innerText = user.name;
-      document.getElementById('userRoleDisplay').innerText = user.role==='farmer'?'เกษตรกรผู้ขาย':'ผู้รับซื้อ';
-      
-      const nameParts = user.name.split(' ');
-      const fname = nameParts[0];
-      const lname = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-      
+      document.getElementById('userRoleDisplay').innerText = buyer ? 'ผู้รับซื้อ' : 'เกษตรกรผู้ขาย';
+      document.getElementById('meCard').classList.toggle('is-buyer', buyer);
+      document.getElementById('userBorderRoleDisplay').innerHTML = `<i class="fa-solid ${buyer ? 'fa-truck' : 'fa-wheat-awn'}"></i>`;
+      document.getElementById('userProvinceDisplay').textContent = (user.province && user.province.name) || '-';
+      // 4.2.0: names of the record page follow the role
+      document.getElementById('entryTabLabel').textContent = buyer ? 'บันทึกข้อมูลการรับซื้อ' : 'บันทึกข้อมูลเพาะปลูก';
+      document.getElementById('entryTitle').textContent = buyer ? 'บันทึกข้อมูลการรับซื้อ' : 'บันทึกข้อมูลเพาะปลูก';
+      document.getElementById('recMapTitle').textContent = buyer ? 'ตำแหน่งจุดรับซื้อ' : 'ตำแหน่งแปลง';
+      document.getElementById('recMapHelp').textContent = buyer ? 'แตะบนแผนที่ หรือลากหมุดของจุดรับซื้อที่เลือกให้ตรงตำแหน่ง' : 'แตะบนแผนที่ หรือลากหมุดของแปลงที่เลือกให้ตรงตำแหน่ง';
+      document.getElementById('farmerFields').classList.toggle('hidden', buyer);
+      document.getElementById('buyerFields').classList.toggle('hidden', !buyer);
+      const nameParts = String(user.name || '').split(' ');
       document.getElementById('entryUsername').value = user.phone;
-      document.getElementById('entryFname').value = fname;
-      document.getElementById('entryLname').value = lname;
+      document.getElementById('entryFname').value = nameParts[0] || '';
+      document.getElementById('entryLname').value = nameParts.slice(1).join(' ');
       document.getElementById('entryPhone').value = user.phone;
+      fillProfileProvinces(user.province && user.province.code);
       loadUserProfile();
-
-      if(user.role==='farmer') {
-         document.getElementById('farmerFields').classList.remove('hidden');
-         document.getElementById('buyerFields').classList.add('hidden'); 
-
-      } else {
-         document.getElementById('farmerFields').classList.add('hidden');
-         document.getElementById('buyerFields').classList.remove('hidden');
-         // change role color
-         document.getElementById('userRoleDisplay').classList.replace('bg-green-100','bg-red-100');
-         document.getElementById('userRoleDisplay').classList.replace('text-green-800','text-red-800');
-         document.getElementById('userBorderRoleDisplay').classList.replace('bg-green-500','bg-red-500');
-      }
-      // setTimeout(initMiniMap, 500);
       switchToEntry('entry');
     }
 
     function loadUserProfile() {
       google.script.run
         .withSuccessHandler(function(d) {
-          if (d.status === 'success') {
-            // displayUserProfile(d)
-            populateUserProfile(d);
-          } else if (d.status === 'not_found') {
-            Swal.fire('แจ้งเตือน', d.message, 'info');
-            populateUserProfile(d);
-          } else {
-            Swal.fire('ผิดพลาด', d.message, 'error');
-          }
+          if (d.status === 'success' || d.status === 'not_found') populateUserProfile(d);
+          else Swal.fire('ผิดพลาด', d.message, 'error');
         })
         .withFailureHandler(function(err) {
           Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
@@ -926,89 +893,147 @@
         .getUserProfileServer({ phone: currentUser.phone });
     }
 
-    function displayUserProfile(d) {
-      if (d.role === 'farmer') {
-        console.log('ชื่อ:', d.profile.fname + ' ' + d.profile.lname);
-        console.log('แปลง:', d.farmers)
-      } else {
-        console.log('ชื่อ:', d.profile.fname + ' ' + d.profile.lname);
-        console.log('รับซื้อ:', d.buyers);
-        
-      }
+    /* ---------- 4.2.0 user card: profile (name, contact phone, province) saved once for every record ---------- */
+    async function fillProfileProvinces(code) {
+      const sel = document.getElementById('profileProvince'); if (!sel || !window.GGH_PROVINCE) return;
+      try { await window.GGH_PROVINCE.fillSelect(sel, { value: code }); } catch (e) { /* list unavailable: keep current */ }
+      if (code) sel.value = code;
+    }
+    function showProfile(p) {
+      if (!p) return;
+      document.getElementById('entryFname').value = p.fname || '';
+      document.getElementById('entryLname').value = p.lname || '';
+      document.getElementById('entryPhone').value = p.contactPhone || currentUser.phone;
+      document.getElementById('entryUsername').value = p.loginPhone || currentUser.phone;
+      if (p.province) { document.getElementById('userProvinceDisplay').textContent = p.province.name || '-'; fillProfileProvinces(p.province.code); }
+    }
+    function saveProfile(e) {
+      e.preventDefault();
+      const f = e.target;
+      const fname = f.fname.value.trim(), contactPhone = f.contactPhone.value.replace(/\D/g, '');
+      if (!fname) return Swal.fire('แจ้งเตือน', 'กรุณาระบุชื่อ', 'warning');
+      if (!/^0\d{9}$/.test(contactPhone)) return Swal.fire('แจ้งเตือน', 'เบอร์ติดต่อต้องเป็นตัวเลข 10 หลัก ขึ้นต้นด้วย 0', 'warning');
+      Swal.showLoading();
+      google.script.run
+        .withSuccessHandler((d) => {
+          Swal.fire('บันทึกแล้ว', d.message, 'success');
+          currentUser.name = d.name; document.getElementById('userNameDisplay').innerText = d.name;
+          if (d.province) {
+            document.getElementById('userProvinceDisplay').textContent = d.province.name;
+            currentUser.province = d.province; if (window.GGH_PROVINCE) window.GGH_PROVINCE.set(d.province, { save: false });
+          }
+          document.getElementById('meProfile').open = false;
+          loadUserProfile();
+        })
+        .withFailureHandler((err) => Swal.fire('ผิดพลาด', err.message, 'error'))
+        .updateProfileServer({ fname, lname: f.lname.value.trim(), contactPhone, provinceCode: f.provinceCode.value });
     }
 
+    /* ---------- 4.2.0 record board: one map with every plot / buy point, numbered buttons, one form at a time ---------- */
+    const REC = { map: null, markers: {}, sel: 1, count: 0, keepId: '', draft: 0, radius: 50 };
+    const recKind = () => (currentUser && currentUser.role === 'buyer' ? 'buyer' : 'farmer');
+    const recList = () => document.getElementById(recKind() === 'buyer' ? 'buyerList' : 'farmerList');
+    const recCard = (i) => document.getElementById(`${recKind()}-card-${i}`);
+    const recLabel = (i) => (recKind() === 'buyer' ? 'จุดรับซื้อที่ ' : 'แปลงเพาะปลูกที่ ') + i;
+
     function populateUserProfile(d) {
-      const id = new Date().getTime().toString();
       if (currentUser) currentUser.sales = d.sales || [];   // 3.1.0: shown on sold plots
+      showProfile(d.profile);
+      if (d.nearRadiusKm) setNearRadius(d.nearRadiusKm);
+      const items = (d.role === 'farmer' ? d.farmers : d.buyers) || [];
+      const render = d.role === 'farmer' ? renderFarmerFieldCard : renderBuyerFieldCard;
+      REC.count = items.length; REC.draft = 0;
+      recList().innerHTML = items.map((x, i) => render(x, i + 1)).join('');
+      REC.items = items;
+      let sel = 1;
+      if (REC.keepId) { const k = items.findIndex((x) => String(x.id) === String(REC.keepId)); if (k >= 0) sel = k + 1; REC.keepId = ''; }
+      if (!items.length) { addData(); return; }
+      recInitMap(() => { items.forEach((x, i) => { if (validCoordinates(x.lat, x.lng)) setRecMarker(i + 1, x.lat, x.lng, true); }); recSelect(sel, true); });
+    }
 
-      if (d.role === 'farmer') {
-        // --- แสดง farmerFields ---
-        document.getElementById('farmerFields').classList.remove('hidden');
-        document.getElementById('buyerFields').classList.add('hidden');
+    function recPickerHtml() {
+      const btn = (i) => {
+        const c = recCard(i); const sold = c && c.classList.contains('is-sold');
+        const sub = c ? (c.querySelector('[data-crop-title]')?.textContent || c.dataset.sub || '') : '';
+        return `<button type="button" role="tab" class="rec-pick${i === REC.sel ? ' is-on' : ''}${sold ? ' is-sold' : ''}" aria-selected="${i === REC.sel}" onclick="recSelect(${i})">
+          <span class="rec-pick-no">${i}</span><span class="rec-pick-txt"><b>${recLabel(i)}</b><small>${escapeHtml(sub)}${sold ? ' · ขายแล้ว' : ''}</small></span></button>`;
+      };
+      let html = '';
+      for (let i = 1; i <= REC.count; i++) html += btn(i);   // saved ones only
+      const draftOn = REC.draft && REC.sel === REC.draft;
+      html += `<button type="button" role="tab" class="rec-pick is-add${draftOn ? ' is-on' : ''}" aria-selected="${!!draftOn}" onclick="addData()"><span class="rec-pick-no"><i class="fa-solid fa-plus" aria-hidden="true"></i></span><span class="rec-pick-txt"><b>${draftOn ? (recKind() === 'buyer' ? 'จุดรับซื้อใหม่' : 'แปลงใหม่') + ' (ยังไม่บันทึก)' : (recKind() === 'buyer' ? 'เพิ่มจุดรับซื้อ' : 'เพิ่มแปลงใหม่')}</b><small>${draftOn ? 'กรอกแล้วกดบันทึก' : 'แตะเพื่อเพิ่ม'}</small></span></button>`;
+      document.getElementById('recPicker').innerHTML = html;
+    }
 
-        const farmers = d.farmers;
-        const container = document.getElementById('farmerList');
-        document.getElementById('btn-add').classList.add('bg-green-500');
-        if (!farmers || farmers.length === 0) {
-          const index = 1;
-          const mapId = `miniMap-${index}`;
+    function recSelect(i, quiet) {
+      REC.sel = i;
+      recList().querySelectorAll('.record-card').forEach((c) => c.classList.toggle('hidden', c.id !== `${recKind()}-card-${i}`));
+      Object.keys(REC.markers).forEach((k) => recStyleMarker(Number(k)));
+      recPickerHtml();
+      const m = REC.markers[i];
+      if (m && REC.map) REC.map.setView(m.getLatLng(), Math.max(REC.map.getZoom(), 14), { animate: !quiet });
+      const lat = document.getElementById('lat-' + i)?.value, lng = document.getElementById('lng-' + i)?.value;
+      const place = document.getElementById('place-' + i);
+      document.getElementById('recPlace').innerHTML = validCoordinates(lat, lng) && place ? place.innerHTML : '<span class="rec-warn"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> ยังไม่ได้ปักหมุด — แตะบนแผนที่ตรงตำแหน่ง</span>';
+    }
 
-          container.innerHTML = renderFarmerFieldCard({id:id}, index);
-          setTimeout(() => {
-            initMiniMap(mapId); // ← use new function
-          }, 300);
-          return;
+    function recInitMap(then) {
+      const go = () => {
+        if (!REC.map) {
+          REC.map = L.map('recMap', { zoomControl: true }).setView([16.48, 99.52], 11);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(REC.map);
+          REC.map.on('click', (e) => setRecMarker(REC.sel, e.latlng.lat, e.latlng.lng));
+        } else {
+          Object.values(REC.markers).forEach((m) => REC.map.removeLayer(m));
         }
+        REC.markers = {};
+        REC.map.invalidateSize();
+        if (then) then();
+        const pts = Object.values(REC.markers).map((m) => m.getLatLng());
+        if (pts.length > 1) REC.map.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
+        else if (pts.length === 1) REC.map.setView(pts[0], 14);
+      };
+      setTimeout(go, 60);
+    }
 
-        // have existing data
-        container.innerHTML = farmers.map((f, i) => renderFarmerFieldCard(f, i+1)).join('');
-        setTimeout(() => {
-          farmers.forEach((f, i) => {
-            const mapId = `miniMap-${i+1}`;
-            initMiniMap(mapId, f.lat, f.lng);
-
-            // if data exists → show marker
-            if (validCoordinates(f.lat, f.lng)) {
-              setMiniMarker(mapId, f.lat, f.lng);
-            }
-          });
-        }, 300);
-
-      } else {
-        // --- แสดง buyerFields ---
-        document.getElementById('buyerFields').classList.remove('hidden');
-        document.getElementById('farmerFields').classList.add('hidden');
-  
-        const buyers = d.buyers;
-        const container = document.getElementById('buyerList');
-        document.getElementById('btn-add').classList.add('bg-blue-500');
-        // new one
-        if (!buyers || buyers.length === 0) {
-          const index = 1;
-          const mapId = `miniMap-${index}`;
-
-          container.innerHTML = renderBuyerFieldCard({id:id}, index);
-          setTimeout(() => {
-            initMiniMap(mapId); 
-          }, 300);
-          return;
-        }
-        
-        // have existing data
-        container.innerHTML = buyers.map((b, i) => renderBuyerFieldCard(b, i+1)).join('');
-        setTimeout(() => {
-          buyers.forEach((b, i) => {
-            const mapId = `miniMap-${i+1}`;
-            initMiniMap(mapId, b.lat, b.lng);
-
-            // if data exists → show marker
-            if (validCoordinates(b.lat, b.lng)) {
-              setMiniMarker(mapId, b.lat, b.lng);
-            }
-          });
-        }, 300);
-
+    function recIcon(i) {
+      const on = i === REC.sel;
+      return L.divIcon({ className: '', iconSize: on ? [44, 54] : [34, 42], iconAnchor: on ? [22, 52] : [17, 40],
+        html: `<div class="rec-pin ${recKind() === 'buyer' ? 'is-buy' : 'is-sell'}${on ? ' is-on' : ''}"><span>${i}</span></div>` });
+    }
+    function recStyleMarker(i) {
+      const m = REC.markers[i]; if (!m) return;
+      m.setIcon(recIcon(i));
+      if (m.dragging) { if (i === REC.sel) m.dragging.enable(); else m.dragging.disable(); }
+      m.setZIndexOffset(i === REC.sel ? 1000 : 0);
+    }
+    /** put / move the pin of card i (only the chosen card's pin moves) */
+    function setRecMarker(i, lat, lng, silent) {
+      if (!REC.map || !recCard(i)) return;
+      if (recCard(i).classList.contains('is-sold') && !silent) return;
+      document.getElementById('lat-' + i).value = Number(lat).toFixed(6);
+      document.getElementById('lng-' + i).value = Number(lng).toFixed(6);
+      if (REC.markers[i]) REC.markers[i].setLatLng([lat, lng]);
+      else {
+        const m = L.marker([lat, lng], { draggable: true, icon: recIcon(i) }).addTo(REC.map);
+        m.on('click', () => { if (REC.sel !== i) recSelect(i); });
+        m.on('dragend', (e) => { const p = e.target.getLatLng(); setRecMarker(i, p.lat, p.lng); });
+        REC.markers[i] = m;
       }
+      recStyleMarker(i);
+      if (!silent) showPinPlace(i, lat, lng);
+    }
+    // older names, still used by a few buttons
+    function initMiniMap() { /* 4.2.0: one shared map (recInitMap) */ }
+    function setMiniMarker(mapId, lat, lng) { const m = String(mapId).match(/\d+$/); if (m) setRecMarker(Number(m[0]), lat, lng); }
+    function getGPS() { recGps(); }
+    function recGps() {
+      if (!navigator.geolocation) return Swal.fire('Error','เบราว์เซอร์ของท่านไม่รองรับการดึงตำแหน่ง (GPS)','error');
+      Swal.showLoading();
+      navigator.geolocation.getCurrentPosition(
+        (p) => { Swal.close(); setRecMarker(REC.sel, p.coords.latitude, p.coords.longitude); REC.map.setView([p.coords.latitude, p.coords.longitude], 15); },
+        (err) => { Swal.close(); Swal.fire('ไม่สามารถใช้ GPS', err.code === 1 ? 'กรุณาอนุญาตให้เว็บไซต์เข้าถึงตำแหน่ง แล้วลองอีกครั้ง' : 'ไม่สามารถดึงตำแหน่งได้ กรุณาลองใหม่หรือแตะตำแหน่งบนแผนที่', 'warning'); },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
     }
 
     /* ---------- 3.1.0 record page: clear sections with icons, sensible dates, where the pin is, "ขายแล้ว" ---------- */
@@ -1044,6 +1069,7 @@
       el.textContent = 'กำลังหาตำบล อำเภอ จังหวัด…';
       window.GGH_PROVINCE.where(lat, lng).then((loc) => {
         el.innerHTML = loc ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${escapeHtml(window.GGH_PROVINCE.label(loc))}` : '<span class="rec-warn">ตำแหน่งนี้อยู่นอกประเทศไทย กรุณาปักหมุดใหม่</span>';
+        if (index === REC.sel) document.getElementById('recPlace').innerHTML = el.innerHTML;
       }).catch(() => { el.textContent = ''; });
     }
     function soldHtml(f) {
@@ -1065,48 +1091,29 @@
       const plant = f?.plantDate || (isNew ? isoDate(new Date()) : '');
       const harvest = f?.harvestDate || (isNew ? addDays(plant, cropDays(crop)) : '');
       const sold = f?.recordStatus === 'Sold';
-      const saved = !!f?.timestamp;
+      const saved = !!(f?.timestamp || f?.id);
       const place = f?.location && f.location.province ? escapeHtml([f.location.subdistrict && 'ต.' + f.location.subdistrict, f.location.district && 'อ.' + f.location.district, 'จ.' + f.location.province].filter(Boolean).join(' ')) : '';
       return `
       <div class="record-card rec-card is-farmer${sold ? ' is-sold' : ''} scroll-mt-28" id="farmer-card-${index}">
         <header class="rec-head">
           <span data-crop-icon>${materialIcon(crop, automaticMaterial)}</span>
-          <div class="rec-title"><h4>แปลงที่ ${index} · <span data-crop-title>${escapeHtml(crop)}</span></h4>
-            <p>${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : (saved ? '' : 'แปลงใหม่ — กรอกข้อมูลแล้วกดบันทึก')}</p></div>
-          <button type="button" class="rec-btn is-map" onclick="switchToMap(${coordinateOr(f?.lat,16.48)},${coordinateOr(f?.lng,99.52)})"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>แผนที่ &amp; ผู้รับซื้อ</span></button>
+          <div class="rec-title"><h4>${saved ? 'แปลงเพาะปลูกที่ ' + index : 'แปลงใหม่'} · <span data-crop-title>${escapeHtml(crop)}</span></h4>
+            <p class="rec-place" id="place-${index}" aria-live="polite">${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : (saved ? '' : 'กรอกข้อมูล ปักหมุดบนแผนที่ แล้วกดบันทึก')}</p></div>
         </header>
+        <input type="hidden" name="lat" id="lat-${index}" value="${f?.lat??''}"><input type="hidden" name="lng" id="lng-${index}" value="${f?.lng??''}">
         ${sold ? soldHtml(f) : listingStatusHtml(f)}
-        <!-- 4.1.0: map of the plot on the left, its details on the right (stacked on phones: map first) -->
-        <div class="rec-split">
-          <div class="rec-split-map">
+        <div class="rec-split-data">
         <fieldset class="rec-sec" ${sold ? 'disabled' : ''}>
-          <legend><i class="fa-solid fa-map-pin" aria-hidden="true"></i> ตำแหน่งแปลง <span class="required-mark">*</span></legend>
-          <p class="rec-help">กด "ใช้ตำแหน่งปัจจุบัน" ขณะอยู่ที่แปลง หรือแตะบนแผนที่ แล้วลากหมุดให้ตรงแปลง</p>
-          <button type="button" onclick="getGPS('miniMap-${index}')" class="rec-btn is-gps"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> ใช้ตำแหน่งปัจจุบัน</button>
-          <p class="rec-place" id="place-${index}" aria-live="polite">${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : ''}</p>
-          <div id="miniMap-${index}" class="rec-minimap"></div>
-          <details class="rec-coords"><summary>พิกัด (ละติจูด, ลองจิจูด)</summary>
-            <div class="grid grid-cols-2 gap-2 mt-2">
-              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly value="${f?.lat??''}">
-              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly value="${f?.lng??''}">
-            </div></details>
-        </fieldset>
-          </div>
-          <div class="rec-split-data">
-        <fieldset class="rec-sec" ${sold ? 'disabled' : ''}>
-          <legend><i class="fa-solid fa-seedling" aria-hidden="true"></i> พืชและวัสดุเหลือใช้</legend>
-          <div class="rec-grid">
-            <label><span class="label-text">ชนิดพืช <span class="required-mark">*</span></span>
-              <select class="input-field" name="crop" onchange="cropChanged(this)">
-                ${CROPS.map(opt => `<option ${opt === crop ? 'selected' : ''}>${opt}</option>`).join('')}
-              </select></label>
-            <label><span class="label-text">วัสดุเหลือใช้ทางการเกษตร</span>
-              <select class="input-field bg-gray-100 text-gray-700" name="materialType" disabled aria-label="ชนิดวัสดุเหลือใช้ทางการเกษตรที่ระบบกำหนดอัตโนมัติ">
-                ${MATERIAL_TYPES.map(opt => `<option value="${opt}" ${opt === automaticMaterial ? 'selected' : ''}>${opt}</option>`).join('')}
-              </select>
-              <input type="text" name="materialOther" value="${escapeHtml(f?.materialOther || '')}" class="input-field mt-2 ${(automaticMaterial === 'อื่นๆ') ? '' : 'hidden'}" placeholder="ระบุชนิดวัสดุเหลือใช้ทางการเกษตร">
-              <small class="rec-help">ระบบเลือกให้ตามชนิดพืช</small></label>
-          </div>
+          <legend><i class="fa-solid fa-seedling" aria-hidden="true"></i> ชนิดพืช <span class="required-mark">*</span></legend>
+          <select class="input-field" name="crop" aria-label="ชนิดพืช" onchange="cropChanged(this)">
+            ${CROPS.map(opt => `<option ${opt === crop ? 'selected' : ''}>${opt}</option>`).join('')}
+          </select>
+          <!-- 4.2.0: the material follows the crop; asked for only when the crop is "อื่นๆ" -->
+          <select class="hidden" name="materialType" disabled aria-hidden="true" tabindex="-1">
+            ${MATERIAL_TYPES.map(opt => `<option value="${opt}" ${opt === automaticMaterial ? 'selected' : ''}>${opt}</option>`).join('')}
+          </select>
+          <label class="rec-other ${(automaticMaterial === 'อื่นๆ') ? '' : 'hidden'}" data-other-wrap><span class="label-text">วัสดุเหลือใช้ทางการเกษตร (ระบุ) <span class="required-mark">*</span></span>
+            <input type="text" name="materialOther" value="${escapeHtml(f?.materialOther || '')}" class="input-field" placeholder="เช่น เปลือกถั่ว"></label>
         </fieldset>
         <fieldset class="rec-sec" ${sold ? 'disabled' : ''}>
           <legend><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> ช่วงเวลา</legend>
@@ -1124,10 +1131,9 @@
             <label><input type="number" value="${wah}" name="wah" class="input-field" inputmode="decimal" min="0" max="99" placeholder="0"><span>ตร.ว.</span></label>
           </div>
         </fieldset>
-          </div>
         </div>
         ${sold ? '' : `<div class="rec-actions">
-          <button type="button" onclick="submitData('${safeId(f?.id)}', ${index})" class="rec-btn is-save"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> บันทึกข้อมูลแปลง</button>
+          <button type="button" onclick="submitData('${safeId(f?.id)}', ${index})" class="rec-btn is-save"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> บันทึกข้อมูลเพาะปลูก</button>
           ${saved && f?.recordStatus === 'Open' ? `<button type="button" onclick="markSold('${safeId(f?.id)}', ${index})" class="rec-btn is-sold"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> ขายแล้ว</button>` : ''}
           <button id="btn-delete-${index}" type="button" onclick="deleteData('${safeId(f?.id)}')" class="rec-btn is-delete"><i class="fa-solid fa-trash" aria-hidden="true"></i> ลบแปลง</button>
         </div>`}
@@ -1150,22 +1156,13 @@
         if (!res.isConfirmed) return;
         Swal.showLoading();
         google.script.run
-          .withSuccessHandler((d) => { Swal.fire('บันทึกแล้ว', d.message, 'success'); miniMaps = {}; miniMarkers = {}; loadUserProfile(); })
+          .withSuccessHandler((d) => { Swal.fire('บันทึกแล้ว', d.message, 'success'); REC.keepId = String(id); loadUserProfile(); })
           .withFailureHandler((err) => Swal.fire('เกิดข้อผิดพลาด', err.message, 'error'))
           .markSoldServer(res.value);
       });
     }
     /** a sold plot, next season: a new card with the same crop, size and pin */
-    function newSeason(crop, area, lat, lng) {
-      const container = document.getElementById('farmerList');
-      const index = container.children.length + 1;
-      container.insertAdjacentHTML('beforeend', renderFarmerFieldCard({ id: String(Date.now()), crop, area, lat: lat ?? '', lng: lng ?? '' }, index));
-      setTimeout(() => {
-        initMiniMap(`miniMap-${index}`, lat, lng);
-        if (validCoordinates(lat, lng)) { setMiniMarker(`miniMap-${index}`, lat, lng); }
-        document.getElementById('farmer-card-' + index)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 150);
-    }
+    function newSeason(crop, area, lat, lng) { addData({ crop, area, lat: lat ?? '', lng: lng ?? '' }); }
 
     function renderBuyerFieldCard(b, index){
       const type = b?.materialType || 'ฟางข้าว';
@@ -1175,27 +1172,11 @@
       <div class="record-card rec-card is-buyer scroll-mt-28" id="buyer-card-${index}">
         <header class="rec-head">
           ${truck}
-          <div class="rec-title"><h4>จุดรับซื้อที่ ${index} · ${escapeHtml(type === 'อื่นๆ' ? (b?.materialOther || 'วัสดุอื่น') : type)}</h4>
-            <p>${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : (b?.timestamp ? '' : 'จุดรับซื้อใหม่ — กรอกข้อมูลแล้วกดบันทึก')}</p></div>
-          <button type="button" class="rec-btn is-map" onclick="switchToMap(${coordinateOr(b?.lat,16.48)},${coordinateOr(b?.lng,99.52)})"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>แผนที่ &amp; แปลงพร้อมขาย</span></button>
+          <div class="rec-title"><h4>${(b?.timestamp || b?.id) ? 'จุดรับซื้อที่ ' + index : 'จุดรับซื้อใหม่'} · <span data-crop-title>${escapeHtml(type === 'อื่นๆ' ? (b?.materialOther || 'วัสดุอื่น') : type)}</span></h4>
+            <p class="rec-place" id="place-${index}" aria-live="polite">${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : ((b?.timestamp || b?.id) ? '' : 'กรอกข้อมูล ปักหมุดบนแผนที่ แล้วกดบันทึก')}</p></div>
         </header>
-        <!-- 4.1.0: map of the plot on the left, its details on the right (stacked on phones: map first) -->
-        <div class="rec-split">
-          <div class="rec-split-map">
-        <fieldset class="rec-sec">
-          <legend><i class="fa-solid fa-map-pin" aria-hidden="true"></i> ตำแหน่งจุดรับซื้อ <span class="required-mark">*</span></legend>
-          <p class="rec-help">กด "ใช้ตำแหน่งปัจจุบัน" ขณะอยู่ที่จุดรับซื้อ หรือแตะบนแผนที่ แล้วลากหมุดให้ตรงตำแหน่ง</p>
-          <button type="button" onclick="getGPS('miniMap-${index}')" class="rec-btn is-gps"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> ใช้ตำแหน่งปัจจุบัน</button>
-          <p class="rec-place" id="place-${index}" aria-live="polite">${place ? `<i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${place}` : ''}</p>
-          <div id="miniMap-${index}" class="rec-minimap"></div>
-          <details class="rec-coords"><summary>พิกัด (ละติจูด, ลองจิจูด)</summary>
-            <div class="grid grid-cols-2 gap-2 mt-2">
-              <input type="text" name="lat" id="lat-${index}" class="input-field text-xs bg-gray-50" placeholder="Latitude" readonly value="${b?.lat??''}">
-              <input type="text" name="lng" id="lng-${index}" class="input-field text-xs bg-gray-50" placeholder="Longitude" readonly value="${b?.lng??''}">
-            </div></details>
-        </fieldset>
-          </div>
-          <div class="rec-split-data">
+        <input type="hidden" name="lat" id="lat-${index}" value="${b?.lat??''}"><input type="hidden" name="lng" id="lng-${index}" value="${b?.lng??''}">
+        <div class="rec-split-data">
         <fieldset class="rec-sec">
           <legend><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> วัสดุที่รับซื้อ</legend>
           <div class="rec-grid">
@@ -1212,10 +1193,9 @@
               <input type="number" value="${b?.price??''}" name="price" class="input-field" inputmode="decimal" min="0" step="0.01" placeholder="เช่น 600"></label>
           </div>
         </fieldset>
-          </div>
         </div>
         <div class="rec-actions">
-          <button type="button" onclick="submitData('${safeId(b?.id)}',${index})" class="rec-btn is-save"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> บันทึกจุดรับซื้อ</button>
+          <button type="button" onclick="submitData('${safeId(b?.id)}',${index})" class="rec-btn is-save"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> บันทึกข้อมูลการรับซื้อ</button>
           <button id="btn-delete-${index}" type="button" onclick="deleteData('${safeId(b?.id)}')" class="rec-btn is-delete"><i class="fa-solid fa-trash" aria-hidden="true"></i> ลบ</button>
         </div>
       </div>
@@ -1223,31 +1203,21 @@
     }
 
 
+    /** 4.2.0: the two tabs at the bottom of the user card */
+    function setUserTab(t) {
+      document.getElementById('btn-entry').setAttribute('aria-selected', String(t === 'entry'));
+      document.getElementById('btn-map-main').setAttribute('aria-selected', String(t === 'map'));
+    }
     function switchToEntry(t) {
       document.getElementById('mapSection').classList.add('hidden');
-      const entryBtn = document.getElementById('btn-entry');
-      const mapBtn = document.getElementById('btn-map-main');
-      if (entryBtn) {
-        entryBtn.classList.remove('text-green-700','border-green-500');
-        entryBtn.classList.add('text-gray-600','border-gray-200');
-      }
-      if (mapBtn) {
-        mapBtn.classList.remove('text-blue-700','border-blue-500');
-        mapBtn.classList.add('text-gray-600','border-gray-200');
-      }
-
-      const active = document.getElementById('btn-'+t);
-      if(t==='entry') {
-        active.classList.replace('text-gray-600','text-green-700');
-        active.classList.replace('border-gray-200','border-green-500');
-        document.getElementById('entrySection').classList.remove('hidden');
-      }
+      document.getElementById('entrySection').classList.remove('hidden');
+      setUserTab('entry');
+      if (REC.map) setTimeout(() => REC.map.invalidateSize(), 60);
     }
 
     function openMatchingMapCard() {
-      const container = document.getElementById(currentUser?.role === 'buyer' ? 'buyerList' : 'farmerList');
-      const lat = Number(container?.querySelector('input[name="lat"]')?.value) || 16.48;
-      const lng = Number(container?.querySelector('input[name="lng"]')?.value) || 99.52;
+      const lat = Number(document.getElementById('lat-' + REC.sel)?.value) || Number(recList()?.querySelector('input[name="lat"]')?.value) || 16.48;
+      const lng = Number(document.getElementById('lng-' + REC.sel)?.value) || Number(recList()?.querySelector('input[name="lng"]')?.value) || 99.52;
       switchToMap(lat, lng);
     }
 
@@ -1255,17 +1225,7 @@
       syncNearSwitch();   // 4.1.0
       lat = coordinateOr(lat, 16.48);
       lng = coordinateOr(lng, 99.52);
-      const entryBtn = document.getElementById('btn-entry');
-      const mapBtn = document.getElementById('btn-map-main');
-
-      if (entryBtn) {
-        entryBtn.classList.remove('text-green-700','border-green-500');
-        entryBtn.classList.add('text-gray-600','border-gray-200');
-      }
-      if (mapBtn) {
-        mapBtn.classList.remove('text-gray-600','border-gray-200');
-        mapBtn.classList.add('text-blue-700','border-blue-500');
-      }
+      setUserTab('map');
 
       document.getElementById('entrySection').classList.add('hidden');
       document.getElementById('mapSection').classList.remove('hidden');
@@ -1280,75 +1240,10 @@
     }
 
     // --- MAP & DATA LOGIC ---
-    let miniMaps = {}, miniMarkers = {};
     let mapMarkers = {}; 
 
     let mainMap = null;
 
-    function initMiniMap(mapId, lat = 16.48, lng = 99.52) {
-      if (miniMaps[mapId]) return;
-
-      lat = coordinateOr(lat, 16.48);
-      lng = coordinateOr(lng, 99.52);
-
-      const map = L.map(mapId).setView([lat, lng], 13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-        .addTo(map);
-
-      // click to place marker (FIXED: include mapId)
-      map.on('click', e => {
-        setMiniMarker(mapId, e.latlng.lat, e.latlng.lng);
-      });
-
-      miniMaps[mapId] = map;
-    }
-
-    function getGPS(mapId) {
-      if(!navigator.geolocation) return Swal.fire('Error','เบราว์เซอร์ของท่านไม่รองรับการดึงตำแหน่ง (GPS)','error');
-      Swal.showLoading();
-      navigator.geolocation.getCurrentPosition(
-        p => {
-          Swal.close();
-          setMiniMarker(mapId,p.coords.latitude, p.coords.longitude);
-          miniMaps[mapId].setView([p.coords.latitude, p.coords.longitude], 15);
-        },
-        err => {
-          Swal.close();
-          const message = err.code === 1
-            ? 'กรุณาอนุญาตให้เว็บไซต์เข้าถึงตำแหน่ง แล้วลองอีกครั้ง'
-            : 'ไม่สามารถดึงตำแหน่งได้ กรุณาลองใหม่หรือแตะตำแหน่งบนแผนที่';
-          Swal.fire('ไม่สามารถใช้ GPS', message, 'warning');
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
-      );
-    }
-
-    function setMiniMarker(mapId, lat, lng) {
-      const match = mapId.match(/\d+$/);
-      const id = match ? parseInt(match[0], 10) : null;
-      document.getElementById('lat-'+ id).value = Number(lat).toFixed(6);
-      document.getElementById('lng-'+ id).value = Number(lng).toFixed(6);
-      if(miniMarkers[mapId]) miniMaps[mapId].removeLayer(miniMarkers[mapId]);
-
-      const card = document.getElementById((currentUser?.role === 'farmer' ? 'farmer-card-' : 'buyer-card-') + id);
-      const cropSel = card && card.querySelector('select[name="crop"]');
-      const group = window.GGH_ICONS ? window.GGH_ICONS.groupOf(cropSel ? cropSel.value : '', card && card.querySelector('select[name="materialType"]')?.value) : '';
-      const marker = L.marker([lat, lng], {
-        draggable: true,
-        icon: getRoleMarkerIcon(currentUser?.role, group)
-      }).addTo(miniMaps[mapId]);
-      miniMarkers[mapId] = marker;
-      showPinPlace(id, lat, lng);
-
-      marker.on('dragend', e => {
-        const p = e.target.getLatLng();
-        document.getElementById('lat-' + id).value = p.lat.toFixed(6);
-        document.getElementById('lng-' + id).value = p.lng.toFixed(6);
-        showPinPlace(id, p.lat, p.lng);
-      });
-    }
-
-    
     function initMatchingMap(lat, lng) {
       // console.log('user location to match:', lat, lng, currentUser.role);
       // clear old markers (important)
@@ -1428,6 +1323,7 @@
             Swal.fire('ต้องอัปเดต Backend', compatibilityError, 'warning');
             return;
           }
+          if (data.nearRadiusKm) setNearRadius(data.nearRadiusKm);   // 4.2.0
           const isFarmer = currentUser.role === 'farmer';
           configureHarvestFilters(data.farmers);
           const partnerRole = isFarmer ? 'buyer' : 'farmer';
@@ -1470,7 +1366,7 @@
             mainMap.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 });
           }
 
-          if(partnerTargets.length === 0) list.innerHTML = `<div class="ggh-match-empty"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> ยังไม่พบคู่ค้า${data.nearKm ? 'ในจังหวัดและในรัศมี ' + data.nearKm + ' กม.' : 'ในจังหวัดนี้'}${data.nearKm ? '' : ' — ลองเปิด "รวมคู่ค้าต่างจังหวัดในรัศมี 50 กม." ด้านบน'}</div>`;
+          if(partnerTargets.length === 0) list.innerHTML = `<div class="ggh-match-empty"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> ยังไม่พบคู่ค้า${data.nearKm ? 'ในจังหวัดและในรัศมี ' + data.nearKm + ' กม.' : 'ในจังหวัดนี้'}${data.nearKm ? '' : ' — ลองเปิด "รวมคู่ค้าต่างจังหวัด" ด้านบน'}</div>`;
 
           const cards = partnerTargets.map((t, index) => {
             const desc = mapPointDescription(t, partnerRole);
@@ -1505,10 +1401,15 @@
         .withFailureHandler(function(err) {
           Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ: ' + err.message, 'error');
         })
-.getMatchingDataServer({ province: window.GGH_PROVINCE ? window.GGH_PROVINCE.code : '', nearKm: nearOn() ? 50 : 0 }); 
+.getMatchingDataServer({ province: window.GGH_PROVINCE ? window.GGH_PROVINCE.code : '', near: nearOn() }); 
     }
 
     /** 4.1.0: partners across the province border within 50 km of my own pins — remembered on this device */
+    /** 4.2.0: the radius is set by Super Admin — the label follows it */
+    function setNearRadius(km) {
+      REC.radius = Number(km) || 50;
+      const b = document.querySelector('#nearBox .ggh-switch-text b'); if (b) b.textContent = `รวมคู่ค้าต่างจังหวัดในรัศมี ${REC.radius} กม.`;
+    }
     function nearOn() { try { return localStorage.getItem('ggh_near50') === '1'; } catch (e) { return false; } }
     function toggleNear(on) {
       try { localStorage.setItem('ggh_near50', on ? '1' : '0'); } catch (e) { /* private mode */ }
@@ -1532,29 +1433,21 @@
     window.addEventListener('resize', function () {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(function () {
-        Object.values(miniMaps).forEach(map => map?.invalidateSize());
+        if (REC.map) REC.map.invalidateSize();
         mainMap?.invalidateSize();
       }, 180);
     }, { passive: true });
 
-    function addData() {
+    /** 4.2.0: one new (unsaved) plot / buy point at a time — it gets its number button once saved */
+    function addData(prefill) {
       const isFarmer = currentUser.role === 'farmer';
-      const containerId = isFarmer ? 'farmerList' : 'buyerList';
-      const container = document.getElementById(containerId);
-      const id = new Date().getTime().toString();
-
-      const index = container.children.length;
-      const html = isFarmer
-        ? renderFarmerFieldCard({id:id}, index+1)
-        : renderBuyerFieldCard({id:id}, index+1);
-      container.insertAdjacentHTML('beforeend', html);
-
-      const mapId = `miniMap-${index+1}`;
-
-      // init map AFTER DOM render
-      setTimeout(() => {
-        initMiniMap(mapId); // default center
-      }, 100);
+      if (REC.draft && recCard(REC.draft)) { recSelect(REC.draft); return; }
+      const index = REC.count + 1;
+      const item = Object.assign({ id: String(Date.now()) }, prefill || {});
+      recList().insertAdjacentHTML('beforeend', isFarmer ? renderFarmerFieldCard(item, index) : renderBuyerFieldCard(item, index));
+      REC.draft = index;
+      const ready = () => { if (validCoordinates(item.lat, item.lng)) setRecMarker(index, item.lat, item.lng); recSelect(index); };
+      if (!REC.map) recInitMap(ready); else ready();
     }
 
     function deleteData(mapId){
@@ -1580,14 +1473,7 @@
           if (d.status === 'success') {
             Swal.fire('สำเร็จ', 'ลบข้อมูลเข้าสู่ระบบเรียบร้อยแล้ว', 'success');
             
-            // reload lists again
-            miniMaps = {};
-            miniMarkers = {};
             loadUserProfile();
-
-            setTimeout(() => {
-              document.getElementById(currentUser.role == 'farmer'? 'farmerFields': 'buyerFields')?.scrollIntoView({ behavior: 'smooth' });
-            }, 150);
           } else {
             Swal.fire('เกิดข้อผิดพลาด', d.message, 'error');
           }
@@ -1684,9 +1570,7 @@
             Swal.close();
             if (d.status === 'success') {
               Swal.fire('สำเร็จ', 'บันทึกข้อมูลเข้าสู่ระบบเรียบร้อยแล้ว', 'success');
-              // reload lists again
-              miniMaps = {};
-              miniMarkers = {};
+              REC.keepId = String(id);   // 4.2.0: stay on the record just saved
               loadUserProfile();
             } else {
               Swal.fire('เกิดข้อผิดพลาด', d.message, 'error');

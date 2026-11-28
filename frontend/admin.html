@@ -12,7 +12,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="assets/admin.css?v=4.0.0">
+  <link rel="stylesheet" href="assets/admin.css?v=4.2.0">
 </head>
 <body>
   <header class="ad-top">
@@ -21,7 +21,7 @@
       <span><b>Green Gain Hub</b><small>สำหรับเจ้าหน้าที่</small></span>
     </a>
     <div class="ad-me hidden" id="adMe">
-      <span class="ad-me-who"><i class="fa-solid fa-user-shield" aria-hidden="true"></i><b id="adMeName">-</b><small id="adMeRole">-</small></span>
+      <span class="ad-me-who"><span class="ad-avatar" id="adMeAvatar" aria-hidden="true">-</span><span class="ad-me-text"><b id="adMeName">-</b><small id="adMeRole">-</small></span></span>
       <button type="button" class="ad-btn ad-btn-ghost" id="adLogout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>ออกจากระบบ</button>
     </div>
   </header>
@@ -58,15 +58,24 @@
   <!-- officers' app -->
   <div class="ad-app hidden" id="adApp">
     <nav class="ad-nav" aria-label="เมนูเจ้าหน้าที่">
-      <button type="button" data-view="overview" aria-current="page"><i class="fa-solid fa-gauge" aria-hidden="true"></i>ภาพรวม</button>
-      <button type="button" data-view="users"><i class="fa-solid fa-users" aria-hidden="true"></i>ผู้ใช้</button>
-      <button type="button" data-view="farmers"><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i>แปลงประกาศขาย</button>
-      <button type="button" data-view="buyers"><i class="fa-solid fa-truck" aria-hidden="true"></i>จุดรับซื้อ</button>
-      <button type="button" data-view="reports"><i class="fa-solid fa-file-lines" aria-hidden="true"></i>รายงาน</button>
-      <button type="button" data-view="admins" data-super><i class="fa-solid fa-user-gear" aria-hidden="true"></i>เจ้าหน้าที่<span class="ad-badge hidden" id="adPendingBadge">0</span></button>
-      <button type="button" data-view="settings" data-super><i class="fa-solid fa-sliders" aria-hidden="true"></i>ตั้งค่าตลาด</button>
-      <button type="button" data-view="log" data-super><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>ประวัติการใช้งาน</button>
-      <button type="button" data-view="account"><i class="fa-solid fa-key" aria-hidden="true"></i>บัญชีของฉัน</button>
+      <p class="ad-nav-group" id="adNavDash">แดชบอร์ด</p>
+      <div role="group" aria-labelledby="adNavDash">
+        <button type="button" data-view="overview" aria-current="page"><i class="fa-solid fa-gauge" aria-hidden="true"></i>ภาพรวม</button>
+        <button type="button" data-view="reports"><i class="fa-solid fa-file-lines" aria-hidden="true"></i>รายงาน</button>
+      </div>
+      <p class="ad-nav-group" id="adNavData">ข้อมูล</p>
+      <div role="group" aria-labelledby="adNavData">
+        <button type="button" data-view="users"><i class="fa-solid fa-users" aria-hidden="true"></i>ผู้ใช้</button>
+        <button type="button" data-view="farmers"><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i>แปลงประกาศขาย</button>
+        <button type="button" data-view="buyers"><i class="fa-solid fa-truck" aria-hidden="true"></i>จุดรับซื้อ</button>
+      </div>
+      <p class="ad-nav-group" id="adNavSys">ระบบ</p>
+      <div role="group" aria-labelledby="adNavSys">
+        <button type="button" data-view="admins" data-super><i class="fa-solid fa-user-gear" aria-hidden="true"></i>เจ้าหน้าที่<span class="ad-badge hidden" id="adPendingBadge">0</span></button>
+        <button type="button" data-view="settings" data-super><i class="fa-solid fa-sliders" aria-hidden="true"></i>ตั้งค่าตลาด</button>
+        <button type="button" data-view="log" data-super><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>ประวัติการใช้งาน</button>
+        <button type="button" data-view="account"><i class="fa-solid fa-key" aria-hidden="true"></i>บัญชีของฉัน</button>
+      </div>
     </nav>
 
     <main class="ad-main">
@@ -76,9 +85,22 @@
       </div>
 
       <section data-panel="overview">
-        <h1>ภาพรวม จังหวัด<span data-scope-name>-</span></h1>
+        <header class="ad-hello">
+          <h1 id="adHello">สวัสดี</h1>
+          <p><span id="adToday"></span> · ภาพรวมจังหวัด<span data-scope-name>-</span></p>
+        </header>
         <div class="ad-alert hidden" id="adPendingAlert"></div>
         <div class="ad-kpis" id="adKpis"></div>
+        <div class="ad-charts">
+          <figure class="ad-card ad-chart" id="adHarvestChart" aria-labelledby="adHarvestTitle">
+            <figcaption><h2 id="adHarvestTitle">พื้นที่ใกล้เก็บเกี่ยวรายเดือน</h2><p>ไร่ · จากแปลงที่ประกาศขาย ใช้วางแผนรถอัดฟางและการรับซื้อ</p></figcaption>
+            <div class="ad-chart-body"></div>
+          </figure>
+          <figure class="ad-card ad-chart" id="adMaterialChart" aria-labelledby="adMaterialTitle">
+            <figcaption><h2 id="adMaterialTitle">วัสดุเหลือใช้ทางการเกษตรที่ประกาศขาย</h2><p>ไร่ · แยกตามชนิดวัสดุ</p></figcaption>
+            <div class="ad-chart-body"></div>
+          </figure>
+        </div>
         <h2>รายอำเภอ</h2>
         <div class="ad-tablewrap" id="adOverviewTable"></div>
       </section>
@@ -92,6 +114,7 @@
 
       <section data-panel="farmers" class="hidden">
         <h1>แปลงประกาศขาย จังหวัด<span data-scope-name>-</span></h1>
+        <div class="ad-filters" data-filters="farmers" role="group" aria-label="กรองตามสถานะ"></div>
         <form class="ad-toolbar" data-records="farmers"><input name="q" type="search" placeholder="ค้นหาชื่อ เบอร์ พืช วัสดุ อำเภอ"><label class="ad-check"><input type="checkbox" name="showDeleted">แสดงรายการที่ลบแล้ว</label><button class="ad-btn" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>ค้นหา</button></form>
         <p class="ad-privacy"><i class="fa-solid fa-lock" aria-hidden="true"></i>มีเบอร์โทรและพิกัดจริง — ระบบบันทึกทุกครั้งที่เปิดดู</p>
         <div class="ad-tablewrap" id="adFarmersTable"></div>
@@ -99,6 +122,7 @@
 
       <section data-panel="buyers" class="hidden">
         <h1>จุดรับซื้อ จังหวัด<span data-scope-name>-</span></h1>
+        <div class="ad-filters" data-filters="buyers" role="group" aria-label="กรองตามสถานะ"></div>
         <form class="ad-toolbar" data-records="buyers"><input name="q" type="search" placeholder="ค้นหาชื่อ เบอร์ วัสดุ อำเภอ"><label class="ad-check"><input type="checkbox" name="showDeleted">แสดงรายการที่ลบแล้ว</label><button class="ad-btn" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>ค้นหา</button></form>
         <p class="ad-privacy"><i class="fa-solid fa-lock" aria-hidden="true"></i>มีเบอร์โทรและพิกัดจริง — ระบบบันทึกทุกครั้งที่เปิดดู</p>
         <div class="ad-tablewrap" id="adBuyersTable"></div>
@@ -133,6 +157,7 @@
         <h1>ตั้งค่าตลาด</h1>
         <form class="ad-card ad-narrow" id="adRuleForm">
           <label>แสดงแปลงบนตลาดถึงกี่วันหลังวันเก็บเกี่ยว (0 = ไม่จำกัด)<input type="number" name="days" min="0" max="365" step="1" required></label>
+          <label>รัศมี "รวมคู่ค้าต่างจังหวัด" (กิโลเมตร, 10–100)<input type="number" name="nearKm" min="10" max="100" step="5" inputmode="numeric" required></label>
           <p class="ad-help" id="adRuleInfo"></p>
           <p class="ad-msg" id="adRuleMsg" role="status"></p>
           <button type="submit" class="ad-btn ad-btn-primary">บันทึก</button>
@@ -164,7 +189,7 @@
   <!-- A4 landscape print, the same layout as Agri-Risk Map Burning: header · map + legend + KPIs | full table · footer -->
   <section id="print-report" aria-hidden="true"></section>
 
-  <script src="assets/config.js?v=4.0.0"></script>
-  <script src="assets/admin.js?v=4.0.0"></script>
+  <script src="assets/config.js?v=4.2.0"></script>
+  <script src="assets/admin.js?v=4.2.0"></script>
 </body>
 </html>

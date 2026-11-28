@@ -12,7 +12,7 @@ window.GGH_CONFIG = {
   // 2.6.0: ผลการดำเนินงาน (จังหวัดกำแพงเพชร) อยู่ที่ ABM · 4.0.0: เจ้าหน้าที่ของ Green Gain Hub ใช้ admin.html ของระบบนี้
   ABM_URL: 'https://krit-pj.github.io/KPP-Agri-Byproduct-Management/',
   ABM_API_URL: 'https://script.google.com/macros/s/AKfycby7nbXMQ3_WvA7y_Mp0DTE_wMX9eyiJQbfYBlpaQBOshpUyurOFgoM7MxWMN0wLvjkdqw/exec',
-  BUILD_VERSION: '4.1.0',
+  BUILD_VERSION: '4.2.0',
   GEO_BASE: 'geo/',   // 3.0.0 boundary files of the 77 provinces (tools/geo/build.py)
   MINIMUM_API_VERSION: '1.3.1'
 };
