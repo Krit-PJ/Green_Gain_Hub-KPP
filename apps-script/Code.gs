@@ -2,6 +2,8 @@
  * Green Gain Hub 4.0.0 — ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ ทุกจังหวัด
  * (API-only bridge from GitHub Pages to Google Sheets).
  *
+ * 4.3.0: a buyer's point buys several materials, each with its own price unit (บาท/ไร่ · บาท/ตัน · บาท/ก้อน) — buyers
+ *        X Price_Unit, Y Materials_JSON; the first material stays in H/J/N/O for older readers.
  * 4.2.0: user card with editable profile (updateProfileServer), one map with all plots / buy points + numbered buttons,
  *        radius of the cross-province switch set by Super Admin (Config near_radius_km, 10–100 km).
  * 4.1.0: record cards map-left / details-right, signed-in map page map-left / partners-right, switch to add partners of
@@ -43,7 +45,7 @@
  * 2.8.0: a plot is shown until N days after its harvest date (Market.gs farmerListing_, Config hide_after_harvest_days,
  * default 20, set in ABM). A harvest date is required when saving. "ยังมีวัสดุอยู่" (renewFarmerServer) shows it N more days.
  */
-const APP_VERSION = '4.2.0';
+const APP_VERSION = '4.3.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -621,19 +623,24 @@ function locationForSave_(lat, lng) {
 function saveBuyer_(data, session) {
   const sh = sheet_('buyers');
   ensureSheetDataFormats_();
-  const material = validateMaterial_(data.materialType || data.material, data.materialOther);
+  ensureBuyerOfferColumns_();
+  // 4.3.0: one buy point may buy several materials, each with its own price and unit (บาท/ไร่ · บาท/ตัน · บาท/ก้อน).
+  // The first offer stays in the old columns (H, J, N, O) so older readers keep working; all offers go to Y as JSON.
+  const offers = buyerOffersInput_(data);
+  const first = offers[0];
   const id = cleanText_(data.id, 100) || newId_();
   const now = new Date();
   const rowValues = [
     id, now, cleanText_(data.fname, 100), cleanText_(data.lname, 100),
     normalizeContactPhone_(data.phone || session.phone), numberInRange_(data.lat, -90, 90, 'ละติจูด'),
-    numberInRange_(data.lng, -180, 180, 'ลองจิจูด'), material.resolved,
-    cleanText_(data.quality, 100), nonNegative_(data.price, 'ราคา'), cleanText_(data.capacity, 80),
-    'Active', session.phone, material.type, material.other, now, 'ALL'
+    numberInRange_(data.lng, -180, 180, 'ลองจิจูด'), first.material,
+    cleanText_(data.quality, 100), first.price, cleanText_(data.capacity, 80),
+    'Active', session.phone, first.materialType, first.materialOther, now, 'ALL'
   ];
   requireFields_(rowValues, [[2, 'ชื่อ'], [4, 'โทรศัพท์'], [8, 'คุณภาพ'], [10, 'ปริมาณ']]);
   const loc = locationForSave_(rowValues[5], rowValues[6]);   // 3.0.0: R:W province…subdistrict from the pin
   geoRowValues_(loc).forEach(function (v) { rowValues.push(v); });
+  rowValues.push(first.unit, JSON.stringify(offers));   // 4.3.0: X Price_Unit · Y Materials_JSON
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -680,6 +687,7 @@ function buyerRecords_(phone) {
       id: text_(r[0]), timestamp: dateTime_(r[1]), fname: text_(r[2]), lname: text_(r[3]), phone: displayPhone_(r[4]),
       lat: maybeNumber_(r[5]), lng: maybeNumber_(r[6]), material: text_(r[7]), quality: text_(r[8]), price: maybeNumber_(r[9]), capacity: text_(r[10]),
       recordStatus: text_(r[11]), materialType: text_(r[13]), materialOther: text_(r[14]),
+      priceUnit: priceUnitOf_(r[BUYER_UNIT_COL - 1]), offers: buyerOffers_(r),   // 4.3.0
       location: recordLocation_(r, BUYER_GEO_COL)
     };
   });
@@ -699,11 +707,73 @@ function farmerPublic_(r) {
 }
 
 function buyerPublic_(r) {
+  const offers = buyerOffers_(r);
   return {
     id: text_(r[0]), name: (text_(r[2]) + ' ' + text_(r[3])).trim(), fname: text_(r[2]), lname: text_(r[3]),
     phone: displayPhone_(r[4]), lat: Number(r[5]), lng: Number(r[6]),
-    material: resolvedMaterial_(r[13], r[14], r[7]), quality: text_(r[8]), price: maybeNumber_(r[9]), capacity: text_(r[10])
+    material: offers[0].material, quality: text_(r[8]), price: offers[0].price, capacity: text_(r[10]),
+    priceUnit: offers[0].unit, offers: offers, materials: offers.map(function (o) { return o.material; }),   // 4.3.0
+    priceText: offers.map(offerPriceText_).join(' · ')
   };
+}
+
+/* ---------------- 4.3.0 buyers: several materials per buy point, price unit per material ---------------- */
+const PRICE_UNITS = { rai: 'บาท/ไร่', ton: 'บาท/ตัน', bale: 'บาท/ก้อน' };
+const BUYER_UNIT_COL = 24;     // X Price_Unit (unit of the first material)
+const BUYER_OFFERS_COL = 25;   // Y Materials_JSON [{materialType, materialOther, material, price, unit}]
+const BUYER_OFFERS_MAX = 6;
+function priceUnitOf_(v) { v = String(v || '').trim().toLowerCase(); return PRICE_UNITS[v] ? v : 'rai'; }
+function offerPriceText_(o) {
+  return o.material + ' ' + (o.price === '' || o.price === null || o.price === undefined ? 'ราคาตกลงกัน' : Number(o.price).toLocaleString('en-US') + ' ' + PRICE_UNITS[o.unit]);
+}
+/** All offers of a buyers row — Y when present, else the old single material (H/N/O + J, unit X or บาท/ไร่). */
+function buyerOffers_(r) {
+  const raw = String(r[BUYER_OFFERS_COL - 1] || '').trim();
+  if (raw) {
+    try {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list) && list.length) {
+        const out = list.map(function (o) {
+          const type = text_(o.materialType), other = text_(o.materialOther);
+          return { materialType: type, materialOther: other, material: text_(o.material) || resolvedMaterial_(type, other, ''), price: maybeNumber_(o.price), unit: priceUnitOf_(o.unit) };
+        }).filter(function (o) { return o.material; });
+        if (out.length) return out;
+      }
+    } catch (e) { /* fall back to the old columns */ }
+  }
+  return [{ materialType: text_(r[13]), materialOther: text_(r[14]), material: resolvedMaterial_(r[13], r[14], r[7]), price: maybeNumber_(r[9]), unit: priceUnitOf_(r[BUYER_UNIT_COL - 1]) }];
+}
+/** Offers sent by the page (data.offers) or by an older page (one material + price). Validated, no duplicate materials. */
+function buyerOffersInput_(data) {
+  const list = Array.isArray(data.offers) && data.offers.length ? data.offers
+    : [{ materialType: data.materialType || data.material, materialOther: data.materialOther, price: data.price, unit: data.priceUnit }];
+  if (list.length > BUYER_OFFERS_MAX) throw new Error('รับซื้อได้ไม่เกิน ' + BUYER_OFFERS_MAX + ' ชนิดต่อจุดรับซื้อ');
+  const seen = {};
+  return list.map(function (o, i) {
+    const m = validateMaterial_(o.materialType || o.material, o.materialOther);
+    if (seen[m.resolved]) throw new Error('วัสดุ "' + m.resolved + '" ซ้ำกัน — เลือกแต่ละชนิดครั้งเดียว');
+    seen[m.resolved] = true;
+    const unit = String(o.unit || 'rai').trim().toLowerCase();
+    if (!PRICE_UNITS[unit]) throw new Error('หน่วยราคาไม่ถูกต้อง (บาท/ไร่ · บาท/ตัน · บาท/ก้อน)');
+    if (o.price === '' || o.price === null || o.price === undefined) throw new Error('กรุณาระบุราคารับซื้อของวัสดุที่ ' + (i + 1));
+    return { materialType: m.type, materialOther: m.other, material: m.resolved, price: nonNegative_(o.price, 'ราคา'), unit: unit };
+  });
+}
+/** Adds X Price_Unit and Y Materials_JSON to buyers without moving any existing column. */
+function ensureBuyerOfferColumns_() {
+  const sh = sheet_('buyers');
+  const want = [[BUYER_UNIT_COL, 'Price_Unit'], [BUYER_OFFERS_COL, 'Materials_JSON']];
+  if (sh.getLastColumn() >= BUYER_OFFERS_COL) {
+    const head = sh.getRange(1, BUYER_UNIT_COL, 1, 2).getValues()[0];
+    if (String(head[0]) === 'Price_Unit' && String(head[1]) === 'Materials_JSON') return 'PASS: buyers X:Y ready';
+  }
+  want.forEach(function (w) {
+    const cell = sh.getRange(1, w[0]);
+    const cur = String(cell.getValue() || '').trim();
+    if (!cur) cell.setValue(w[1]);
+    else if (cur !== w[1]) throw new Error('buyers: column ' + String.fromCharCode(64 + w[0]) + ' is already used by ' + cur);
+  });
+  return 'PASS: buyers X Price_Unit, Y Materials_JSON are ready';
 }
 
 /** Legacy compatibility entry point. Farmer records no longer expire by harvest date. */
@@ -740,6 +810,7 @@ function verifyDatabaseSchema() {
 /** One-time administrator setup after pasting this code into a new project. */
 function setupSystem() {
   const migration = ensureBuyerHarvestDaysColumn_();
+  const offerCols = ensureBuyerOfferColumns_();   // 4.3.0
   const formats = ensureSheetDataFormats_();
   const normalized = normalizeLegacySheetData_();
   const schema = verifyDatabaseSchema();
@@ -752,7 +823,7 @@ function setupSystem() {
   try { geo = ensureGeoColumns_() + '\n' + geoMigrate_(false) + '\n' + verifyGeo(); } catch (err) { geo = 'INFO: provinces not filled yet — ' + err; }
   let admins;   // 4.0.0: GGH officers (ggh_admins / ggh_admin_log) and the first Super Admin from Script Properties
   try { admins = ensureAdminSchema_() + '\n' + ensureSuperAdmin_(); } catch (err) { admins = 'FAIL: officer sheets — ' + err; }
-  const out = [migration, formats, normalized, schema, restored, trigger, visits, abm, geo, admins].join('\n');
+  const out = [migration, offerCols, formats, normalized, schema, restored, trigger, visits, abm, geo, admins].join('\n');
   console.log(out);
   return out;
 }

@@ -36,7 +36,7 @@ assert(get({ api: 'v1', endpoint: 'hit' }).data.today === 4, 'today must not inc
   assert(!r.ok && r.moved === 'ABM' && /KPP-Agri-Byproduct-Management/.test(r.error), ep + ' points to ABM: ' + JSON.stringify(r));
 });
 const h = get({ api: 'v1', endpoint: 'health' });
-assert(h.ok && h.apiVersion === '4.2.0' && h.feature === 'MARKET_ONLY' && h.system === 'GGH', 'health 4.2.0: ' + JSON.stringify(h));
+assert(h.ok && h.apiVersion === '4.3.0' && h.feature === 'MARKET_ONLY' && h.system === 'GGH', 'health 4.3.0: ' + JSON.stringify(h));
 env.api.doPost({ postData: { contents: JSON.stringify({ method: 'adminLoginServer', args: [{}] }) } });
 const pr = JSON.parse(env.out().body);
 assert(!pr.ok && /ชื่อผู้ใช้และรหัสผ่าน/.test(pr.error), '4.0.0: officers sign in to Green Gain Hub itself again: ' + JSON.stringify(pr));

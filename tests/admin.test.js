@@ -48,7 +48,7 @@ check(post('adminOverviewServer', { province: '62' }, T).result.pendingAdmins ==
   const h = fe('admin.html'), j = fe('assets/admin.js');
   check(/name="nearKm" min="10" max="100"/.test(h) && /nearRadiusKm: Number\(e\.target\.nearKm\.value\)/.test(j), '4.2.0 settings form sends the partner radius');
   check(h.includes('id="adHarvestChart"') && h.includes('id="adMaterialChart"') && j.includes('function drawHarvest') && j.includes('function chartTip'), '4.2.0 dashboard charts with tooltips');
-  check((h.match(/class="ad-nav-group"/g) || []).length === 3 && h.includes('data-filters="farmers"') && h.includes('admin.js?v=4.2.0'), '4.2.0 grouped menu, filter pills, asset version'); }
+  check((h.match(/class="ad-nav-group"/g) || []).length === 3 && h.includes('data-filters="farmers"') && h.includes('admin.js?v=4.3.0'), '4.2.0 grouped menu, filter pills, asset version'); }
 check(post('adminSaveServer', { username: 'somchai.kpp', status: 'active' }, T).ok, 'approved');
 const A = post('adminLoginServer', { username: 'somchai.kpp', password: 'Admin12345' }).result;
 check(A.token && A.role === 'admin' && A.province === '62' && A.provinceName === 'กำแพงเพชร', 'Admin signs in, province 62');

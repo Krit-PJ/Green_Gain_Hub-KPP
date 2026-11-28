@@ -288,7 +288,7 @@
       { key: 'harvestDate', label: 'วันเก็บเกี่ยว' }, { key: 'where', label: 'ที่ตั้ง', html: where }, { key: 'status', label: 'สถานะ', html: status }, { key: 'x', label: 'จัดการ', html: acts }
     ] : [
       { key: 'ownerName', label: 'ผู้รับซื้อ', html: (x) => `<b>${esc(x.ownerName)}</b><small><a href="tel:${esc(x.owner)}">${esc(x.owner)}</a></small>` },
-      { key: 'material', label: 'วัสดุที่รับซื้อ' }, { key: 'price', label: 'ราคา (บาท/ไร่)', num: 1 }, { key: 'capacity', label: 'รับได้ (ตัน/วัน)' },
+      { key: 'priceText', label: 'วัสดุและราคารับซื้อ', html: (x) => esc(x.priceText || (x.material + ' ' + x.price + ' บาท/ไร่')).replace(/ · /g, '<br>') }, { key: 'capacity', label: 'รับได้ (ตัน/วัน)' },
       { key: 'where', label: 'ที่ตั้ง', html: where }, { key: 'status', label: 'สถานะ', html: status }, { key: 'x', label: 'จัดการ', html: acts }
     ];
     const more = r.total > r.rows.length ? `แสดง ${r.rows.length} จาก ${r.total} รายการ — ค้นหาเพื่อกรอง` : `${r.total} รายการ`;

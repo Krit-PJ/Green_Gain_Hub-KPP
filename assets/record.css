@@ -238,3 +238,17 @@
 #mainApp[data-role="buyer"] .rec-pick-no { background: #fff4dc; color: var(--ggh-straw-ink); }
 #mainApp[data-role="buyer"] .rec-pick.is-add .rec-pick-no { background: #fff; border-color: var(--ggh-straw); }
 #mainApp[data-role="buyer"] .rec-board-title { color: var(--ggh-straw-ink); }
+
+/* 4.3.0: buyers — several materials per buy point, each with price + unit */
+.rec-offers { display: grid; gap: .6rem; }
+.rec-offer { display: grid; gap: .5rem; padding: .7rem .75rem; border: 1px solid #ecd9ae; border-radius: 12px; background: #fff; }
+.rec-offer > label, .rec-offer-price > label { display: grid; gap: .25rem; min-width: 0; }
+.rec-offer-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; color: var(--ggh-straw-ink, #7a5310); }
+.rec-offer-del { min-height: 40px; padding: .2rem .7rem; border: 1px solid #f0b4ae; border-radius: 10px; background: #fff; color: #a1281c; font-weight: 600; cursor: pointer; }
+.rec-offer-del[hidden] { display: none; }
+.rec-offer-price { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 9rem); gap: .5rem; }
+.rec-offer-add { margin-top: .6rem; width: 100%; min-height: 46px; border: 2px dashed #d8b56a; border-radius: 12px; background: #fffaf0; color: #7a5310; font-weight: 700; cursor: pointer; }
+.rec-offer-add:hover { background: #fff4dc; }
+.rec-offer-add[hidden] { display: none; }
+.rec-offer-del:focus-visible, .rec-offer-add:focus-visible { outline: 3px solid rgba(154,101,18,.4); outline-offset: 2px; }
+@media (max-width: 380px) { .rec-offer-price { grid-template-columns: minmax(0, 1fr) minmax(0, 7.5rem); } }
