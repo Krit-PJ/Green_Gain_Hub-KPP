@@ -7,7 +7,7 @@ const js = fs.readFileSync(path.join(front, 'assets', 'market.js'), 'utf8');
 const css = fs.readFileSync(path.join(front, 'assets', 'market.css'), 'utf8');
 new vm.Script(js, { filename: 'frontend/assets/market.js' });
 
-assert(html.includes('assets/market.js?v=4.1.0') && html.includes('assets/market.css?v=4.1.0') && !html.includes('dashboard.js'), 'market assets 4.1.0, no dashboard.js');
+assert(html.includes('assets/market.js?v=4.2.0') && html.includes('assets/market.css?v=4.2.0') && !html.includes('dashboard.js'), 'market assets 4.2.0, no dashboard.js');
 assert(html.includes("document.getElementById('marketPage')?.classList.add('hidden');"), 'signing in hides the market page');
 assert(['mkMats', 'mkSide', 'mkDistrict', 'mkNear', 'mkMap', 'mkList', 'mkStats', 'mkView', 'mkDistWrap', 'mkDistTable'].every((id) => html.includes(`id="${id}"`)), 'board controls');
 

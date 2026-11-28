@@ -2,6 +2,8 @@
  * Green Gain Hub 4.0.0 — ศูนย์กลางเชื่อมโยงการซื้อ-ขายวัสดุเหลือใช้ทางการเกษตร สำหรับเกษตรกรและผู้รับซื้อ ทุกจังหวัด
  * (API-only bridge from GitHub Pages to Google Sheets).
  *
+ * 4.2.0: user card with editable profile (updateProfileServer), one map with all plots / buy points + numbered buttons,
+ *        radius of the cross-province switch set by Super Admin (Config near_radius_km, 10–100 km).
  * 4.1.0: record cards map-left / details-right, signed-in map page map-left / partners-right, switch to add partners of
  *        other provinces within 50 km of the user's own pins (getMatchingDataServer nearKm), calmer high-contrast colours.
  * 4.0.0: officers of this system only — Admin (one province) and Super Admin (all), username + password, no central
@@ -41,7 +43,7 @@
  * 2.8.0: a plot is shown until N days after its harvest date (Market.gs farmerListing_, Config hide_after_harvest_days,
  * default 20, set in ABM). A harvest date is required when saving. "ยังมีวัสดุอยู่" (renewFarmerServer) shows it N more days.
  */
-const APP_VERSION = '4.1.0';
+const APP_VERSION = '4.2.0';
 // Database 1.5.0: "Green Gain Hub KPP — Database (v1.5.0)" in Drive folder "7. Green Gain Hub".
 // Script Property SPREADSHEET_ID overrides this value when set.
 const DEFAULT_SPREADSHEET_ID = '1TU2kC7kzJbb9JZzo4m7D3eOmcW8Ra_osic33rolE-Hw';
@@ -56,7 +58,7 @@ const CROP_MATERIAL_MAP = {
 };
 // 3.1.0: ssoLoginServer / ssoProvisionServer retired (unused since 2.9.3) (farmers and buyers sign in with their phone number).
 const PUBLIC_METHODS = ['loginServer', 'registerServer', 'getApiInfoServer'];   // 3.3.0: setPinServer removed
-const PRIVATE_METHODS = ['getUserProfileServer', 'saveDataServer', 'deleteDataServer', 'getMatchingDataServer', 'renewFarmerServer', 'markSoldServer'];
+const PRIVATE_METHODS = ['getUserProfileServer', 'saveDataServer', 'deleteDataServer', 'getMatchingDataServer', 'renewFarmerServer', 'markSoldServer', 'updateProfileServer'];
 
 /** JSONP endpoint used by the static GitHub Pages frontend. */
 function doGet(e) {
@@ -90,6 +92,7 @@ function apiMethods_() {
     markSoldServer: function (args, session) { return markSoldServer(args[0], session); },
     getApiInfoServer: function () { return getApiInfoServer(); },
     getUserProfileServer: function (args, session) { return getUserProfileServer(session); },
+    updateProfileServer: function (args, session) { return updateProfileServer(args[0], session); },
     saveDataServer: function (args, session) { return saveDataServer(args[0], session); },
     deleteDataServer: function (args, session) { return deleteDataServer(args[0], session); },
     getMatchingDataServer: function (args, session) { return getMatchingDataServer(session, args[0]); },
@@ -376,14 +379,52 @@ function geoMigrateSafe_() {
 function getUserProfileServer(session) {
   const user = dataRows_(sheet_('users')).find(function (r) { return normalizePhone_(r[0]) === session.phone; });
   const province = user ? userProvince_(user) : { code: session.province || DEFAULT_PROVINCE_CODE, name: '' };
+  const name = user ? text_(user[3]) : session.name;
+  const records = session.role === 'farmer' ? farmerRecords_(session.phone) : buyerRecords_(session.phone);
+  // 4.2.0: the user card — name, contact phone shown to partners (the login phone is the account and stays), province
+  const first = records[0] || {};
+  const parts = String(name || '').trim().split(/\s+/);
+  const profile = { loginPhone: session.phone, fname: first.fname || parts[0] || '', lname: first.fname ? (first.lname || '') : parts.slice(1).join(' '),
+    contactPhone: normalizePhone_(first.phone) || session.phone, province: province };
+  const base = { success: true, role: session.role, name: name, province: province, profile: profile, nearRadiusKm: nearRadiusKm_() };
   if (session.role === 'farmer') {
-    const farmers = farmerRecords_(session.phone);
-    return { status: farmers.length ? 'success' : 'not_found', success: true, role: 'farmer', name: session.name, province: province, farmers: farmers, sales: salesOf_(session.phone),
-      message: farmers.length ? '' : 'ยังไม่มีข้อมูลแปลง กรุณาเพิ่มข้อมูล' };
+    return Object.assign(base, { status: records.length ? 'success' : 'not_found', farmers: records, sales: salesOf_(session.phone),
+      message: records.length ? '' : 'ยังไม่มีข้อมูลแปลง กรุณาเพิ่มข้อมูล' });
   }
-  const buyers = buyerRecords_(session.phone);
-  return { status: buyers.length ? 'success' : 'not_found', success: true, role: 'buyer', name: session.name, province: province, buyers: buyers,
-    message: buyers.length ? '' : 'ยังไม่มีข้อมูลการรับซื้อ กรุณาเพิ่มข้อมูล' };
+  return Object.assign(base, { status: records.length ? 'success' : 'not_found', buyers: records,
+    message: records.length ? '' : 'ยังไม่มีข้อมูลการรับซื้อ กรุณาเพิ่มข้อมูล' });
+}
+
+/** 4.2.0: the user edits name, contact phone and province once; every plot / buy point of theirs follows. */
+function updateProfileServer(input, session) {
+  input = input || {};
+  const fname = cleanText_(input.fname, 80), lname = cleanText_(input.lname, 80);
+  if (!fname) throw new Error('กรุณาระบุชื่อ');
+  const contact = normalizePhone_(input.contactPhone);
+  if (!/^0\d{9}$/.test(contact)) throw new Error('เบอร์ติดต่อต้องเป็นตัวเลข 10 หลัก ขึ้นต้นด้วย 0');
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  let n = 0, province;
+  try {
+    const users = sheet_('users');
+    const rows = dataRows_(users);
+    const i = rows.findIndex(function (r) { return normalizePhone_(r[0]) === session.phone; });
+    if (i < 0) throw new Error('ไม่พบบัญชีผู้ใช้');
+    province = input.provinceCode ? registerProvince_(input.provinceCode) : userProvince_(rows[i]);
+    const now = new Date();
+    users.getRange(i + 2, 4).setValue((fname + ' ' + lname).trim());
+    users.getRange(i + 2, 9).setValue(now);
+    users.getRange(i + 2, USER_GEO_COL, 1, 2).setValues([[province.code, province.name]]);
+    const kind = session.role === 'farmer' ? 'farmers' : 'buyers';
+    const sh = sheet_(kind);
+    dataRows_(sh).forEach(function (r, j) {
+      if (!isOwned_(r, session.phone, 12) || String(r[11] || '').trim().toLowerCase() === 'deleted') return;
+      sh.getRange(j + 2, 3, 1, 3).setValues([[fname, lname, contact]]);
+      sh.getRange(j + 2, kind === 'farmers' ? 18 : 16).setValue(now);
+      n++;
+    });
+  } finally { lock.releaseLock(); }
+  invalidateSummary_();
+  return { status: 'success', message: 'บันทึกข้อมูลผู้ใช้แล้ว' + (n ? ' (ปรับในข้อมูล ' + n + ' รายการ)' : ''), name: (fname + ' ' + lname).trim(), province: province, updated: n };
 }
 
 function saveDataServer(data, session) {
@@ -437,7 +478,8 @@ function getMatchingDataServer(session, input) {
   const province = text_(input && input.province) || session.province || DEFAULT_PROVINCE_CODE;
   // 4.1.0: switch "รวมคู่ค้าต่างจังหวัดในรัศมี 50 กม." — partners of other provinces within 50 km of the user's OWN pins
   // (plots for a farmer, buy points for a buyer; never the phone's GPS) are added, marked crossProvince.
-  const nearKm = Number(input && input.nearKm) === NEAR_KM ? NEAR_KM : 0;
+  // 4.2.0: the page asks with near:true (or any nearKm > 0); the radius is the one Super Admin set
+  const nearKm = input && (input.near === true || Number(input.nearKm) > 0) ? nearRadiusKm_() : 0;
   const ownRows = isFarmer ? ownFarmerPlotsWithCoordinates_(session.phone) : ownBuyerPointsWithCoordinates_(session.phone);
   const anchors = nearKm ? ownRows.map(function (r) { return isFarmer ? [Number(r[9]), Number(r[10])] : [Number(r[5]), Number(r[6])]; }) : [];
   const near = function (lat, lng) { return anchors.some(function (a) { return distanceKm_(a[0], a[1], Number(lat), Number(lng)) <= nearKm; }); };
@@ -466,7 +508,7 @@ function getMatchingDataServer(session, input) {
     farmers: farmers,
     buyers: buyers,
     ownPlots: ownPlots,
-    nearKm: nearKm, nearAnchors: anchors.length,
+    nearKm: nearKm, nearRadiusKm: nearRadiusKm_(), nearAnchors: anchors.length,
     generatedAt: new Date().toISOString()
   };
 }
@@ -493,7 +535,17 @@ function activeBuyersWithCoordinates_() {
 }
 
 /** Every non-deleted plot owned by the logged-in farmer that has coordinates. */
-const NEAR_KM = 50;
+/** 4.2.0: radius of "รวมคู่ค้าต่างจังหวัด" — set by Super Admin (10–100 km, default 50) */
+const NEAR_KM = 50, NEAR_KM_MIN = 10, NEAR_KM_MAX = 100, NEAR_KM_PARAM = 'near_radius_km';
+function nearRadiusKm_() {
+  const v = Number(setting_(NEAR_KM_PARAM, NEAR_KM));
+  return isFinite(v) && v >= NEAR_KM_MIN && v <= NEAR_KM_MAX ? Math.round(v) : NEAR_KM;
+}
+function nearRadiusValid_(v) {
+  const n = Number(v);
+  if (v === '' || v === null || v === undefined || !isFinite(n) || Math.floor(n) !== n || n < NEAR_KM_MIN || n > NEAR_KM_MAX) throw new Error('รัศมีต้องเป็นจำนวนเต็ม ' + NEAR_KM_MIN + '–' + NEAR_KM_MAX + ' กม.');
+  return n;
+}
 /** great-circle distance in km */
 function distanceKm_(lat1, lng1, lat2, lng2) {
   const R = 6371, rad = Math.PI / 180;

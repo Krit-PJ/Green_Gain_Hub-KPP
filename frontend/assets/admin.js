@@ -1,4 +1,4 @@
-/* Green Gain Hub 4.0.0 — officers' page: Admin (one province) and Super Admin (all provinces).
+/* Green Gain Hub 4.2.0 — officers' page: Admin (one province) and Super Admin (all provinces).
    API: POST text/plain {method, args, token} to the same Apps Script web app (no cookies, no CORS preflight).
    Reports print on A4 landscape with the Agri-Risk Map Burning layout: header · map + legend + KPIs | full table · footer. */
 (function () {
@@ -96,13 +96,25 @@
   async function start(me) {
     state.me = me;
     $('adAuth').classList.add('hidden'); $('adApp').classList.remove('hidden'); $('adMe').classList.remove('hidden');
-    $('adMeName').textContent = me.name; $('adMeRole').textContent = me.roleLabel + (me.provinceName ? ' · จ.' + me.provinceName : ' · ทุกจังหวัด');
+    $('adMeName').textContent = me.name; $('adMeAvatar').textContent = initials(me.name); greet();
+    $('adMeRole').textContent = me.roleLabel + (me.provinceName ? ' · จ.' + me.provinceName : ' · ทุกจังหวัด');
     document.querySelectorAll('[data-super]').forEach((el) => el.classList.toggle('hidden', !isSuper()));
     state.province = isSuper() ? (sessionStorage.getItem('ggh_admin_prov') || '62') : me.province;
     await fillProvinceSelect($('adProvince'), { only: isSuper() ? '' : me.province, value: state.province });
     $('adProvince').disabled = !isSuper();
     $('adScopeNote').textContent = isSuper() ? 'Super Admin เลือกจังหวัดที่ต้องการจัดการได้' : 'Admin จัดการได้เฉพาะจังหวัดที่ลงทะเบียน';
     show(location.hash.replace('#', '') || 'overview');
+  }
+  // 4.2.0: initials avatar, time-of-day greeting with the Thai date
+  function initials(name) {
+    const parts = String(name || '').replace(/^(นาย|นางสาว|นาง|น\.ส\.)\s*/, '').trim().split(/\s+/).filter(Boolean);
+    return (parts.map((p) => Array.from(p)[0]).join('').slice(0, 2) || '?').toUpperCase();
+  }
+  function greet() {
+    const h = new Date().getHours();
+    const part = h < 12 ? 'สวัสดีตอนเช้า' : h < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น';
+    $('adHello').textContent = `${part}, ${(state.me && state.me.name) || ''}`;
+    $('adToday').textContent = new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   }
   $('adProvince').addEventListener('change', (e) => { state.province = e.target.value; sessionStorage.setItem('ggh_admin_prov', state.province); show(state.view); });
   document.querySelectorAll('.ad-nav [data-view]').forEach((b) => b.addEventListener('click', () => show(b.dataset.view)));
@@ -113,7 +125,7 @@
     state.view = view; history.replaceState(null, '', '#' + view);
     document.querySelectorAll('.ad-nav [data-view]').forEach((b) => b.toggleAttribute('aria-current', b.dataset.view === view));
     document.querySelectorAll('.ad-nav [data-view][aria-current]').forEach((b) => b.setAttribute('aria-current', 'page'));
-    document.querySelectorAll('[data-panel]').forEach((p) => p.classList.toggle('hidden', p.dataset.panel !== view));
+    document.querySelectorAll('[data-panel]').forEach((p) => { const on = p.dataset.panel === view; p.classList.toggle('hidden', !on); p.classList.toggle('is-enter', on); });
     const name = ($('adProvince').selectedOptions[0] || {}).textContent || '';
     document.querySelectorAll('[data-scope-name]').forEach((el) => { el.textContent = name; });
     $('adProvince').closest('.ad-scopebar').classList.toggle('hidden', ['reports', 'admins', 'settings', 'log', 'account'].indexOf(view) >= 0);
@@ -138,10 +150,11 @@
     $('adKpis').innerHTML = '<p class="ad-more">กำลังโหลด…</p>'; loading('adOverviewTable');
     const r = await api('adminOverviewServer', { province: state.province });
     const x = r.summary;
-    const k = (v, unit, label, kind) => `<div class="ad-kpi"><b>${fmt(v, 0)} <small>${unit}</small></b><span>${label}<em class="${kind === 'est' ? 'is-est' : 'is-fact'}">${kind === 'est' ? 'ประมาณการ' : 'ข้อมูลจริง'}</em></span></div>`;
-    $('adKpis').innerHTML = k(x.usersFarmers, 'ราย', 'เกษตรกรที่ลงทะเบียน') + k(x.usersBuyers, 'ราย', 'ผู้รับซื้อที่ลงทะเบียน') + k(x.plots, 'แปลง', 'แปลงบนตลาดวันนี้') +
-      k(x.areaRai, 'ไร่', 'พื้นที่ประกาศขาย') + k(x.ton, 'ตัน', 'ชีวมวลที่คาดว่าจะได้', 'est') + k(x.buyers, 'จุด', 'จุดรับซื้อที่เปิดรับ') +
-      k(x.potentialBaht, 'บาท', 'มูลค่าที่เป็นไปได้', 'est') + k(x.salesBaht, 'บาท', 'รายได้จากการขายจริง');
+    const k = (icon, v, unit, label, kind) => `<div class="ad-kpi"><span class="ad-kpi-ic" aria-hidden="true"><i class="fa-solid ${icon}"></i></span><div><b>${fmt(v, 0)} <small>${unit}</small></b><span>${label}<em class="${kind === 'est' ? 'is-est' : 'is-fact'}">${kind === 'est' ? 'ประมาณการ' : 'ข้อมูลจริง'}</em></span></div></div>`;
+    $('adKpis').innerHTML = k('fa-user', x.usersFarmers, 'ราย', 'เกษตรกรที่ลงทะเบียน') + k('fa-store', x.usersBuyers, 'ราย', 'ผู้รับซื้อที่ลงทะเบียน') + k('fa-map-location-dot', x.plots, 'แปลง', 'แปลงบนตลาดวันนี้') +
+      k('fa-vector-square', x.areaRai, 'ไร่', 'พื้นที่ประกาศขาย') + k('fa-weight-hanging', x.ton, 'ตัน', 'ชีวมวลที่คาดว่าจะได้', 'est') + k('fa-truck', x.buyers, 'จุด', 'จุดรับซื้อที่เปิดรับ') +
+      k('fa-coins', x.potentialBaht, 'บาท', 'มูลค่าที่เป็นไปได้', 'est') + k('fa-hand-holding-dollar', x.salesBaht, 'บาท', 'รายได้จากการขายจริง');
+    chartData = { h: r.harvest || [], m: r.materials || [] }; drawHarvest(chartData.h); drawMaterials(chartData.m);
     const pend = r.pendingAdmins || 0;
     $('adPendingBadge').textContent = pend; $('adPendingBadge').classList.toggle('hidden', !pend);
     $('adPendingAlert').classList.toggle('hidden', !pend);
@@ -149,6 +162,79 @@
     $('adOverviewTable').innerHTML = table([{ key: 'name', label: 'อำเภอ' }, { key: 'farmers', label: 'เกษตรกรผู้ขาย (ราย)', num: 1 }, { key: 'plots', label: 'แปลง', num: 1 },
       { key: 'areaRai', label: 'พื้นที่ (ไร่)', num: 1, d: 0 }, { key: 'ton', label: 'ชีวมวล ประมาณการ (ตัน)', num: 1, d: 0 }, { key: 'buyers', label: 'ผู้รับซื้อ (จุด)', num: 1 }, { key: 'salesBaht', label: 'รายได้จริง (บาท)', num: 1, d: 0 }],
     r.areas, { empty: 'ยังไม่มีแปลงประกาศขายหรือจุดรับซื้อในจังหวัดนี้' });
+  }
+  /* 4.2.0 charts — one series each, single hue, SVG with a hover/focus tooltip per mark; the district table stays the table view */
+  const MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const monthText = (m) => { if (m === 'done') return 'เลยวันเก็บ'; if (m === 'none') return 'ไม่ระบุ'; const [y, mm] = String(m).split('-'); return mm ? `${MONTHS[Number(mm) - 1]} ${String(Number(y) + 543).slice(-2)}` : String(m); };
+  const monthFull = (m) => (m === 'done' ? 'เลยวันเก็บเกี่ยวแล้ว (ยังแสดงบนตลาด)' : m === 'none' ? 'ไม่ระบุวันเก็บเกี่ยว' : monthText(m));
+  function niceMax(v) { if (!(v > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
+  const tick = (v) => (v >= 10000 ? (v / 1000).toLocaleString('th-TH', { maximumFractionDigits: 1 }) + 'K' : v.toLocaleString('th-TH', { maximumFractionDigits: 1 }));
+  function chartTip(fig) {
+    let tip = fig.querySelector('.ad-tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'ad-tip'; tip.setAttribute('role', 'status'); fig.appendChild(tip); }
+    const showTip = (m) => {
+      const fr = fig.getBoundingClientRect(); const r = m.getBoundingClientRect();
+      tip.innerHTML = m.dataset.tip; tip.classList.add('is-on');
+      const x = Math.min(Math.max(r.left + r.width / 2 - fr.left, 70), fr.width - 70);
+      tip.style.left = x + 'px'; tip.style.top = (r.top - fr.top - 8) + 'px';
+      fig.querySelectorAll('.ad-mark').forEach((o) => o.classList.toggle('is-dim', o !== m));
+    };
+    const hide = () => { tip.classList.remove('is-on'); fig.querySelectorAll('.ad-mark').forEach((o) => o.classList.remove('is-dim')); };
+    fig.querySelectorAll('.ad-hit').forEach((h) => {
+      const m = h.closest('.ad-mark');
+      h.addEventListener('mouseenter', () => showTip(m)); h.addEventListener('focus', () => showTip(m));
+      h.addEventListener('mouseleave', hide); h.addEventListener('blur', hide);
+    });
+  }
+  const barPath = (x, y, w, h, horizontal) => {   // 4px rounded data end, square at the baseline
+    const r = Math.min(4, horizontal ? w : h, horizontal ? h / 2 : w / 2);
+    if (h <= 0 || w <= 0) return '';
+    return horizontal
+      ? `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`
+      : `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  };
+  let chartData = null, chartTimer = 0;
+  window.addEventListener('resize', () => { clearTimeout(chartTimer); chartTimer = setTimeout(() => { if (chartData && state.view === 'overview') { drawHarvest(chartData.h); drawMaterials(chartData.m); } }, 200); });
+  function drawHarvest(rows) {
+    const fig = $('adHarvestChart'); const body = fig.querySelector('.ad-chart-body');
+    const order = (m) => (m === 'done' ? '0' : m === 'none' ? 'z' : m);   // past-harvest first, undated last
+    const data = rows.filter((h) => h.month).sort((a, b) => order(a.month).localeCompare(order(b.month))).slice(0, 13);
+    if (!data.length) { body.innerHTML = '<p class="ad-chart-empty">ยังไม่มีแปลงที่ระบุวันเก็บเกี่ยว</p>'; return; }
+    const W = Math.max(300, Math.min(640, body.clientWidth || 560)), H = 240, L = 44, R = 8, T = 22, B = 30;   // drawn at the box width so text stays readable on phones
+    const max = niceMax(Math.max(...data.map((d) => d.areaRai || 0)));
+    const band = (W - L - R) / data.length; const bw = Math.min(24, band * 0.6);
+    const y = (v) => T + (H - T - B) * (1 - v / max);
+    const ticks = [0, max / 2, max];
+    const peak = data.reduce((a, d) => ((d.areaRai || 0) > (a.areaRai || 0) ? d : a), data[0]);
+    body.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="พื้นที่ใกล้เก็บเกี่ยวรายเดือน สูงสุด ${esc(monthText(peak.month))} ${fmt(peak.areaRai, 0)} ไร่">
+      ${ticks.map((t) => `<line class="ad-grid" x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}"/><text class="ad-axis" x="${L - 6}" y="${y(t) + 4}" text-anchor="end">${tick(t)}</text>`).join('')}
+      ${data.map((d, i) => { const cx = L + band * i + band / 2; const top = y(d.areaRai || 0);
+        return `<g class="ad-mark" data-tip="<b>${esc(monthFull(d.month))}</b>${fmt(d.areaRai, 0)} ไร่ · ${fmt(d.plots, 0)} แปลง<br>ชีวมวล ~${fmt(d.ton, 0)} ตัน">
+          <path class="ad-bar" d="${barPath(cx - bw / 2, top, bw, y(0) - top)}"/>
+          ${d === peak ? `<text class="ad-val" x="${cx}" y="${top - 6}" text-anchor="middle">${fmt(d.areaRai, 0)}</text>` : ''}
+          <rect class="ad-hit" x="${L + band * i}" y="${T}" width="${band}" height="${H - T - B}" tabindex="0" aria-label="${esc(monthText(d.month))} ${fmt(d.areaRai, 0)} ไร่"/>
+          <text class="ad-axis" x="${cx}" y="${H - 10}" text-anchor="middle">${esc(monthText(d.month))}</text></g>`; }).join('')}
+    </svg>`;
+    chartTip(fig);
+  }
+  function drawMaterials(rows) {
+    const fig = $('adMaterialChart'); const body = fig.querySelector('.ad-chart-body');
+    let data = rows.filter((m) => (m.areaRai || 0) > 0).sort((a, b) => b.areaRai - a.areaRai);
+    if (data.length > 7) { const rest = data.slice(6); data = data.slice(0, 6).concat([{ name: `อื่นๆ (${rest.length} ชนิด)`, areaRai: rest.reduce((a, m) => a + m.areaRai, 0), plots: rest.reduce((a, m) => a + (m.plots || 0), 0), ton: rest.reduce((a, m) => a + (m.ton || 0), 0), buyers: '' }]); }
+    if (!data.length) { body.innerHTML = '<p class="ad-chart-empty">ยังไม่มีแปลงประกาศขาย</p>'; return; }
+    const W = Math.max(300, Math.min(640, body.clientWidth || 560)), row = 34, T = 6, L = W < 420 ? 112 : 150, R = 56; const H = T + row * data.length + 4;
+    const max = Math.max(...data.map((m) => m.areaRai)); const bh = Math.min(20, row - 12);
+    const x = (v) => (W - L - R) * (v / max);
+    body.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="วัสดุเหลือใช้ทางการเกษตรที่ประกาศขาย มากที่สุด ${esc(data[0].name)} ${fmt(data[0].areaRai, 0)} ไร่">
+      <line class="ad-grid" x1="${L}" x2="${L}" y1="${T}" y2="${H - 4}"/>
+      ${data.map((m, i) => { const cy = T + row * i + row / 2; const w = x(m.areaRai);
+        return `<g class="ad-mark" data-tip="<b>${esc(m.name)}</b>${fmt(m.areaRai, 0)} ไร่ · ${fmt(m.plots, 0)} แปลง<br>ชีวมวล ~${fmt(m.ton, 0)} ตัน${m.buyers !== '' && m.buyers !== undefined ? ` · ผู้รับซื้อ ${fmt(m.buyers, 0)} จุด` : ''}">
+          <text class="ad-label" x="${L - 8}" y="${cy + 5}" text-anchor="end">${esc(m.name.length > (W < 420 ? 13 : 18) ? m.name.slice(0, W < 420 ? 12 : 17) + '…' : m.name)}</text>
+          <path class="ad-bar" d="${barPath(L, cy - bh / 2, w, bh, true)}"/>
+          <text class="ad-val" x="${L + w + 6}" y="${cy + 5}">${fmt(m.areaRai, 0)}</text>
+          <rect class="ad-hit" x="0" y="${T + row * i}" width="${W}" height="${row}" tabindex="0" aria-label="${esc(m.name)} ${fmt(m.areaRai, 0)} ไร่"/></g>`; }).join('')}
+    </svg>`;
+    chartTip(fig);
   }
   document.addEventListener('click', (e) => { const a = e.target.closest('[data-go]'); if (a) { e.preventDefault(); show(a.dataset.go); } });
 
@@ -205,7 +291,19 @@
       { key: 'material', label: 'วัสดุที่รับซื้อ' }, { key: 'price', label: 'ราคา (บาท/ไร่)', num: 1 }, { key: 'capacity', label: 'รับได้ (ตัน/วัน)' },
       { key: 'where', label: 'ที่ตั้ง', html: where }, { key: 'status', label: 'สถานะ', html: status }, { key: 'x', label: 'จัดการ', html: acts }
     ];
-    $(box).innerHTML = table(cols, r.rows, { empty: 'ไม่พบรายการ', more: r.total > r.rows.length ? `แสดง ${r.rows.length} จาก ${r.total} รายการ — ค้นหาเพื่อกรอง` : `${r.total} รายการ` });
+    const more = r.total > r.rows.length ? `แสดง ${r.rows.length} จาก ${r.total} รายการ — ค้นหาเพื่อกรอง` : `${r.total} รายการ`;
+    // 4.2.0: status filter pills (client side, over the rows already loaded)
+    const pills = document.querySelector(`[data-filters="${kind}"]`);
+    const counts = {}; r.rows.forEach((x) => { counts[x.status] = (counts[x.status] || 0) + 1; });
+    const keys = Object.keys(counts);
+    let cur = state['filter_' + kind] || ''; if (cur && !counts[cur]) cur = '';
+    const paint = () => {
+      pills.innerHTML = [['', 'ทั้งหมด', r.rows.length]].concat(keys.map((k) => [k, STATUS_TEXT[k] || k, counts[k]]))
+        .map(([k, label, n]) => `<button type="button" class="ad-fpill" data-f="${esc(k)}" aria-pressed="${k === cur}">${esc(label)} <span>${fmt(n, 0)}</span></button>`).join('');
+      $(box).innerHTML = table(cols, cur ? r.rows.filter((x) => x.status === cur) : r.rows, { empty: 'ไม่พบรายการ', more });
+    };
+    pills.onclick = (e) => { const b = e.target.closest('[data-f]'); if (!b) return; cur = b.dataset.f; state['filter_' + kind] = cur; paint(); };
+    paint();
     $(box).dataset.kind = kind;
   }
   document.querySelectorAll('[data-records]').forEach((f) => f.addEventListener('submit', (e) => { e.preventDefault(); loadRecords(f.dataset.records).catch((err) => fail(f.dataset.records, err)); }));
@@ -287,12 +385,13 @@
   async function loadRule() {
     const r = await api('marketRuleServer'); const x = r.rule;
     $('adRuleForm').days.value = x.hideAfterHarvestDays;
-    $('adRuleInfo').textContent = `ตอนนี้: ${x.hideAfterHarvestDays ? 'แสดงถึง ' + x.hideAfterHarvestDays + ' วันหลังวันเก็บเกี่ยว' : 'ไม่จำกัด'} · แปลงที่แสดง ${x.listedPlots} · ไม่แสดง ${x.hiddenPlots} (ทุกจังหวัด)`;
+    $('adRuleForm').nearKm.value = r.nearRadiusKm || 50;   // 4.2.0
+    $('adRuleInfo').textContent = `ตอนนี้: ${x.hideAfterHarvestDays ? 'แสดงถึง ' + x.hideAfterHarvestDays + ' วันหลังวันเก็บเกี่ยว' : 'ไม่จำกัด'} · แปลงที่แสดง ${x.listedPlots} · ไม่แสดง ${x.hiddenPlots} (ทุกจังหวัด) · รัศมีคู่ค้าต่างจังหวัด ${r.nearRadiusKm || 50} กม.`;
   }
   $('adRuleForm').addEventListener('submit', (e) => {
     e.preventDefault();
     busy(e.target.querySelector('[type=submit]'), 'กำลังบันทึก…', async () => {
-      try { await api('marketRuleSaveServer', { hideAfterHarvestDays: Number(e.target.days.value) }); msg('adRuleMsg', 'บันทึกแล้ว มีผลกับตลาดทุกจังหวัดทันที', true); loadRule(); }
+      try { await api('marketRuleSaveServer', { hideAfterHarvestDays: Number(e.target.days.value), nearRadiusKm: Number(e.target.nearKm.value) }); msg('adRuleMsg', 'บันทึกแล้ว มีผลกับตลาดทุกจังหวัดทันที', true); loadRule(); }
       catch (err) { msg('adRuleMsg', err.message); }
     });
   });

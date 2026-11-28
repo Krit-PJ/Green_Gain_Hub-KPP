@@ -17,7 +17,7 @@ assert(
   config.includes('AKfycbylUGpPc7g9ODTrt-sodEwAa4G3mx8yP-Rve4lqllPyHGxpZkiuLkNcprQ3p_pVB7WT/exec'),
   'deployment URL is missing or stale'
 );
-assert(config.includes("BUILD_VERSION: '4.1.0'"), 'frontend build version is missing or stale');
+assert(config.includes("BUILD_VERSION: '4.2.0'"), 'frontend build version is missing or stale');
 assert(config.includes("MINIMUM_API_VERSION: '1.3.1'"), 'minimum compatible API version is missing');
 
 [
@@ -62,14 +62,14 @@ assert(config.includes("MINIMUM_API_VERSION: '1.3.1'"), 'minimum compatible API 
   'กดหมุดเพื่อโทรติดต่อหรือเริ่มนำทาง',
   'href="tel:${phone}"',
   'https://www.google.com/maps/dir/?api=1&destination=',
-  "getRoleMarkerIcon(currentUser?.role, group)",
+  "getRoleMarkerIcon(role, group, own)", "function recIcon(i)", "class=\"rec-pin ${recKind() === 'buyer' ? 'is-buy' : 'is-sell'}",
   // 3.1.0 record page: sections with icons, default dates by crop, place of the pin, ขายแล้ว, front-page pins
   "const CROP_DAYS = Object.freeze({ 'ข้าวนาปี': 120, 'ข้าวนาปรัง': 120, 'ข้าวโพดเลี้ยงสัตว์': 110, 'อ้อยโรงงาน': 330, 'มันสำปะหลัง': 300, 'อื่นๆ': 100 })",
   "const plant = f?.plantDate || (isNew ? isoDate(new Date()) : '')", "const harvest = f?.harvestDate || (isNew ? addDays(plant, cropDays(crop)) : '')",
   "if (harvest.dataset.touched === '1' || !plant.value) return;", "'ข้าวโพดเลี้ยงสัตว์': 'ซังข้าวโพด'",
   'function showPinPlace', 'window.GGH_PROVINCE.where(lat, lng)', 'function markSold', '.markSoldServer(res.value)', 'function newSeason',
-  'window.GGH_ICONS.pin(side', 'getRoleMarkerIcon(role, group, own)', 'class="rec-sec"', 'fa-calendar-days', 'fa-ruler-combined', 'fa-map-pin',
-  'function deleteDataNow', 'assets/record.css?v=4.1.0'
+  'window.GGH_ICONS.pin(side', 'getRoleMarkerIcon(role, group, own)', 'class="rec-sec"', 'fa-calendar-days', 'fa-ruler-combined', 'fa-seedling', 'id="recMap"', 'id="recPicker"', 'function recSelect(i, quiet)', 'แปลงเพาะปลูกที่ ', 'จุดรับซื้อที่ ', 'บันทึกข้อมูลเพาะปลูก', 'บันทึกข้อมูลการรับซื้อ', 'function saveProfile(e)', 'id="meProfile"', 'id="userProvinceDisplay"', 'class="ggh-me-tabs"',
+  'function deleteDataNow', 'assets/record.css?v=4.2.0'
 ].forEach(text => assert(html.includes(text), `missing component: ${text}`));
 
 assert(!html.includes('marker-icon-red.png'), 'red marker must not remain');
@@ -78,7 +78,7 @@ assert(!html.includes('select[name="purchaseAfterHarvestDays"]'), 'retired buyer
 assert(!html.includes('ช่วงเวลารับซื้อ:'), 'retired buyer condition is still shown on partner cards');
 assert(html.includes("const color = role === 'buyer' ? 'blue' : 'green';"), 'role marker colors are incorrect');
 assert(html.includes('name="materialType" disabled'), 'farmer material field must be automatic');
-assert(html.includes('ระบบเลือกให้ตามชนิดพืช'), 'automatic material explanation is missing');
+assert(html.includes('the material follows the crop; asked for only when the crop is "อื่นๆ"') && html.includes('data-other-wrap') && !html.includes('พืชและวัสดุเหลือใช้</legend>'), '4.2.0: material follows the crop, asked only for อื่นๆ');
 
 const versionBody = html.match(/function isVersionAtLeast\(actual, minimum\) \{([\s\S]*?)\n    \}/);
 assert(versionBody, 'isVersionAtLeast function was not found');

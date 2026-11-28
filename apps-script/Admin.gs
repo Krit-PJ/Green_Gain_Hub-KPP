@@ -253,7 +253,7 @@ function adminOverview_(input, s) {
   const scope = adminScope_(s, (input || {}).province, true);
   const rep = marketReport_(scope);
   const pending = s.role === 'super' ? dataRows_(sheetByName_('ggh_admins')).filter(function (r) { return text_(r[3]) === 'pending'; }).length : 0;
-  return { status: 'success', scope: rep.scope, summary: rep.summary, areas: rep.areas, listing: rep.listing, pendingAdmins: pending, generatedAt: rep.generatedAt };
+  return { status: 'success', scope: rep.scope, summary: rep.summary, areas: rep.areas, materials: rep.materials, harvest: rep.harvest, listing: rep.listing, pendingAdmins: pending, generatedAt: rep.generatedAt };
 }
 
 /* ------------------------------ users / plots / buyer points ------------------------------ */
@@ -387,19 +387,22 @@ function adminRecordStatus_(input, s) {
 }
 
 /* ------------------------------ Super Admin: market settings, log ------------------------------ */
-function adminMarketRule_() { return { status: 'success', rule: marketListingInfo_() }; }
+function adminMarketRule_() { return { status: 'success', rule: marketListingInfo_(), nearRadiusKm: nearRadiusKm_(), nearMin: NEAR_KM_MIN, nearMax: NEAR_KM_MAX }; }
 function adminMarketRuleSave_(input, s) {
-  const days = hideDaysValid_((input || {}).hideAfterHarvestDays);
+  input = input || {};
+  const days = hideDaysValid_(input.hideAfterHarvestDays);
+  const near = input.nearRadiusKm === undefined ? null : nearRadiusValid_(input.nearRadiusKm);   // 4.2.0
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
     const before = marketHideRule_();
     const start = days > 0 && (!before.days || !before.start) ? dateInput_(new Date()) : (before.start ? dateInput_(before.start) : '');
     hideRuleWrite_(days, start);
     settingWrite_('hide_after_harvest_updated', new Date(), 'วันที่', 'แก้ไขล่าสุดโดย ' + s.username);
+    if (near !== null) settingWrite_(NEAR_KM_PARAM, near, 'กม.', 'รัศมี "รวมคู่ค้าต่างจังหวัด" ของเกษตรกรและผู้รับซื้อ — Super Admin ของ Green Gain Hub ตั้งค่า');
   } finally { lock.releaseLock(); }
   invalidateSummary_();
-  gadminAudit_(s, 'market_rule', 'แสดงแปลงถึง ' + days + ' วันหลังวันเก็บเกี่ยว');
-  return { status: 'success', rule: marketListingInfo_() };
+  gadminAudit_(s, 'market_rule', 'แสดงแปลงถึง ' + days + ' วันหลังวันเก็บเกี่ยว' + (near !== null ? ' · รัศมีคู่ค้าต่างจังหวัด ' + near + ' กม.' : ''));
+  return { status: 'success', rule: marketListingInfo_(), nearRadiusKm: nearRadiusKm_() };
 }
 
 function gadminAudit_(s, action, detail) {

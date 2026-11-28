@@ -43,6 +43,12 @@ bad(post('adminRegisterServer', reg), /มีผู้ใช้แล้ว/, 'u
 bad(post('adminLoginServer', { username: 'somchai.kpp', password: 'Admin12345' }), /รอ Super Admin อนุมัติ/, 'pending cannot sign in');
 check(post('adminsListServer', undefined, T).result.rows.find((a) => a.username === 'somchai.kpp').status === 'pending', 'Super sees the request');
 check(post('adminOverviewServer', { province: '62' }, T).result.pendingAdmins === 1, 'overview counts pending requests');
+{ const ov = post('adminOverviewServer', { province: '62' }, T).result; check(Array.isArray(ov.harvest) && Array.isArray(ov.materials), '4.2.0 overview returns harvest + materials for the charts'); }
+{ const fs = require('fs'), path = require('path'); const fe = (f) => fs.readFileSync(path.join(__dirname, '..', 'frontend', f), 'utf8');
+  const h = fe('admin.html'), j = fe('assets/admin.js');
+  check(/name="nearKm" min="10" max="100"/.test(h) && /nearRadiusKm: Number\(e\.target\.nearKm\.value\)/.test(j), '4.2.0 settings form sends the partner radius');
+  check(h.includes('id="adHarvestChart"') && h.includes('id="adMaterialChart"') && j.includes('function drawHarvest') && j.includes('function chartTip'), '4.2.0 dashboard charts with tooltips');
+  check((h.match(/class="ad-nav-group"/g) || []).length === 3 && h.includes('data-filters="farmers"') && h.includes('admin.js?v=4.2.0'), '4.2.0 grouped menu, filter pills, asset version'); }
 check(post('adminSaveServer', { username: 'somchai.kpp', status: 'active' }, T).ok, 'approved');
 const A = post('adminLoginServer', { username: 'somchai.kpp', password: 'Admin12345' }).result;
 check(A.token && A.role === 'admin' && A.province === '62' && A.provinceName === 'กำแพงเพชร', 'Admin signs in, province 62');
@@ -107,4 +113,4 @@ check(post('adminResetPasswordServer', { username: 'somchai.kpp', password: 'Res
 /* user delete: user row removed, their plots marked Deleted */
 check(post('adminUserDeleteServer', { phone: '0810000002' }, T).ok && !sheets.users.rows.some((x) => x[0] === '0810000002') && sheets.farmers.rows[3][11] === 'Deleted', 'Super deletes a user, plots hidden');
 
-console.log('PASS: ' + n + ' checks — 4.0.0 GGH officers (Super/Admin, province scope, management, reports, audit)');
+console.log('PASS: ' + n + ' checks — 4.0.0/4.2.0 GGH officers (Super/Admin, province scope, management, reports, audit)');
